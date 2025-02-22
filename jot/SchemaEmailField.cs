@@ -6,7 +6,7 @@ namespace Figment;
 public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
 {
     [JsonPropertyName("type")]
-    public override string Type { get; } = "text";
+    public override string Type { get; } = "string";
 
     [JsonPropertyName("format")]
     public string Format { get; } = "email";

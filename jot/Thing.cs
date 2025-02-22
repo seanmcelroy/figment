@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using jot;
 using Spectre.Console;
@@ -84,6 +84,13 @@ public class Thing(string Guid, string Name)
             await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
         }
 
+        // Add to schema name index, if applicable
+        if (!string.IsNullOrWhiteSpace(schemaGuid))
+        {
+            var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
+            await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
+        }
+
         // If this has a schema, add it to the schema index
         if (!string.IsNullOrWhiteSpace(schemaGuid))
         {
@@ -124,6 +131,14 @@ public class Thing(string Guid, string Name)
             var indexFilePath = Path.Combine(thingDir.FullName, NameIndexFileName);
             await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
             AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Path.GetFileName(indexFilePath)}");
+        }
+
+        // Remove schema name index, if applicable
+        if (!string.IsNullOrWhiteSpace(SchemaGuid))
+        {
+            var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{SchemaGuid}.csv");
+            await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
+            AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Path.GetFileName(indexFilePath)}");
         }
 
         // If this has a schema, remove it from the schema index
@@ -476,6 +491,30 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    public static async IAsyncEnumerable<(Reference, string name)> ResolvePartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var thingDir = await GetThingDatabaseDirectory();
+        if (thingDir == null)
+            yield break;
+
+        // Load index
+        var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
+        if (!File.Exists(indexFilePath))
+            yield break; // Happens on new install if no items, nothing in index, and so no file
+
+        await foreach (var guid in Program.ResolveGuidFromPartialNameAsync(indexFilePath, thingNamePart, cancellationToken))
+        {
+            var thing = await LoadAsync(guid, cancellationToken);
+            if (thing == null || string.IsNullOrWhiteSpace(thing.Name))
+                continue;
+            yield return (new Reference
+            {
+                Type = Reference.ReferenceType.Thing,
+                Guid = guid
+            }, thing.Name);
+        }
+    }
+
     public async IAsyncEnumerable<Schema> GetAssociatedSchemas([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
@@ -542,11 +581,17 @@ public class Thing(string Guid, string Name)
             bool valid = true;
             var schema = thingSchemas.FirstOrDefault(s => thingProp.Key.StartsWith($"{s.Guid}."));
             var (escapedPropKey, fullDisplayName, simpleDisplayName) = CarvePropertyName(thingProp.Key, schema);
+            var required = false;
+            var schemaFieldType = default(string?);
             if (schema != default)
             {
                 // Watch out, the schema field could have been deleted but it's still there on the instance.
                 if (schema.Properties.TryGetValue(simpleDisplayName, out SchemaFieldBase? schemaField))
+                {
                     valid = schemaField == null || await schemaField.IsValidAsync(thingProp.Value, cancellationToken); // Valid if no schema.
+                    required = schemaField != null && schemaField.Required;
+                    schemaFieldType = schemaField?.Type;
+                }
             }
 
             yield return new ThingProperty
@@ -556,7 +601,10 @@ public class Thing(string Guid, string Name)
                 SimpleDisplayName = simpleDisplayName,
                 SchemaGuid = schema?.Guid,
                 Value = thingProp.Value,
-                Valid = valid
+                Valid = valid,
+                Required = required,
+                SchemaFieldType = schemaFieldType,
+                SchemaName = schema?.Name
             };
         }
     }
@@ -599,7 +647,10 @@ public class Thing(string Guid, string Name)
         return unsetSchemaFields.Values.ToList();
     }
 
-    public async Task<bool> Set(string propName, string? propValue, CancellationToken cancellationToken)
+    public async Task<bool> Set(
+        string propName,
+        string? propValue,
+        CancellationToken cancellationToken)
     {
         // If prop name came in unescaped, and it should be escaled, then escape it here for comparisons.
         if (propName.Contains(' ') && !propName.StartsWith('[') && !propName.EndsWith(']'))
@@ -647,7 +698,10 @@ public class Thing(string Guid, string Name)
                             SimpleDisplayName = candidateProperties[i].SimpleDisplayName,
                             SchemaGuid = candidateProperties[i].SchemaGuid,
                             Value = candidateProperties[i].Value,
-                            Valid = wouldBeValid
+                            Valid = wouldBeValid,
+                            Required = schemaProperty.Value.Required,
+                            SchemaFieldType = schemaProperty.Value.Type,
+                            SchemaName = candidateProperties[i].SchemaName
                         };
                         candidatesMatch = true;
                     }
@@ -667,7 +721,10 @@ public class Thing(string Guid, string Name)
                     SimpleDisplayName = simpleDisplayName,
                     SchemaGuid = schema.Guid,
                     Value = null,
-                    Valid = wouldBeValid
+                    Valid = wouldBeValid,
+                    Required = schemaProperty.Value.Required,
+                    SchemaFieldType = schemaProperty.Value.Type,
+                    SchemaName = schema.Name
                 };
 
                 if (string.Compare(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
@@ -710,10 +767,59 @@ public class Thing(string Guid, string Name)
                 return await SaveAsync(cancellationToken);
             case 1:
                 // Exactly one, we need to update:
+
+                // Unset (null it out) case
                 if (string.IsNullOrWhiteSpace(propValue))
-                    Properties.Remove(candidateProperties[0].TruePropertyName);
-                else
-                    Properties[candidateProperties[0].TruePropertyName] = propValue;
+                {
+                    if (Properties.Remove(candidateProperties[0].TruePropertyName)
+                        && candidateProperties[0].Required)
+                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Required {propName} was removed.\r\n");
+                    return await SaveAsync(cancellationToken);
+                }
+
+                if (!candidateProperties[0].Valid)
+                {
+                    if (AnsiConsole.Profile.Capabilities.Interactive
+                        && candidateProperties[0].SchemaGuid != null
+                        && candidateProperties[0].SchemaFieldType == SchemaRefField.TYPE)
+                    {
+                        var disambig = ResolvePartialNameAsync(candidateProperties[0].SchemaGuid!, propValue, cancellationToken)
+                            .ToBlockingEnumerable(cancellationToken)
+                            .Select(p => new PossibleNameMatch(p.Item1, p.name))
+                            .ToArray();
+
+                        if (disambig.Length == 1)
+                        {
+                            Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
+                            AnsiConsole.MarkupLineInterpolated($"[blue]INFO[/]: Set {propName} to {disambig[0].Name}.");
+                            return await SaveAsync(cancellationToken);
+                        }
+                        else if (disambig.Length > 1)
+                        {
+                            var which = AnsiConsole.Prompt(
+                                new SelectionPrompt<PossibleNameMatch>()
+                                    .Title($"There was more than one {candidateProperties[0].SchemaName} matching '{propValue}'.  Which do you want to select?")
+                                    .PageSize(5)
+                                    .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
+                                    .AddChoices(disambig));
+
+                            Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
+                            return await SaveAsync(cancellationToken);
+                        }
+                        else
+                        {
+                            Properties[candidateProperties[0].TruePropertyName] = propValue;
+                            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
+                            return await SaveAsync(cancellationToken);
+                        }
+                    }
+                    else
+                    {
+                        Properties[candidateProperties[0].TruePropertyName] = propValue;
+                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
+                        return await SaveAsync(cancellationToken);
+                    }
+                }
 
                 // Special case for Name.
                 if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
@@ -725,9 +831,8 @@ public class Thing(string Guid, string Name)
                     }
                     Name = propValue;
                 }
-
-                if (!candidateProperties[0].Valid)
-                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
+                else
+                    Properties[candidateProperties[0].TruePropertyName] = propValue;
 
                 return await SaveAsync(cancellationToken);
             default:
@@ -746,10 +851,12 @@ public class Thing(string Guid, string Name)
 
         Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingIndexes = [];
+        Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingNames = [];
 
         await foreach (var schema in Schema.GetAll(cancellationToken))
         {
             schemaGuidsAndThingIndexes.Add(schema.Guid, []);
+            schemaGuidsAndThingNames.Add(schema.Guid, []);
         }
 
         Dictionary<string, string> namesIndex = [];
@@ -768,6 +875,12 @@ public class Thing(string Guid, string Name)
             {
                 value.Add(thing.Guid, thingFileName.Name);
             }
+
+            if (!string.IsNullOrWhiteSpace(thing.SchemaGuid)
+                && schemaGuidsAndThingNames.TryGetValue(thing.SchemaGuid, out Dictionary<string, string>? value2))
+            {
+                value2.Add(thing.Name, thingFileName.Name);
+            }
         }
         indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
         foreach (var kvp in schemaGuidsAndThingIndexes)
@@ -775,6 +888,13 @@ public class Thing(string Guid, string Name)
             if (cancellationToken.IsCancellationRequested)
                 break;
             indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.schema.{kvp.Key}.csv"), kvp.Value);
+        }
+
+        foreach (var kvp in schemaGuidsAndThingNames)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                break;
+            indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.names.schema.{kvp.Key}.csv"), kvp.Value);
         }
 
         foreach (var index in indexesToWrite)

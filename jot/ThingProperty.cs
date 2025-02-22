@@ -37,4 +37,8 @@ public readonly record struct ThingProperty
     /// If no <see cref="Schema"> is associated, this is always true.
     /// </summary>
     public required readonly bool Valid { get; init; }
+
+    public required readonly bool Required { get; init; }
+    public required readonly string? SchemaFieldType { get; init; }
+    public required readonly string? SchemaName { get; init; }
 }

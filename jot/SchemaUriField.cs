@@ -2,26 +2,25 @@ using System.Text.Json.Serialization;
 
 namespace Figment;
 
-public class SchemaUriField(string Name) : SchemaFieldBase(Name)
+public class SchemaUriField(string Name) : SchemaTextField(Name)
 {
     [JsonPropertyName("type")]
-    public override string Type { get; } = "text";
+    public override string Type { get; } = "string";
 
     [JsonPropertyName("format")]
     public string Format { get; } = "uri";
 
     [JsonPropertyName("pattern")]
-    public string Pattern { get; init; } = @"[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)";
+    public override string? Pattern { get; set; } = @"[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)";
 
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("uri");
 
-    public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+    public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
-        if (!Required && value == null)
-            return Task.FromResult(true);
-        if (Required && value == null)
-            return Task.FromResult(false);
+        if (!await base.IsValidAsync(value, cancellationToken))
+            return false;
 
-        return Task.FromResult(Uri.TryCreate(value as string, UriKind.RelativeOrAbsolute, out Uri? _));
+        var str = value as string;
+        return Uri.TryCreate(str, UriKind.RelativeOrAbsolute, out Uri? _);
     }
 }

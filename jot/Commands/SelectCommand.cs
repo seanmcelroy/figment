@@ -77,7 +77,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 var disambig = possibilities
                     .Select(p => new { Guid = p, Object = p.LoadAsync(cancellationToken).Result })
                     .Where(p => p.Object != null)
-                    .Select(p => new PossibleMatch(p.Guid, p.Object!))
+                    .Select(p => new PossibleEntityMatch(p.Guid, p.Object!))
                     .ToArray();
 
                 if (!AnsiConsole.Profile.Capabilities.Interactive)
@@ -89,7 +89,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 }
 
                 var which = AnsiConsole.Prompt(
-                    new SelectionPrompt<PossibleMatch>()
+                    new SelectionPrompt<PossibleEntityMatch>()
                         .Title($"There was more than one entity matching '{settings.Name}'.  Which do you want to select?")
                         .PageSize(5)
                         .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")

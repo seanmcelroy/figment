@@ -4,8 +4,10 @@ namespace Figment;
 
 public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Name)
 {
+    internal const string TYPE = "ref";
+
     [JsonIgnore] // Only for enums.
-    public override string Type { get; } = "ref";
+    public override string Type { get; } = TYPE;
 
     [JsonIgnore]
     public string SchemaGuid { get; set; } = SchemaGuid;

@@ -7,7 +7,7 @@ namespace Figment;
 public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 {
     [JsonPropertyName("type")]
-    public override string Type { get; } = "text";
+    public override string Type { get; } = "string";
 
     [JsonPropertyName("minLength")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -19,7 +19,7 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 
     [JsonPropertyName("pattern")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Pattern { get; set; }
+    public virtual string? Pattern { get; set; }
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {

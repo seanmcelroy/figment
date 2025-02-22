@@ -116,6 +116,11 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var sbf = new SchemaBooleanField(propName);
             schemaLoaded.Properties[propName] = sbf;
         }
+        else if (string.CompareOrdinal(propType, "date") == 0)
+        {
+            var sdf = new SchemaDateField(propName);
+            schemaLoaded.Properties[propName] = sdf;
+        }
         else if (string.CompareOrdinal(propType, "email") == 0)
         {
             var sef = new SchemaEmailField(propName);

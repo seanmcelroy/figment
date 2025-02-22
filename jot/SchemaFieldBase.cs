@@ -4,6 +4,7 @@ namespace Figment;
 
 [JsonPolymorphic]
 [JsonDerivedType(typeof(SchemaBooleanField), typeDiscriminator: "bool")]
+[JsonDerivedType(typeof(SchemaDateField), typeDiscriminator: "date")]
 [JsonDerivedType(typeof(SchemaEmailField), typeDiscriminator: "email")]
 [JsonDerivedType(typeof(SchemaEnumField), typeDiscriminator: "enum")]
 [JsonDerivedType(typeof(SchemaIntegerField), typeDiscriminator: "integer")]

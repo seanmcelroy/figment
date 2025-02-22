@@ -21,5 +21,4 @@ public class SchemaPhoneField(string Name) : SchemaTextField(Name)
 
         return Task.FromResult((string?)$"[link=tel:{value}]{value}[/]");
     }
-
 }
