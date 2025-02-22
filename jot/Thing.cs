@@ -700,7 +700,10 @@ public class Thing(string Guid, string Name)
                             Value = candidateProperties[i].Value,
                             Valid = wouldBeValid,
                             Required = schemaProperty.Value.Required,
-                            SchemaFieldType = schemaProperty.Value.Type,
+                            SchemaFieldType = 
+                                string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.TYPE) == 0
+                                    ? $"{SchemaRefField.TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                                    : schemaProperty.Value.Type,
                             SchemaName = candidateProperties[i].SchemaName
                         };
                         candidatesMatch = true;
@@ -723,7 +726,10 @@ public class Thing(string Guid, string Name)
                     Value = null,
                     Valid = wouldBeValid,
                     Required = schemaProperty.Value.Required,
-                    SchemaFieldType = schemaProperty.Value.Type,
+                    SchemaFieldType = 
+                        string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.TYPE) == 0
+                            ? $"{SchemaRefField.TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                            : schemaProperty.Value.Type,
                     SchemaName = schema.Name
                 };
 
@@ -781,9 +787,11 @@ public class Thing(string Guid, string Name)
                 {
                     if (AnsiConsole.Profile.Capabilities.Interactive
                         && candidateProperties[0].SchemaGuid != null
-                        && candidateProperties[0].SchemaFieldType == SchemaRefField.TYPE)
+                        && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.TYPE) ?? false))
                     {
-                        var disambig = ResolvePartialNameAsync(candidateProperties[0].SchemaGuid!, propValue, cancellationToken)
+                        var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length+1)..];
+
+                        var disambig = ResolvePartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
                             .ToBlockingEnumerable(cancellationToken)
                             .Select(p => new PossibleNameMatch(p.Item1, p.name))
                             .ToArray();
