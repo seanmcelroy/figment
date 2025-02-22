@@ -10,13 +10,6 @@ public class SelectCommandSettings : CommandSettings
     public const int ARG_POSITION_NAME = 0;
 
     [Description("The entity to select")]
-    [CommandArgument(ARG_POSITION_NAME, "<NAME>")]
+    [CommandArgument(ARG_POSITION_NAME, "[NAME]")]
     public string? Name { get; init; }
-
-    public override ValidationResult Validate()
-    {
-        return string.IsNullOrWhiteSpace(Name)
-            ? ValidationResult.Error("Name must either be the GUID of an entity or a name that resolves to just one")
-            : ValidationResult.Success();
-    }
 }

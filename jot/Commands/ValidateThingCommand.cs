@@ -59,11 +59,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
-        var schemaLoaded = thing.SchemaGuid == null
-            ? null
-            : await Schema.LoadAsync(thing.SchemaGuid, cancellationToken);
-
-        await Console.Out.WriteLineAsync($"Validating {(schemaLoaded == null ? "thing" : schemaLoaded.Name.ToLowerInvariant())} {thing.Name} ({thing.Guid}) ...");
+        await Console.Out.WriteLineAsync($"Validating {thing.Name} ({thing.Guid}) ...");
 
         List<ThingProperty> thingProperties = [];
         await foreach (var property in thing.GetProperties(cancellationToken))
@@ -75,8 +71,25 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             }
         }
 
-        if (schemaLoaded != null)
+        if (thing.SchemaGuids == null
+            || thing.SchemaGuids.Count == 0)
         {
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");
+            return (int)ERROR_CODES.SUCCESS;
+        }
+
+        foreach (var schemaGuid in thing.SchemaGuids)
+        {
+            var schemaLoaded = string.IsNullOrWhiteSpace(schemaGuid)
+                ? null
+                : await Schema.LoadAsync(schemaGuid, cancellationToken);
+
+            if (schemaLoaded == null)
+            {
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
+                return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+            }
+
             foreach (var sp in schemaLoaded.Properties
                 .Where(sp => sp.Value.Required
                     && !thingProperties.Any(
@@ -86,11 +99,9 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                 AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Schema property {sp.Key} is required but is not set!");
             }
 
-
-//                            if (!schema.Properties.TryGetValue(choppedPropName, out ISchemaField? schemaField))
-//                {
-//                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {prop.Key} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
-
+            //                            if (!schema.Properties.TryGetValue(choppedPropName, out ISchemaField? schemaField))
+            //                {
+            //                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {prop.Key} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
         }
 
         AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");

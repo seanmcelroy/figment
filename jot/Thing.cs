@@ -1,8 +1,8 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using jot;
+using jot.Commands;
 using Spectre.Console;
 
 namespace Figment;
@@ -13,7 +13,8 @@ public class Thing(string Guid, string Name)
 
     public string Guid { get; set; } = Guid;
     public string Name { get; set; } = Name;
-    public string? SchemaGuid { get; set; }
+    //    public string? SchemaGuid { get; set; }
+    public List<string> SchemaGuids { get; set; } = [];
     public Dictionary<string, object> Properties { get; init; } = [];
 
     private static async Task<DirectoryInfo?> GetThingDatabaseDirectory()
@@ -50,7 +51,7 @@ public class Thing(string Guid, string Name)
         var thingGuid = System.Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
         {
-            SchemaGuid = schemaGuid
+            SchemaGuids = [schemaGuid]
         };
 
         var thingDir = await GetThingDatabaseDirectory();
@@ -134,20 +135,28 @@ public class Thing(string Guid, string Name)
         }
 
         // Remove schema name index, if applicable
-        if (!string.IsNullOrWhiteSpace(SchemaGuid))
-        {
-            var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{SchemaGuid}.csv");
-            await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-            AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Path.GetFileName(indexFilePath)}");
-        }
+        if (SchemaGuids != null)
+            foreach (var schemaGuid in SchemaGuids)
+            {
+                if (!string.IsNullOrWhiteSpace(schemaGuid))
+                {
+                    var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
+                    await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
+                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Path.GetFileName(indexFilePath)}");
+                }
+            }
 
         // If this has a schema, remove it from the schema index
-        if (!string.IsNullOrWhiteSpace(SchemaGuid))
-        {
-            var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{SchemaGuid}.csv");
-            await IndexManager.RemoveByKeyAsync(indexFilePath, Guid, cancellationToken);
-            AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from schema index {Path.GetFileName(indexFilePath)}");
-        }
+        if (SchemaGuids != null)
+            foreach (var schemaGuid in SchemaGuids)
+            {
+                if (!string.IsNullOrWhiteSpace(schemaGuid))
+                {
+                    var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
+                    await IndexManager.RemoveByKeyAsync(indexFilePath, Guid, cancellationToken);
+                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from schema index {Path.GetFileName(indexFilePath)}");
+                }
+            }
 
         return true;
     }
@@ -227,9 +236,21 @@ public class Thing(string Guid, string Name)
                 thingLoaded.Name = nameProperty.GetString() ?? "<UNDEFINED>";
             }
 
-            if (root.TryGetProperty(nameof(SchemaGuid), out JsonElement schemaGuidProperty))
+            // Legacy
+            if (root.TryGetProperty("SchemaGuid", out JsonElement schemaGuidProperty))
+                thingLoaded.SchemaGuids = [schemaGuidProperty.GetString()];
+            else
+                thingLoaded.SchemaGuids = [];
+
+            if (root.TryGetProperty(nameof(SchemaGuids), out JsonElement schemaGuidsProperty))
             {
-                thingLoaded.SchemaGuid = schemaGuidProperty.GetString();
+                var arrayCount = schemaGuidsProperty.GetArrayLength();
+                foreach (var element in schemaGuidsProperty.EnumerateArray())
+                {
+                    var elementValue = element.GetString();
+                    if (!string.IsNullOrWhiteSpace(elementValue))
+                        thingLoaded.SchemaGuids.Add(elementValue);
+                }
             }
 
             foreach (var prop in root.EnumerateObject())
@@ -240,7 +261,7 @@ public class Thing(string Guid, string Name)
                 if (
                   string.CompareOrdinal(prop.Name, nameof(Name)) == 0
                   || string.CompareOrdinal(prop.Name, nameof(Guid)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(SchemaGuid)) == 0
+                  || string.CompareOrdinal(prop.Name, nameof(SchemaGuids)) == 0
                 )
                 {
                     // Ignore built-ins, as they're defined on root, not Properties
@@ -341,10 +362,23 @@ public class Thing(string Guid, string Name)
                 thingLoaded.Name = nameProperty.GetString() ?? "<UNDEFINED>";
             }
 
-            if (root.TryGetProperty(nameof(SchemaGuid), out JsonElement schemaGuidProperty))
+            // Legacy
+            if (root.TryGetProperty("SchemaGuid", out JsonElement schemaGuidProperty))
+                thingLoaded.SchemaGuids = [schemaGuidProperty.GetString()];
+            else
+                thingLoaded.SchemaGuids = [];
+
+            if (root.TryGetProperty(nameof(SchemaGuids), out JsonElement schemaGuidsProperty))
             {
-                thingLoaded.SchemaGuid = schemaGuidProperty.GetString();
+                var arrayCount = schemaGuidsProperty.GetArrayLength();
+                foreach (var element in schemaGuidsProperty.EnumerateArray())
+                {
+                    var elementValue = element.GetString();
+                    if (!string.IsNullOrWhiteSpace(elementValue))
+                        thingLoaded.SchemaGuids.Add(elementValue);
+                }
             }
+
 
             foreach (var prop in root.EnumerateObject())
             {
@@ -354,7 +388,7 @@ public class Thing(string Guid, string Name)
                 if (
                   string.CompareOrdinal(prop.Name, nameof(Name)) == 0
                   || string.CompareOrdinal(prop.Name, nameof(Guid)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(SchemaGuid)) == 0
+                  || string.CompareOrdinal(prop.Name, nameof(SchemaGuids)) == 0
                 )
                 {
                     // Ignore built-ins, as they're defined on root, not Properties
@@ -518,12 +552,16 @@ public class Thing(string Guid, string Name)
     public async IAsyncEnumerable<Schema> GetAssociatedSchemas([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
-        if (!string.IsNullOrWhiteSpace(SchemaGuid))
-        {
-            var schema = await Schema.LoadAsync(SchemaGuid, cancellationToken);
-            if (schema != null)
-                yield return schema;
-        }
+        if (SchemaGuids != null)
+            foreach (var schemaGuid in SchemaGuids)
+                if (!string.IsNullOrWhiteSpace(schemaGuid))
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        yield break;
+                    var schema = await Schema.LoadAsync(schemaGuid, cancellationToken);
+                    if (schema != null)
+                        yield return schema;
+                }
         yield break;
     }
 
@@ -700,7 +738,7 @@ public class Thing(string Guid, string Name)
                             Value = candidateProperties[i].Value,
                             Valid = wouldBeValid,
                             Required = schemaProperty.Value.Required,
-                            SchemaFieldType = 
+                            SchemaFieldType =
                                 string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.TYPE) == 0
                                     ? $"{SchemaRefField.TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                                     : schemaProperty.Value.Type,
@@ -726,7 +764,7 @@ public class Thing(string Guid, string Name)
                     Value = null,
                     Valid = wouldBeValid,
                     Required = schemaProperty.Value.Required,
-                    SchemaFieldType = 
+                    SchemaFieldType =
                         string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.TYPE) == 0
                             ? $"{SchemaRefField.TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                             : schemaProperty.Value.Type,
@@ -789,7 +827,7 @@ public class Thing(string Guid, string Name)
                         && candidateProperties[0].SchemaGuid != null
                         && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.TYPE) ?? false))
                     {
-                        var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length+1)..];
+                        var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length + 1)..];
 
                         var disambig = ResolvePartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
                             .ToBlockingEnumerable(cancellationToken)
@@ -878,17 +916,17 @@ public class Thing(string Guid, string Name)
                 continue;
 
             namesIndex.Add(thing.Name, thingFileName.Name);
-            if (!string.IsNullOrWhiteSpace(thing.SchemaGuid)
-                && schemaGuidsAndThingIndexes.TryGetValue(thing.SchemaGuid, out Dictionary<string, string>? value))
-            {
-                value.Add(thing.Guid, thingFileName.Name);
-            }
+            if (thing.SchemaGuids != null)
+                foreach (var schemaGuid in thing.SchemaGuids)
+                    if (!string.IsNullOrWhiteSpace(schemaGuid)
+                        && schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
+                        value.Add(thing.Guid, thingFileName.Name);
 
-            if (!string.IsNullOrWhiteSpace(thing.SchemaGuid)
-                && schemaGuidsAndThingNames.TryGetValue(thing.SchemaGuid, out Dictionary<string, string>? value2))
-            {
-                value2.Add(thing.Name, thingFileName.Name);
-            }
+            if (thing.SchemaGuids != null)
+                foreach (var schemaGuid in thing.SchemaGuids)
+                    if (!string.IsNullOrWhiteSpace(schemaGuid)
+                && schemaGuidsAndThingNames.TryGetValue(schemaGuid, out Dictionary<string, string>? value2))
+                        value2.Add(thing.Name, thingFileName.Name);
         }
         indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
         foreach (var kvp in schemaGuidsAndThingIndexes)

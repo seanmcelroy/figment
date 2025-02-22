@@ -60,11 +60,16 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         }
 
         Dictionary<string, Schema> schemas = [];
-        if (thingLoaded.SchemaGuid != null)
+        if (thingLoaded.SchemaGuids != null)
         {
-            var schema = await Schema.LoadAsync(thingLoaded.SchemaGuid, cancellationToken);
-            if (schema != null)
-                schemas.Add(schema.Guid, schema);
+            foreach (var schemaGuid in thingLoaded.SchemaGuids)
+            {
+                var schema = await Schema.LoadAsync(schemaGuid, cancellationToken);
+                if (schema != null)
+                    schemas.Add(schema.Guid, schema);
+                else
+                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Unable to load associated schema with Guid '{schemaGuid}'.");
+            }
         }
 
         var propDict = new Dictionary<string, (string? schemaGuid, object? fieldValue, bool valid)>();
@@ -90,7 +95,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             // Skip built-ins
             if (string.CompareOrdinal(prop.Key, nameof(Thing.Name)) == 0
                 || string.CompareOrdinal(prop.Key, nameof(Thing.Guid)) == 0
-                || string.CompareOrdinal(prop.Key, nameof(Thing.SchemaGuid)) == 0
+                || string.CompareOrdinal(prop.Key, nameof(Thing.SchemaGuids)) == 0
                 )
                 continue;
 

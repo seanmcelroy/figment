@@ -23,7 +23,15 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
 
         if (string.IsNullOrWhiteSpace(settings.Name))
         {
-            AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a schema, you must first 'select' a schema.");
+            if (Program.SelectedEntity != Reference.EMPTY)
+            {
+                // Select with no arguments just clears the selection
+                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Selection cleared.\r\n");
+                Program.SelectedEntity = Reference.EMPTY;
+                return (int)ERROR_CODES.SUCCESS;
+            }
+
+            AnsiConsole.MarkupLine("[yellow]ERROR[/]: You must first 'select' one by specifying a [[NAME]] argument.");
             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }

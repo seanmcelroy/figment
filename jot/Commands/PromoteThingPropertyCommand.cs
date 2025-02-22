@@ -57,14 +57,10 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
-        var schemaLoaded = thingLoaded.SchemaGuid == null
-            ? null
-            : await Schema.LoadAsync(thingLoaded.SchemaGuid, cancellationToken);
-
-        // TODO: Are there multiple schemas?  (schema chooser)
-        if (schemaLoaded == null)
+        if (thingLoaded.SchemaGuids == null
+            || thingLoaded.SchemaGuids.Count == 0)
         {
-            AnsiConsole.MarkupLine("[red]ERROR[/]: Unable to load schema from thing.  Must be able to load schema to edit it.");
+            AnsiConsole.MarkupInterpolated($"[red]ERROR[/]: Unable to load any schema from {thingLoaded.Name}.  Must be able to load an associated schema to promote a property to it.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -75,26 +71,41 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
+        foreach (var schemaGuid in thingLoaded.SchemaGuids)
+        {
+            var schemaLoaded = string.IsNullOrWhiteSpace(schemaGuid)
+                ? null
+                : await Schema.LoadAsync(schemaGuid, cancellationToken);
+
+            if (schemaLoaded == null)
+            {
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thingLoaded.Name}.  Must be able to load schema to promote a property to it.");
+                return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+            }
+
+            // TODO: Right now we promote the field to EVERY associated schema.
+            // Should there be a schema chooser?
+
+            // Put the field on the schema.
+            var schemaProperty = schemaLoaded.AddTextField(property.Key);
+            // Update my version of the file to point to the schema version
+            thingLoaded.Properties.Remove(property.Key);
+            var truePropertyName = $"{schemaLoaded.Guid}.{schemaProperty.Name}";
+            thingLoaded.Properties.Add($"{schemaLoaded.Guid}.{schemaProperty.Name}", property.Value);
+            var schemaSaved = await schemaLoaded.SaveAsync(cancellationToken);
+            if (!schemaSaved)
+                return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
+        }
+
         // Type?  Just assume text field for now.  Deal with anything different as a schema field type change.
 
-        // Put the field on the schema.
-        var schemaProperty = schemaLoaded.AddTextField(property.Key);
-        // Update my version of the file to point to the schema version
-        thingLoaded.Properties.Remove(property.Key);
-        var truePropertyName = $"{schemaLoaded.Guid}.{schemaProperty.Name}";
-        thingLoaded.Properties.Add($"{schemaLoaded.Guid}.{schemaProperty.Name}", property.Value);
-        var schemaSaved = await schemaLoaded.SaveAsync(cancellationToken);
-        if (!schemaSaved)
-            return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         var thingSaved = await thingLoaded.SaveAsync(cancellationToken);
         if (!thingSaved)
             return (int)ERROR_CODES.THING_SAVE_ERROR;
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {property.Key} is now promoted from a one-off property on {thingLoaded.Name} to a property on schema {schemaLoaded.Name}.\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {property.Key} is now promoted from a one-off property on {thingLoaded.Name} to a property on associated schema(s).\r\n");
         return (int)ERROR_CODES.SUCCESS;
 
         // Is there a conflicting name?
-
-
     }
 }
