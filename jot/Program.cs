@@ -40,6 +40,8 @@ internal class Program
                 {
                     schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
                         .WithDescription("Associates a thing with a schema");
+                    schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
+                        .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<RequireSchemaPropertyCommand>("require")
                         .WithDescription("Changes whether a property is required");
                     schema.AddCommand<SetSchemaPropertyCommand>("set")
