@@ -113,7 +113,7 @@ public class Thing(string Guid, string Name)
 
         if (!File.Exists(thingFilePath))
         {
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: File for thing {Name} ({Guid}) does not exist at {thingFilePath}. Nothing to do.");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: File for thing {Markup.Escape(Name)} ({Markup.Escape(Guid)}) does not exist at {Markup.Escape(thingFilePath)}. Nothing to do.");
             return false;
         }
 
@@ -131,7 +131,7 @@ public class Thing(string Guid, string Name)
         {
             var indexFilePath = Path.Combine(thingDir.FullName, NameIndexFileName);
             await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-            AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Path.GetFileName(indexFilePath)}");
+            AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Markup.Escape(Path.GetFileName(indexFilePath))}");
         }
 
         // Remove schema name index, if applicable
@@ -142,7 +142,7 @@ public class Thing(string Guid, string Name)
                 {
                     var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
                     await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Path.GetFileName(indexFilePath)}");
+                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Markup.Escape(Path.GetFileName(indexFilePath))}");
                 }
             }
 
@@ -154,7 +154,7 @@ public class Thing(string Guid, string Name)
                 {
                     var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
                     await IndexManager.RemoveByKeyAsync(indexFilePath, Guid, cancellationToken);
-                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from schema index {Path.GetFileName(indexFilePath)}");
+                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from schema index {Markup.Escape(Path.GetFileName(indexFilePath))}");
                 }
             }
 
@@ -504,6 +504,25 @@ public class Thing(string Guid, string Name)
         return true;
     }
 
+    public static async IAsyncEnumerable<Reference> ResolveAsync(
+        string guidOrNamePart,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        if (await GuidExists(guidOrNamePart, cancellationToken))
+        {
+            yield return new Reference
+            {
+                Guid = guidOrNamePart,
+                Type = Reference.ReferenceType.Thing
+            };
+            yield break;
+        }
+
+        // Nope, so name searching...
+        await foreach (var possible in ResolvePartialNameAsync(guidOrNamePart, cancellationToken))
+            yield return possible;
+    }
+
     public static async IAsyncEnumerable<Reference> ResolvePartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var thingDir = await GetThingDatabaseDirectory();
@@ -579,7 +598,7 @@ public class Thing(string Guid, string Name)
             // Watch out, the schema field could have been deleted but it's still there on the instance.
             if (!schema.Properties.TryGetValue(choppedPropName, out SchemaFieldBase? schemaField))
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {Markup.Escape(truePropertyName)} ({Markup.Escape(escapedPropKey)}) on thing, but it doesn't appear on schema {Markup.Escape(schema.Name)} ({Markup.Escape(schema.Guid)}).");
                 escapedPropKey = truePropertyName.Contains(' ') && !truePropertyName.StartsWith('[') && !truePropertyName.EndsWith(']') ? $"[{truePropertyName}]" : truePropertyName;
                 fullDisplayName = escapedPropKey; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
                 simpleDisplayName = truePropertyName; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
@@ -728,7 +747,6 @@ public class Thing(string Guid, string Name)
                 {
                     if (string.CompareOrdinal(candidateProperties[i].TruePropertyName, truePropertyName) == 0)
                     {
-                        //AnsiConsole.MarkupLineInterpolated($"[blue]DEBUG[/]: if {truePropertyName} were {propValue} validity would be {wouldBeValid}");
                         candidateProperties[i] = new ThingProperty
                         {
                             TruePropertyName = candidateProperties[i].TruePropertyName,
@@ -802,7 +820,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (string.IsNullOrWhiteSpace(propValue))
                     {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {nameof(Name)} cannot be empty.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {Markup.Escape(nameof(Name))} cannot be empty.\r\n");
                         return false;
                     }
                     Name = propValue;
@@ -817,7 +835,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (Properties.Remove(candidateProperties[0].TruePropertyName)
                         && candidateProperties[0].Required)
-                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Required {propName} was removed.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Required {Markup.Escape(propName)} was removed.\r\n");
                     return await SaveAsync(cancellationToken);
                 }
 
@@ -837,7 +855,7 @@ public class Thing(string Guid, string Name)
                         if (disambig.Length == 1)
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                            AnsiConsole.MarkupLineInterpolated($"[blue]INFO[/]: Set {propName} to {disambig[0].Name}.");
+                            AnsiConsole.MarkupLineInterpolated($"[blue]INFO[/]: Set {Markup.Escape(propName)} to {Markup.Escape(disambig[0].Name)}.");
                             return await SaveAsync(cancellationToken);
                         }
                         else if (disambig.Length > 1)
@@ -855,14 +873,14 @@ public class Thing(string Guid, string Name)
                         else
                         {
                             Properties[candidateProperties[0].TruePropertyName] = propValue;
-                            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
+                            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {Markup.Escape(propName)} is invalid.\r\n");
                             return await SaveAsync(cancellationToken);
                         }
                     }
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = propValue;
-                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {Markup.Escape(propName)} is invalid.\r\n");
                         return await SaveAsync(cancellationToken);
                     }
                 }
@@ -872,7 +890,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (string.IsNullOrWhiteSpace(propValue))
                     {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {nameof(Name)} cannot be empty.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {Markup.Escape(nameof(Name))} cannot be empty.\r\n");
                         return false;
                     }
                     Name = propValue;
@@ -883,7 +901,7 @@ public class Thing(string Guid, string Name)
                 return await SaveAsync(cancellationToken);
             default:
                 // Ambiguous
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.\r\n");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to determine which property between {Markup.Escape(candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}"))} to update.\r\n");
                 return false;
         }
 

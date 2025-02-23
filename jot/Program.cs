@@ -1,9 +1,9 @@
-﻿using Spectre.Console;
-using System.Runtime.CompilerServices;
-using Figment;
+﻿using Figment;
 using jot.Commands;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace jot;
 
@@ -38,6 +38,8 @@ internal class Program
                 .WithDescription("Lists all the schemas in the database");
             config.AddBranch<SchemaCommandSettings>("schema", schema =>
                 {
+                    schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
+                        .WithDescription("Associates a thing with a schema");
                     schema.AddCommand<RequireSchemaPropertyCommand>("require")
                         .WithDescription("Changes whether a property is required");
                     schema.AddCommand<SetSchemaPropertyCommand>("set")

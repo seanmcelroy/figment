@@ -30,9 +30,8 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
-                .Where(x => x.Type == Reference.ReferenceType.Thing)
                 .ToArray();
             switch (possibilities.Length)
             {
@@ -57,14 +56,14 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thingLoaded = await Thing.LoadAsync(selected.Guid, cancellationToken);
         if (thingLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -73,11 +72,11 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         var saved = await thingLoaded.Set(propName, propValue, cancellationToken);
         if (!saved)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{selected.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{Markup.Escape(selected.Guid)}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thingLoaded.Name} saved.\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(thingLoaded.Name)} saved.\r\n");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

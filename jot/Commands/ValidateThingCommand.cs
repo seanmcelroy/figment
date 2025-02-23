@@ -28,9 +28,8 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
-                .Where(x => x.Type == Reference.ReferenceType.Thing)
                 .ToArray();
             switch (possibilities.Length)
             {
@@ -48,14 +47,14 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thing = await Thing.LoadAsync(selected.Guid, cancellationToken);
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -67,7 +66,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             thingProperties.Add(property);
             if (!property.Valid)
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Property {property.SimpleDisplayName} ({property.TruePropertyName}) has an invalid value of '{property.Value}'.");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Property {Markup.Escape(property.SimpleDisplayName)} ({Markup.Escape(property.TruePropertyName)}) has an invalid value of '{Markup.Escape(property.Value?.ToString() ?? string.Empty)}'.");
             }
         }
 
@@ -86,7 +85,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
             if (schemaLoaded == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{Markup.Escape(schemaGuid)}' from {Markup.Escape(thing.Name)}.  Must be able to load schema to promote a property to it.");
                 return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
             }
 
@@ -96,12 +95,8 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                         tp => tp.SchemaGuid == schemaLoaded.Guid
                         && string.CompareOrdinal(tp.SimpleDisplayName, sp.Key) == 0)))
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Schema property {sp.Key} is required but is not set!");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Schema property {Markup.Escape(sp.Key)} is required but is not set!");
             }
-
-            //                            if (!schema.Properties.TryGetValue(choppedPropName, out ISchemaField? schemaField))
-            //                {
-            //                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {prop.Key} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
         }
 
         AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");

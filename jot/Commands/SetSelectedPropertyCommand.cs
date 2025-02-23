@@ -25,7 +25,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
             case Reference.ReferenceType.Schema:
                 {
                     var cmd = new SetSchemaPropertyCommand();
-                    return await cmd.ExecuteAsync(context, new SetSchemaPropertyCommandSettings { Name = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Value }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new SetSchemaPropertyCommandSettings { SchemaName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Value }, cancellationToken);
                 }
             case Reference.ReferenceType.Thing:
                 {
@@ -34,7 +34,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(Program.SelectedEntity.Type) ?? string.Empty)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

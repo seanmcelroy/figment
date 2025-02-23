@@ -166,14 +166,14 @@ public class Schema(string Guid, string Name)
     {
         if (!File.Exists(filePath))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema. No file found at {filePath}");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema. No file found at {Markup.Escape(filePath)}");
             return null;
         }
 
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length == 0)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema. Empty schema file found at {filePath}");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema. Empty schema file found at {Markup.Escape(filePath)}");
             fileInfo.Delete();
             return null;
         }
@@ -184,14 +184,14 @@ public class Schema(string Guid, string Name)
             var schemaDefinition = await JsonSerializer.DeserializeAsync<SchemaDefinition>(fs, jsonSerializerOptions, cancellationToken);
             if (schemaDefinition == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize schema from {filePath}");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize schema from {Markup.Escape(filePath)}");
                 return null;
             }
             return new Schema(schemaDefinition);
         }
         catch (JsonException je)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize schema from {filePath}");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize schema from {Markup.Escape(filePath)}");
             AnsiConsole.WriteException(je);
             return null;
         }
@@ -293,6 +293,28 @@ public class Schema(string Guid, string Name)
         }
 
         return true;
+    }
+
+    public static async IAsyncEnumerable<Reference> ResolveAsync(
+        string guidOrNamePart,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Shortcut - See if it's a guid first of all.
+        if (await GuidExists(guidOrNamePart, cancellationToken))
+        {
+            yield return new Reference
+            {
+                Guid = guidOrNamePart,
+                Type = Reference.ReferenceType.Schema
+            };
+            yield break;
+        }
+
+        // Nope, so name searching...
+        await foreach (var possible in ResolvePartialNameAsync(guidOrNamePart, cancellationToken))
+        {
+            yield return possible;
+        }
     }
 
     public static async IAsyncEnumerable<Reference> ResolvePartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)

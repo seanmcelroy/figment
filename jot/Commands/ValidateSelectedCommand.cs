@@ -25,9 +25,12 @@ public class ValidateSelectedCommand : CancellableAsyncCommand<ValidateSelectedC
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.EntityName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
+            var possibilities = 
+                Schema.ResolveAsync(settings.EntityName, cancellationToken)
+                    .ToBlockingEnumerable(cancellationToken)
+                    .Concat([.. Thing.ResolveAsync(settings.EntityName, cancellationToken).ToBlockingEnumerable(cancellationToken)]
+                    ).ToArray();
+
             switch (possibilities.Length)
             {
                 case 0:
@@ -47,7 +50,7 @@ public class ValidateSelectedCommand : CancellableAsyncCommand<ValidateSelectedC
             case Reference.ReferenceType.Schema:
                 {
                     var cmd = new ValidateSchemaCommand();
-                    return await cmd.ExecuteAsync(context, new SchemaCommandSettings { Name = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new SchemaCommandSettings { SchemaName = selected.Guid }, cancellationToken);
                 }
             case Reference.ReferenceType.Thing:
                 {
@@ -56,7 +59,7 @@ public class ValidateSelectedCommand : CancellableAsyncCommand<ValidateSelectedC
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

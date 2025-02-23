@@ -36,9 +36,11 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var possibilities = Reference.ResolveAsync(settings.Name, cancellationToken)
-            .ToBlockingEnumerable(cancellationToken)
-            .ToArray();
+        var possibilities = 
+            Schema.ResolveAsync(settings.Name, cancellationToken)
+                .ToBlockingEnumerable(cancellationToken)
+                .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)]
+                ).ToArray();
 
         switch (possibilities.Length)
         {
@@ -52,13 +54,13 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         var schemaLoaded = await Schema.LoadAsync(possibilities[0].Guid, cancellationToken);
                         if (schemaLoaded == null)
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{possibilities[0].Guid}'.");
+                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(possibilities[0].Guid)}'.");
                             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
                         }
                         else
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schemaLoaded.Name} selected.\r\n");
+                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {Markup.Escape(schemaLoaded.Name)} selected.\r\n");
                             Program.SelectedEntity = possibilities[0];
                             return (int)ERROR_CODES.SUCCESS;
                         }
@@ -66,18 +68,18 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         var thingLoaded = await Thing.LoadAsync(possibilities[0].Guid, cancellationToken);
                         if (thingLoaded == null)
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{possibilities[0].Guid}'.");
+                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(possibilities[0].Guid)}'.");
                             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                             return (int)ERROR_CODES.THING_LOAD_ERROR;
                         }
                         else
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Thing {thingLoaded.Name} selected.\r\n");
+                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Thing {Markup.Escape(thingLoaded.Name)} selected.\r\n");
                             Program.SelectedEntity = possibilities[0];
                             return (int)ERROR_CODES.SUCCESS;
                         }
                     default:
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(possibilities[0].Type)}'.");
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(possibilities[0].Type) ?? string.Empty)}'.");
                         Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                         return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
@@ -105,7 +107,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         .AddChoices(disambig));
 
                 Program.SelectedEntity = which.Reference;
-                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {which.Entity} selected.\r\n");
+                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(which.Entity.ToString() ?? "<UNRENDERABLE>")} selected.\r\n");
                 return (int)ERROR_CODES.SUCCESS;
         }
     }

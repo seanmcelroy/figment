@@ -36,11 +36,11 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                 schema = await Schema.Create(settings.SchemaName, cancellationToken);
             if (schema == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}'.");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{Markup.Escape(settings.SchemaName)}'.");
                 return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
             }
 
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schema.Name} created.\r\n");
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema '{Markup.Escape(schema.Name)}' created.\r\n");
             return (int)ERROR_CODES.SUCCESS;
         }
 
@@ -54,7 +54,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         }
         if (schema == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{Markup.Escape(settings.SchemaName)}'.");
             return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
         }
 
@@ -64,9 +64,9 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         Program.SelectedEntity = thing;
 
         if (createdNewSchema)
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schema.Name} created, and new instance {thingName} created.\r\n");
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {Markup.Escape(schema.Name)} created, and new instance {Markup.Escape(thingName)} created.\r\n");
         else
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thingName}, a type of {schema.Name}, created.\r\n");
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(thingName)}, a type of {Markup.Escape(schema.Name)}, created.\r\n");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

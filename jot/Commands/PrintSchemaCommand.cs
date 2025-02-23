@@ -21,15 +21,14 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
     {
         if (Program.SelectedEntity.Equals(Reference.EMPTY) || Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a schema, you must first 'select' a schema.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Schema.ResolveAsync(settings.SchemaName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
-                .Where(x => x.Type == Reference.ReferenceType.Schema)
                 .ToArray();
             switch (possibilities.Length)
             {
@@ -47,14 +46,14 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
 
         if (Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(Program.SelectedEntity.Type) ?? string.Empty)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var schemaLoaded = await Schema.LoadAsync(Program.SelectedEntity.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Program.SelectedEntity.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(Program.SelectedEntity.Guid)}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 

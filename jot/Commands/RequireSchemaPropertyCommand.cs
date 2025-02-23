@@ -25,15 +25,14 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY) || selected.Type != Reference.ReferenceType.Schema)
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To update a property on a schema, you must first 'select' a schema.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Schema.ResolveAsync(settings.SchemaName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
-                .Where(x => x.Type == Reference.ReferenceType.Schema)
                 .ToArray();
             switch (possibilities.Length)
             {
@@ -51,14 +50,14 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var schemaLoaded = await Schema.LoadAsync(selected.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(selected.Guid)}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -68,7 +67,7 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
         var sp = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No schema field named '{propName}' was found.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No schema field named '{Markup.Escape(propName ?? string.Empty)}' was found.");
             return (int)ERROR_CODES.NOT_FOUND;
         }
 
@@ -77,11 +76,11 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
         var saved = await schemaLoaded.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{selected.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{Markup.Escape(selected.Guid)}'.");
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {schemaLoaded.Name} saved.\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(schemaLoaded.Name)} saved.\r\n");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

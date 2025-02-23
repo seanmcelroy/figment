@@ -32,9 +32,8 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
-                .Where(x => x.Type == Reference.ReferenceType.Thing)
                 .ToArray();
             switch (possibilities.Length)
             {
@@ -53,21 +52,21 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         var thingLoaded = await Thing.LoadAsync(selected.Guid, cancellationToken);
         if (thingLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
         if (thingLoaded.SchemaGuids == null
             || thingLoaded.SchemaGuids.Count == 0)
         {
-            AnsiConsole.MarkupInterpolated($"[red]ERROR[/]: Unable to load any schema from {thingLoaded.Name}.  Must be able to load an associated schema to promote a property to it.");
+            AnsiConsole.MarkupInterpolated($"[red]ERROR[/]: Unable to load any schema from {Markup.Escape(thingLoaded.Name)}.  Must be able to load an associated schema to promote a property to it.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
         var property = thingLoaded.Properties.FirstOrDefault(p => string.CompareOrdinal(p.Key, settings.PropertyName) == 0);
         if (property.Equals(default(KeyValuePair<string, object>)))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No property named '{settings.PropertyName}' on thing.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No property named '{Markup.Escape(settings.PropertyName ?? string.Empty)}' on thing.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -79,7 +78,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
 
             if (schemaLoaded == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thingLoaded.Name}.  Must be able to load schema to promote a property to it.");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{Markup.Escape(schemaGuid)}' from {Markup.Escape(thingLoaded.Name)}.  Must be able to load schema to promote a property to it.");
                 return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
             }
 
@@ -103,7 +102,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         if (!thingSaved)
             return (int)ERROR_CODES.THING_SAVE_ERROR;
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {property.Key} is now promoted from a one-off property on {thingLoaded.Name} to a property on associated schema(s).\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(property.Key)} is now promoted from a one-off property on {Markup.Escape(thingLoaded.Name)} to a property on associated schema(s).\r\n");
         return (int)ERROR_CODES.SUCCESS;
 
         // Is there a conflicting name?

@@ -25,9 +25,12 @@ public class DeleteSelectedCommand : CancellableAsyncCommand<DeleteSelectedComma
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Reference.ResolveAsync(settings.EntityName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
+            var possibilities = 
+                Schema.ResolveAsync(settings.EntityName, cancellationToken)
+                    .ToBlockingEnumerable(cancellationToken)
+                    .Concat([.. Thing.ResolveAsync(settings.EntityName, cancellationToken).ToBlockingEnumerable(cancellationToken)]
+                    ).ToArray();
+
             switch (possibilities.Length)
             {
                 case 0:
@@ -50,7 +53,7 @@ public class DeleteSelectedCommand : CancellableAsyncCommand<DeleteSelectedComma
                     return await cmd.ExecuteAsync(context, new ThingCommandSettings { Name = selected.Guid }, cancellationToken);
                 }
             default:
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
                 return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
     }

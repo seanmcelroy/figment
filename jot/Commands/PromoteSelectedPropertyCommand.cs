@@ -29,7 +29,7 @@ public class PromoteSelectedPropertyCommand : CancellableAsyncCommand<PromoteSel
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(Program.SelectedEntity.Type) ?? string.Empty)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }
