@@ -1,9 +1,17 @@
 using System.Text.Json.Serialization;
 
-namespace Figment;
+namespace Figment.Data;
 
+/// <summary>
+/// This is the definition of a <see cref="Figment.Schema"/> when it is persisted
+/// to local storage, such as via <see cref="LocalDirectoryStorageProvider"/>
+/// </summary>
+/// <param name="Guid">The unique identiifer of the schema</param>
+/// <param name="Name">The name of the schema</param>
+/// <param name="Description">A description for the schema</param>
+/// <param name="Plural">The plural word for the schema, which should be the plural form of the value provided in <paramref name="Name"/></param>
 [method: JsonConstructor]
-public record SchemaDefinition(string Guid, string Name, string? Description, string? Plural)
+public record JsonSchemaDefinition(string Guid, string Name, string? Description, string? Plural)
 
 {
     [JsonPropertyName("$schema")]
@@ -50,7 +58,7 @@ public record SchemaDefinition(string Guid, string Name, string? Description, st
     [JsonIgnore]
     public string Guid { get; set; } = Guid;
 
-    public SchemaDefinition(Schema schema) : this(schema.Guid, schema.Name, schema.Description, schema.Plural)
+    public JsonSchemaDefinition(Schema schema) : this(schema.Guid, schema.Name, schema.Description, schema.Plural)
     {
         Description = schema.Description;
         Plural = schema.Plural;
@@ -60,5 +68,28 @@ public record SchemaDefinition(string Guid, string Name, string? Description, st
         {
             Properties.Add(prop.Key, prop.Value);
         }
+    }
+
+    public Schema ToSchema()
+    {
+        var schema = new Schema(Guid, Name)
+        {
+            // Optional built-ins
+            Description = Description,
+            Plural = Plural
+        };
+
+        foreach (var prop in Properties)
+        {
+            var required =
+                RequiredProperties != null &&
+                RequiredProperties.Any(sdr => string.CompareOrdinal(sdr, prop.Key) == 0);
+
+            prop.Value.Required = required;
+
+            schema.Properties.Add(prop.Key, prop.Value);
+        }
+
+        return schema;
     }
 }

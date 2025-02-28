@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -9,10 +9,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
 {
     private enum ERROR_CODES : int
     {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
         SCHEMA_CREATE_ERROR = -1002,
-        THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, NewCommandSettings settings, CancellationToken cancellationToken)
@@ -21,7 +18,14 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
             AnsiConsole.MarkupLine("[yellow]ERROR[/]: To create a new thing, specify the type of thing and its name, like: new todo \"Call Jake\"");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
+        var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (ssp == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         Schema? schema;
@@ -30,43 +34,76 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         {
             // Create schema only.
             // new todo
-
-            schema = await Schema.FindAsync(settings.SchemaName, cancellationToken);
-            if (schema == null && (settings.AutoCreateSchema ?? true))
-                schema = await Schema.Create(settings.SchemaName, cancellationToken);
-            if (schema == null)
+            var schemaRef = await ssp.FindByNameAsync(settings.SchemaName, cancellationToken);
+            if (schemaRef == Reference.EMPTY)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{Markup.Escape(settings.SchemaName)}'.");
+                schema = await Schema.Create(settings.SchemaName, cancellationToken);
+                if (schema == null)
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}'.");
+                    return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
+                }
+            }
+            else
+            {
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: A schema with that name already exists!");
                 return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
             }
 
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema '{Markup.Escape(schema.Name)}' created.\r\n");
-            return (int)ERROR_CODES.SUCCESS;
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema '{settings.SchemaName}' created. ({schema.Guid})\r\n");
+            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
         // new todo Call Jake
         bool createdNewSchema = false;
-        schema = await Schema.FindAsync(settings.SchemaName, cancellationToken);
-        if (schema == null && (settings.AutoCreateSchema ?? true))
         {
-            schema = await Schema.Create(settings.SchemaName, cancellationToken);
-            createdNewSchema = true;
-        }
-        if (schema == null)
-        {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{Markup.Escape(settings.SchemaName)}'.");
-            return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
+            var schemaRef = await ssp.FindByNameAsync(settings.SchemaName, cancellationToken);
+            if (schemaRef == Reference.EMPTY)
+            {
+                if (settings.AutoCreateSchema ?? true) // This is the key difference from the part above.  Auto-gen only matters for schema+name
+                {
+                    schema = await Schema.Create(settings.SchemaName, cancellationToken);
+                    if (schema == null)
+                    {
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}'.");
+                        return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
+                    }
+                    else
+                        createdNewSchema = true;
+                }
+                else
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}' because automatic generation was not enabled.");
+                    return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
+                }
+            }
+            else {
+                schema = await ssp.LoadAsync(schemaRef.Guid, cancellationToken);
+                if (schema == null)
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{settings.SchemaName}'.");
+                    return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
+                }
+            }
         }
 
         //var thingName = inputSplit[2..].Aggregate((c, n) => $"{c} {n}");
+
+        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (tsp == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
         var thingName = settings.ThingName;
-        var thing = await Thing.Create(schema.Guid, thingName, cancellationToken);
+        var thing = await tsp.CreateAsync(schema.Guid, thingName, cancellationToken);
         Program.SelectedEntity = thing;
 
         if (createdNewSchema)
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {Markup.Escape(schema.Name)} created, and new instance {Markup.Escape(thingName)} created.\r\n");
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schema.Name} created, and new instance {thingName} created.\r\n");
         else
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(thingName)}, a type of {Markup.Escape(schema.Name)}, created.\r\n");
-        return (int)ERROR_CODES.SUCCESS;
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thingName}, a type of {schema.Name}, created.\r\n");
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

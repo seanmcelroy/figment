@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -36,7 +37,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var possibilities = 
+        var possibilities =
             Schema.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)]
@@ -51,35 +52,51 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 switch (possibilities[0].Type)
                 {
                     case Reference.ReferenceType.Schema:
-                        var schemaLoaded = await Schema.LoadAsync(possibilities[0].Guid, cancellationToken);
-                        if (schemaLoaded == null)
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(possibilities[0].Guid)}'.");
-                            Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
-                            return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
-                        }
-                        else
-                        {
-                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {Markup.Escape(schemaLoaded.Name)} selected.\r\n");
-                            Program.SelectedEntity = possibilities[0];
-                            return (int)ERROR_CODES.SUCCESS;
+                            var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+                            if (provider == null)
+                            {
+                                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+                            }
+
+                            var schemaLoaded = await provider.LoadAsync(possibilities[0].Guid, cancellationToken);
+                            if (schemaLoaded == null)
+                            {
+                                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{possibilities[0].Guid}'.");
+                                Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
+                                return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+                            }
+                            else
+                            {
+                                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schemaLoaded.Name} selected.\r\n");
+                                Program.SelectedEntity = possibilities[0];
+                                return (int)ERROR_CODES.SUCCESS;
+                            }
                         }
                     case Reference.ReferenceType.Thing:
-                        var thingLoaded = await Thing.LoadAsync(possibilities[0].Guid, cancellationToken);
+                        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+                        if (thingProvider == null)
+                        {
+                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+                            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+                        }
+
+                        var thingLoaded = await thingProvider.LoadAsync(possibilities[0].Guid, cancellationToken);
                         if (thingLoaded == null)
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(possibilities[0].Guid)}'.");
+                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{possibilities[0].Guid}'.");
                             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                             return (int)ERROR_CODES.THING_LOAD_ERROR;
                         }
                         else
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Thing {Markup.Escape(thingLoaded.Name)} selected.\r\n");
+                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Thing {thingLoaded.Name} selected.\r\n");
                             Program.SelectedEntity = possibilities[0];
                             return (int)ERROR_CODES.SUCCESS;
                         }
                     default:
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(possibilities[0].Type) ?? string.Empty)}'.");
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(possibilities[0].Type)}'.");
                         Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                         return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
@@ -107,7 +124,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         .AddChoices(disambig));
 
                 Program.SelectedEntity = which.Reference;
-                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(which.Entity.ToString() ?? "<UNRENDERABLE>")} selected.\r\n");
+                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {which.Entity} selected.\r\n");
                 return (int)ERROR_CODES.SUCCESS;
         }
     }

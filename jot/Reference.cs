@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Figment.Data;
 
 namespace Figment;
 
@@ -25,15 +26,20 @@ public readonly record struct Reference
 
     public async Task<object?> LoadAsync(CancellationToken cancellationToken)
     {
-        return Type switch
+        switch (Type)
         {
-            ReferenceType.Schema => await Schema.LoadAsync(Guid, cancellationToken),
-            ReferenceType.Thing => await Thing.LoadAsync(Guid, cancellationToken),
-            ReferenceType.Unknown => throw new NotImplementedException(),
-            ReferenceType.Link => throw new NotImplementedException(),
-            ReferenceType.Page => throw new NotImplementedException(),
-            _ => throw new NotImplementedException(),
-        };
+            case ReferenceType.Schema:
+                {
+                    var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+                    return provider == null ? null : (object?)await provider.LoadAsync(Guid, cancellationToken);
+                }
+            case ReferenceType.Thing:
+                {
+                    var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+                    return provider == null ? null : (object?)await provider.LoadAsync(Guid, cancellationToken);
+                }
+            default: throw new NotImplementedException();
+        }
     }
 
     public static implicit operator Reference(Link? l) => new() { Type = ReferenceType.Link, Guid = l?.Guid ?? string.Empty };

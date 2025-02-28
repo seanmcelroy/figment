@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -50,14 +51,21 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var schemaLoaded = await Schema.LoadAsync(selected.Guid, cancellationToken);
+        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (provider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var schemaLoaded = await provider.LoadAsync(selected.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -67,7 +75,7 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
         var sp = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No schema field named '{Markup.Escape(propName ?? string.Empty)}' was found.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No schema field named '{propName}' was found.");
             return (int)ERROR_CODES.NOT_FOUND;
         }
 
@@ -76,11 +84,11 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
         var saved = await schemaLoaded.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(schemaLoaded.Name)} saved.\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {schemaLoaded.Name} saved.\r\n");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

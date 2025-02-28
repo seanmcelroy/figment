@@ -1,5 +1,6 @@
 using System.Text;
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -47,27 +48,41 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingLoaded = await Thing.LoadAsync(selected.Guid, cancellationToken);
+        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var thingLoaded = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thingLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
         Dictionary<string, Schema> schemas = [];
         if (thingLoaded.SchemaGuids != null)
         {
+            var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+            if (provider == null)
+            {
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+            }
+
             foreach (var schemaGuid in thingLoaded.SchemaGuids)
             {
-                var schema = await Schema.LoadAsync(schemaGuid, cancellationToken);
+                var schema = await provider.LoadAsync(schemaGuid, cancellationToken);
                 if (schema != null)
                     schemas.Add(schema.Guid, schema);
                 else
-                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Unable to load associated schema with Guid '{Markup.Escape(schemaGuid)}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Unable to load associated schema with Guid '{schemaGuid}'.");
             }
         }
 

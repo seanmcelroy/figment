@@ -1,4 +1,4 @@
-using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -8,6 +8,13 @@ public class ReindexSchemasCommand : CancellableAsyncCommand
 {
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
+        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (provider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
             .SpinnerStyle(Style.Parse("purple"))
@@ -16,7 +23,7 @@ public class ReindexSchemasCommand : CancellableAsyncCommand
                 if (AnsiConsole.Profile.Capabilities.Interactive)
                     Thread.Sleep(1000);
 
-                var success = await Schema.RebuildIndexes(cancellationToken);
+                var success = await provider.RebuildIndexes(cancellationToken);
                 if (success)
                     ctx.Status("Success!");
                 else

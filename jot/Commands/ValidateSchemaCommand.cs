@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -46,14 +47,21 @@ public class ValidateSchemaCommand : CancellableAsyncCommand<SchemaCommandSettin
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var schema = await Schema.LoadAsync(selected.Guid, cancellationToken);
+        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (provider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var schema = await provider.LoadAsync(selected.Guid, cancellationToken);
         if (schema == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -65,7 +73,7 @@ public class ValidateSchemaCommand : CancellableAsyncCommand<SchemaCommandSettin
         }
         if (string.IsNullOrWhiteSpace(schema.Plural))
         {
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Plural is not set, rendering listing of all things with this schema on the REPL inaccessible.  Resolve with: [bold]set Plural {Markup.Escape(schema.Name.ToLowerInvariant())}s[/]");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Plural is not set, rendering listing of all things with this schema on the REPL inaccessible.  Resolve with: [bold]set Plural {schema.Name.ToLowerInvariant()}s[/]");
         }
 
         AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");

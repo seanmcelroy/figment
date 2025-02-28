@@ -1,4 +1,5 @@
 ﻿using Figment;
+using Figment.Data;
 using jot.Commands;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -21,6 +22,9 @@ internal class Program
 
         var interactive = args.Length == 0
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
+
+        // Setup the storage provider. TODO: Allow CLI config
+        StorageUtility.StorageProvider = new LocalDirectoryStorageProvider();
 
         var app = new CommandApp();
         app.Configure(config =>
@@ -113,6 +117,21 @@ internal class Program
         // Interactive mode
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
         AnsiConsole.MarkupLine("\r\nThere are additional undocumented commands in this mode.  Type [purple bold]ihelp[/] for help on this mode interactive.");
+
+        var schemaProvider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (schemaProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
         do
         {
             string? input;
@@ -120,7 +139,7 @@ internal class Program
             {
                 input = AnsiConsole.Prompt(
                    new TextPrompt<string>("[green]>[/]")
-                   
+
                );
             }
             else
@@ -136,14 +155,16 @@ internal class Program
             if (!string.IsNullOrWhiteSpace(input))
             {
                 var handled = false;
-                await foreach (var schemaRef in Schema.ResolvePluralNameAsync(input, cts.Token))
+                await foreach (var schemaRef in schemaProvider.FindByPluralNameAsync(input, cts.Token))
                 {
-                    var schema = await Schema.LoadAsync(schemaRef.Guid, cts.Token);
+                    var schema = await schemaProvider.LoadAsync(schemaRef.Guid, cts.Token);
                     if (schema != null)
                     {
-                        await foreach (var thing in Thing.GetBySchema(schema.Guid, cts.Token))
+                        await foreach (var thingRef in thingProvider.GetBySchemaAsync(schema.Guid, cts.Token))
                         {
-                            await Console.Out.WriteLineAsync(thing.Name);
+                            var thing = await thingProvider.LoadAsync(thingRef.Guid, cts.Token);
+                            if (thing != null)
+                                await Console.Out.WriteLineAsync(thing.Name);
                         }
                         handled = true;
                         break;
@@ -160,53 +181,5 @@ internal class Program
 
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
-    }
-
-    public static async IAsyncEnumerable<string> ResolveGuidFromPartialNameAsync(string indexFile, string namePart, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        // Load index
-        if (!File.Exists(indexFile))
-            yield break; // Happens on new install if no items, nothing in index, and so no file
-
-        await foreach (var entry in IndexManager.LookupAsync(
-            indexFile
-            , e => e.Key.StartsWith(namePart, StringComparison.CurrentCultureIgnoreCase)
-            , cancellationToken
-        ))
-        {
-            var fileName = entry.Value;
-            if (Path.IsPathFullyQualified(fileName))
-                yield return Path.GetFileName(fileName).Split('.')[0];
-            else
-                yield return fileName.Split('.')[0];
-        }
-    }
-
-    public static async IAsyncEnumerable<string> ResolveGuidFromExactNameAsync(string indexFile, string name, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        // Load index
-        if (!File.Exists(indexFile))
-            yield break; // Happens on new install if no items, nothing in index, and so no file
-
-        await foreach (var entry in IndexManager.LookupAsync(
-            indexFile
-            , e => string.Compare(e.Key, name, StringComparison.CurrentCultureIgnoreCase) == 0
-            , cancellationToken
-        ))
-        {
-            var fileName = entry.Value;
-            if (Path.IsPathFullyQualified(fileName))
-            {
-                // Full file path
-                var guid = Path.GetFileName(fileName).Split('.')[0];
-                yield return guid;
-            }
-            else
-            {
-                // Filename only
-                var guid = fileName.Split('.')[0];
-                yield return guid;
-            }
-        }
     }
 }

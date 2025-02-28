@@ -1,4 +1,7 @@
 using System.Text.Json.Serialization;
+using Figment.Data;
+using jot;
+using Spectre.Console;
 
 namespace Figment;
 
@@ -38,10 +41,18 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
         if (Required && value == null)
             return false;
 
-        if (!await Schema.GuidExists(SchemaGuid, cancellationToken))
+        var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (ssp == null)
             return false;
 
-        if (value is string s && !await Thing.GuidExists(s, cancellationToken))
+        if (!await ssp.GuidExists(SchemaGuid, cancellationToken))
+            return false;
+
+        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (tsp == null)
+            return false;
+
+        if (value is string s && !await tsp.GuidExists(s, cancellationToken))
             return false;
 
         return true;
@@ -56,8 +67,12 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
             return default;
 
         var thingGuid = str[(str.IndexOf('.') + 1)..];
-        var thing = await Thing.LoadAsync(thingGuid, cancellationToken);
 
+        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (tsp == null)
+            return str;
+
+        var thing = await tsp.LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
             return str;
 
@@ -66,10 +81,14 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
 
     public override async Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
-        if (!await Schema.GuidExists(SchemaGuid, cancellationToken))
+        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (provider == null)
             return "???";
 
-        var schemaLoaded = await Schema.LoadAsync(SchemaGuid, cancellationToken);
+        if (!await provider.GuidExists(SchemaGuid, cancellationToken))
+            return "???";
+
+        var schemaLoaded = await provider.LoadAsync(SchemaGuid, cancellationToken);
         if (schemaLoaded == null)
             return "???";
 

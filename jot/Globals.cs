@@ -11,6 +11,7 @@ public static class Globals
         NOT_FOUND = -2,
         AMBIGUOUS_MATCH = -3,
         UNKNOWN_TYPE = -4,
+        GENERAL_IO_ERROR = -5,
         SCHEMA_LOAD_ERROR = -1000,
         SCHEMA_SAVE_ERROR = -1001,
         // SCHEMA_CREATE_ERROR = -1002
@@ -19,9 +20,6 @@ public static class Globals
         // THING_CREATE_ERROR = -2002
         // THING_DELETE_ERROR = -2003
    }
-
-
-    public static string DB_PATH { get; set; } = "/home/sean/src/figment/jot/db";
 
     public static IEnumerable<string> SplitArgs(string? commandLine)
     {

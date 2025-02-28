@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -56,14 +57,21 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingLoaded = await Thing.LoadAsync(selected.Guid, cancellationToken);
+        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var thingLoaded = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thingLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -72,11 +80,11 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         var saved = await thingLoaded.Set(propName, propValue, cancellationToken);
         if (!saved)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(thingLoaded.Name)} saved.\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thingLoaded.Name} saved.\r\n");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

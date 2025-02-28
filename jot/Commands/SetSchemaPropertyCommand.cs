@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -56,14 +57,21 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var schemaLoaded = await Schema.LoadAsync(selected.Guid, cancellationToken);
+        var schemaStorageProvider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (schemaStorageProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var schemaLoaded = await schemaStorageProvider.LoadAsync(selected.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -81,21 +89,24 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
 
             schemaLoaded.Name = propType;
             await schemaLoaded.SaveAsync(cancellationToken);
-            await Schema.RebuildIndexes(cancellationToken);
+
+            // For 'name', we know we should rebuild indexes.
+            await schemaStorageProvider.RebuildIndexes(cancellationToken);
         }
         else if (string.Compare("plural", propName, StringComparison.CurrentCultureIgnoreCase) == 0)
         {
             // Built-in
             schemaLoaded.Plural = propType;
             await schemaLoaded.SaveAsync(cancellationToken);
-            await Schema.RebuildIndexes(cancellationToken);
+
+            // For 'plural', we know we should rebuild indexes.
+            await schemaStorageProvider.RebuildIndexes(cancellationToken);
         }
         else if (string.Compare("description", propName, StringComparison.CurrentCultureIgnoreCase) == 0)
         {
             // Built-in
             schemaLoaded.Description = propType;
             await schemaLoaded.SaveAsync(cancellationToken);
-            await Schema.RebuildIndexes(cancellationToken);
         }
         else if (string.IsNullOrWhiteSpace(propType))
         {
@@ -103,12 +114,12 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var propToDelete = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.OrdinalIgnoreCase) == 0);
             if (propToDelete.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No property named '{Markup.Escape(propName)}' found on schema '{Markup.Escape(schemaLoaded.Name)}'");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No property named '{propName}' found on schema '{schemaLoaded.Name}'");
                 return (int)ERROR_CODES.NOT_FOUND;
             }
 
             schemaLoaded.Properties.Remove(propToDelete.Key);
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Deleted property name '{Markup.Escape(propName)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Deleted property name '{propName}'.");
         }
         else if (string.CompareOrdinal(propType, "bool") == 0)
         {
@@ -167,10 +178,10 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         else
         {
             // Maybe this is the name of a schema.
-            var refSchema = await Schema.FindAsync(propType!, cancellationToken);
-            if (refSchema == null)
+            var refSchema = await schemaStorageProvider.FindByNameAsync(propType!, cancellationToken);
+            if (refSchema == Reference.EMPTY)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: I do not understand that type of field ({Markup.Escape(propType ?? string.Empty)}).");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: I do not understand that type of field ({propType}).");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -181,11 +192,11 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         var saved = await schemaLoaded.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(schemaLoaded.Name)} saved.\r\n");
+        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {schemaLoaded.Name} saved.\r\n");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

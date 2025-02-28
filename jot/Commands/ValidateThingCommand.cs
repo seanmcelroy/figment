@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -47,14 +48,21 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thing = await Thing.LoadAsync(selected.Guid, cancellationToken);
+        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var thing = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -66,7 +74,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             thingProperties.Add(property);
             if (!property.Valid)
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Property {Markup.Escape(property.SimpleDisplayName)} ({Markup.Escape(property.TruePropertyName)}) has an invalid value of '{Markup.Escape(property.Value?.ToString() ?? string.Empty)}'.");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Property {property.SimpleDisplayName} ({property.TruePropertyName}) has an invalid value of '{property.Value}'.");
             }
         }
 
@@ -77,25 +85,35 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             return (int)ERROR_CODES.SUCCESS;
         }
 
-        foreach (var schemaGuid in thing.SchemaGuids)
+        if (thing.SchemaGuids.Count > 0)
         {
-            var schemaLoaded = string.IsNullOrWhiteSpace(schemaGuid)
-                ? null
-                : await Schema.LoadAsync(schemaGuid, cancellationToken);
-
-            if (schemaLoaded == null)
+            var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+            if (provider == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{Markup.Escape(schemaGuid)}' from {Markup.Escape(thing.Name)}.  Must be able to load schema to promote a property to it.");
-                return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
-            foreach (var sp in schemaLoaded.Properties
-                .Where(sp => sp.Value.Required
-                    && !thingProperties.Any(
-                        tp => tp.SchemaGuid == schemaLoaded.Guid
-                        && string.CompareOrdinal(tp.SimpleDisplayName, sp.Key) == 0)))
+            foreach (var schemaGuid in thing.SchemaGuids)
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Schema property {Markup.Escape(sp.Key)} is required but is not set!");
+                var schemaLoaded = string.IsNullOrWhiteSpace(schemaGuid)
+                    ? null
+                    : await provider.LoadAsync(schemaGuid, cancellationToken);
+
+                if (schemaLoaded == null)
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
+                    return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+                }
+
+                foreach (var sp in schemaLoaded.Properties
+                    .Where(sp => sp.Value.Required
+                        && !thingProperties.Any(
+                            tp => tp.SchemaGuid == schemaLoaded.Guid
+                            && string.CompareOrdinal(tp.SimpleDisplayName, sp.Key) == 0)))
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Schema property {sp.Key} is required but is not set!");
+                }
             }
         }
 

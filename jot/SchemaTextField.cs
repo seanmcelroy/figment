@@ -44,6 +44,9 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 
     public static SchemaTextField FromSchemaDefinitionProperty(string name, JsonElement prop, bool required)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (prop.Equals(default(JsonElement)))
+            throw new ArgumentException("Default struct value is invalid", nameof(prop));
 
         var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
         ushort? minLength = null, maxLength = null;

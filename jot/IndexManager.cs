@@ -17,6 +17,9 @@ public static class IndexManager
 
     public static async IAsyncEnumerable<Entry> LookupAsync(string indexFilePath, Func<Entry, bool> selector, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
+        ArgumentNullException.ThrowIfNull(selector);
+
         if (!File.Exists(indexFilePath))
             yield break;
 
@@ -29,6 +32,8 @@ public static class IndexManager
 
         await foreach (var entry in csvReader.GetRecordsAsync<Entry>(cancellationToken))
         {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
             if (selector.Invoke(entry))
                 yield return entry;
         }
@@ -36,6 +41,10 @@ public static class IndexManager
 
     public static async Task<bool> AddAsync(string indexFilePath, string key, string value, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
         try
         {
             using var sw = new StreamWriter(indexFilePath, true, Encoding.UTF8);
@@ -80,16 +89,25 @@ public static class IndexManager
 
     public static async Task<bool> RemoveByKeyAsync(string indexFilePath, string keyToRemove, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyToRemove);
+
         return await RemoveAsync(indexFilePath, entry => string.CompareOrdinal(entry.Key, keyToRemove) == 0, cancellationToken);
     }
 
     public static async Task<bool> RemoveByValueAsync(string indexFilePath, string valueToRemove, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(valueToRemove);
+
         return await RemoveAsync(indexFilePath, entry => string.CompareOrdinal(entry.Value, valueToRemove) == 0, cancellationToken);
     }
 
     private static async Task<bool> RemoveAsync(string indexFilePath, Func<Entry, bool> deleteSelector, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
+        ArgumentNullException.ThrowIfNull(deleteSelector);
+
         if (!File.Exists(indexFilePath))
             return true; // No index, nothing to do.
 
@@ -114,6 +132,8 @@ public static class IndexManager
 
             await foreach (var entry in csvRead.GetRecordsAsync<Entry>(cancellationToken))
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return false;
                 if (deleteSelector.Invoke(entry))
                     continue;
                 await csvWriter.WriteRecordsAsync([entry], cancellationToken);
@@ -133,5 +153,31 @@ public static class IndexManager
         }
 
         return true;
+    }
+
+    internal static async IAsyncEnumerable<string> ResolveGuidFromPartialNameAsync(
+        string indexFile,
+        string namePart,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Load index
+        if (!File.Exists(indexFile))
+            yield break; // Happens on new install if no items, nothing in index, and so no file
+
+        await foreach (var entry in IndexManager.LookupAsync(
+            indexFile
+            , e => e.Key.StartsWith(namePart, StringComparison.CurrentCultureIgnoreCase)
+            , cancellationToken
+        ))
+        {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
+
+            var fileName = entry.Value;
+            if (Path.IsPathFullyQualified(fileName))
+                yield return Path.GetFileName(fileName).Split('.')[0];
+            else
+                yield return fileName.Split('.')[0];
+        }
     }
 }

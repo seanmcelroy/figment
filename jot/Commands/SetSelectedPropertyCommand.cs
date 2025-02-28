@@ -34,7 +34,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(Program.SelectedEntity.Type) ?? string.Empty)}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

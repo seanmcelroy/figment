@@ -59,7 +59,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

@@ -53,6 +53,10 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
 
     public static SchemaEnumField FromToSchemaDefinitionProperty(string name, JsonElement prop, bool required)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (prop.Equals(default(JsonElement)))
+            throw new ArgumentException("Default struct value is invalid", nameof(prop));
+
         var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
         List<object?> vals = [];
         if (subs.TryGetValue("enum", out JsonElement typeEnum))

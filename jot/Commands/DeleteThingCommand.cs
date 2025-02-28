@@ -1,4 +1,5 @@
 using Figment;
+using Figment.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -48,23 +49,30 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Markup.Escape(Enum.GetName(selected.Type) ?? string.Empty)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thing = await Thing.LoadAsync(selected.Guid, cancellationToken);
+        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        var thing = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{Markup.Escape(selected.Guid)}'.");
+            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
         // TODO: Check links
 
-        var deleted = await thing.Delete(cancellationToken);
+        var deleted = await thing.DeleteAsync(cancellationToken);
         if (deleted)
         {
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {Markup.Escape(thing.Name)} ({Markup.Escape(thing.Guid)}) deleted.\r\n");
+            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} ({thing.Guid}) deleted.\r\n");
             Program.SelectedEntity = Reference.EMPTY;
             return (int)ERROR_CODES.SUCCESS;
         }

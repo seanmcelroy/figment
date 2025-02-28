@@ -1,8 +1,6 @@
-using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
+using Figment.Data;
 using jot;
-using jot.Commands;
 using Spectre.Console;
 
 namespace Figment;
@@ -17,498 +15,15 @@ public class Thing(string Guid, string Name)
     public List<string> SchemaGuids { get; set; } = [];
     public Dictionary<string, object> Properties { get; init; } = [];
 
-    private static async Task<DirectoryInfo?> GetThingDatabaseDirectory()
-    {
-        var thingPath = Path.Combine(Globals.DB_PATH, "things");
-
-        if (Directory.Exists(thingPath))
-            return new DirectoryInfo(thingPath);
-
-        await Console.Error.WriteLineAsync("WARN: Thing database directory does not exist.");
-        try
-        {
-            return Directory.CreateDirectory(thingPath);
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync($"ERR: Cannot create thing database directory at '{thingPath}': {ex.Message}");
-            return null;
-        }
-    }
-
-    public static string ConvertThingNameToFileName(string thingName)
-    {
-        var cultureInfo = new CultureInfo("en-US", false);
-        var textInfo = cultureInfo.TextInfo;
-        var title = textInfo.ToTitleCase(thingName);
-        var combined = title.Replace(" ", "");
-        var camelCase = combined.ToLower(cultureInfo)[0] + title[1..];
-        return camelCase;
-    }
-
-    public static async Task<Thing?> Create(string? schemaGuid, string thingName, CancellationToken cancellationToken)
-    {
-        var thingGuid = System.Guid.NewGuid().ToString();
-        var thing = new Thing(thingGuid, thingName)
-        {
-            SchemaGuids = [schemaGuid]
-        };
-
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            return null;
-
-        var thingFileName = $"{thingGuid}.thing.json";
-        var thingFilePath = Path.Combine(thingDir.FullName, thingFileName);
-
-        if (File.Exists(thingFilePath))
-        {
-            await Console.Error.WriteLineAsync($"ERR: File for thing {thingName} already exists at {thingFilePath}");
-            return null;
-        }
-
-        using var fs = new FileStream(thingFilePath, FileMode.CreateNew);
-        try
-        {
-            await JsonSerializer.SerializeAsync(fs, thing, cancellationToken: cancellationToken);
-            await fs.FlushAsync(cancellationToken);
-        }
-        catch (Exception)
-        {
-            File.Delete(thingFilePath);
-            throw;
-        }
-
-        // Add to name index
-        {
-            var indexFilePath = Path.Combine(thingDir.FullName, NameIndexFileName);
-            await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
-        }
-
-        // Add to schema name index, if applicable
-        if (!string.IsNullOrWhiteSpace(schemaGuid))
-        {
-            var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
-            await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
-        }
-
-        // If this has a schema, add it to the schema index
-        if (!string.IsNullOrWhiteSpace(schemaGuid))
-        {
-            var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
-            await IndexManager.AddAsync(indexFilePath, thing.Guid, thingFileName, cancellationToken);
-        }
-
-        return await LoadAsync(thingGuid, cancellationToken);
-    }
-
-    public async Task<bool> Delete(CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            return false;
-
-        var thingFileName = $"{Guid}.thing.json";
-        var thingFilePath = Path.Combine(thingDir.FullName, thingFileName);
-
-        if (!File.Exists(thingFilePath))
-        {
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: File for thing {Markup.Escape(Name)} ({Markup.Escape(Guid)}) does not exist at {Markup.Escape(thingFilePath)}. Nothing to do.");
-            return false;
-        }
-
-        try
-        {
-            File.Delete(thingFilePath);
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.WriteException(ex);
-            return false;
-        }
-
-        // Remove from name index
-        {
-            var indexFilePath = Path.Combine(thingDir.FullName, NameIndexFileName);
-            await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-            AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Markup.Escape(Path.GetFileName(indexFilePath))}");
-        }
-
-        // Remove schema name index, if applicable
-        if (SchemaGuids != null)
-            foreach (var schemaGuid in SchemaGuids)
-            {
-                if (!string.IsNullOrWhiteSpace(schemaGuid))
-                {
-                    var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
-                    await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Markup.Escape(Path.GetFileName(indexFilePath))}");
-                }
-            }
-
-        // If this has a schema, remove it from the schema index
-        if (SchemaGuids != null)
-            foreach (var schemaGuid in SchemaGuids)
-            {
-                if (!string.IsNullOrWhiteSpace(schemaGuid))
-                {
-                    var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
-                    await IndexManager.RemoveByKeyAsync(indexFilePath, Guid, cancellationToken);
-                    AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from schema index {Markup.Escape(Path.GetFileName(indexFilePath))}");
-                }
-            }
-
-        return true;
-    }
-
-    public static async IAsyncEnumerable<Thing> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            yield break;
-
-        foreach (var file in thingDir.GetFiles("*.thing.json"))
-        {
-            if (cancellationToken.IsCancellationRequested)
-                yield break;
-
-            var thingGuidString = file.Name.Split(".thing.json");
-            if (!string.IsNullOrWhiteSpace(thingGuidString[0])
-                && System.Guid.TryParse(thingGuidString[0], out Guid _))
-            {
-                var thing = await LoadAsync(thingGuidString[0], cancellationToken);
-                if (thing != null)
-                    yield return thing;
-            }
-        }
-    }
-
-    public static async IAsyncEnumerable<Thing> GetBySchema(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            yield break;
-
-        var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
-
-        await foreach (var entry in IndexManager.LookupAsync(indexFilePath, e => true, cancellationToken))
-        {
-            var thing = await LoadFileAsync(Path.Combine(thingDir.FullName, entry.Value), cancellationToken);
-            if (thing != null)
-                yield return thing;
-        }
-        if (!File.Exists(indexFilePath))
-            yield break;
-    }
-
-    public static async Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            return null;
-
-        var fileName = $"{thingGuid}.thing.json";
-        var filePath = Path.Combine(thingDir.FullName, fileName);
-
-        if (!File.Exists(filePath))
-        {
-            await Console.Error.WriteLineAsync($"ERR: No file for thing {thingGuid} found at {filePath}");
-            return null;
-        }
-
-        var fileInfo = new FileInfo(filePath);
-        if (fileInfo.Length == 0)
-        {
-            await Console.Error.WriteLineAsync($"ERR: Empty thing file for {thingGuid} found at {filePath}");
-            fileInfo.Delete();
-            return null;
-        }
-
-        var thingLoaded = new Thing(thingGuid, "");
-        using var fs = new FileStream(filePath, FileMode.Open);
-        try
-        {
-            using var doc = await JsonDocument.ParseAsync(fs, cancellationToken: cancellationToken);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty(nameof(Name), out JsonElement nameProperty))
-            {
-                thingLoaded.Name = nameProperty.GetString() ?? "<UNDEFINED>";
-            }
-
-            // Legacy
-            if (root.TryGetProperty("SchemaGuid", out JsonElement schemaGuidProperty))
-                thingLoaded.SchemaGuids = [schemaGuidProperty.GetString()];
-            else
-                thingLoaded.SchemaGuids = [];
-
-            if (root.TryGetProperty(nameof(SchemaGuids), out JsonElement schemaGuidsProperty))
-            {
-                var arrayCount = schemaGuidsProperty.GetArrayLength();
-                foreach (var element in schemaGuidsProperty.EnumerateArray())
-                {
-                    var elementValue = element.GetString();
-                    if (!string.IsNullOrWhiteSpace(elementValue))
-                        thingLoaded.SchemaGuids.Add(elementValue);
-                }
-            }
-
-            foreach (var prop in root.EnumerateObject())
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
-                if (
-                  string.CompareOrdinal(prop.Name, nameof(Name)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(Guid)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(SchemaGuids)) == 0
-                )
-                {
-                    // Ignore built-ins, as they're defined on root, not Properties
-                    continue;
-                }
-
-                switch (prop.Value.ValueKind)
-                {
-                    case JsonValueKind.String:
-                        var s = prop.Value.GetString();
-                        if (s != null) // We don't load nulls
-                            thingLoaded.Properties.TryAdd(prop.Name, s);
-                        continue;
-                    case JsonValueKind.True:
-                        thingLoaded.Properties.TryAdd(prop.Name, true);
-                        continue;
-                    case JsonValueKind.False:
-                        thingLoaded.Properties.TryAdd(prop.Name, false);
-                        continue;
-                    case JsonValueKind.Null:
-                        continue; // We don't load nulls
-                    case JsonValueKind.Object:
-                        {
-                            if (string.CompareOrdinal(prop.Name, "Properties") == 0)
-                            {
-                                foreach (var sub in prop.Value.EnumerateObject())
-                                {
-                                    switch (sub.Value.ValueKind)
-                                    {
-                                        case JsonValueKind.String:
-                                            var s2 = sub.Value.GetString();
-                                            if (s2 != null) // We don't load nulls
-                                                thingLoaded.Properties.TryAdd(sub.Name, s2);
-                                            continue;
-                                        case JsonValueKind.True:
-                                            thingLoaded.Properties.TryAdd(sub.Name, true);
-                                            continue;
-                                        case JsonValueKind.False:
-                                            thingLoaded.Properties.TryAdd(sub.Name, false);
-                                            continue;
-                                        case JsonValueKind.Null:
-                                            continue; // We don't load nulls
-                                        case JsonValueKind.Object:
-                                            continue; // We don't load sub-object graphs
-                                        default:
-                                            continue;
-                                    }
-                                }
-                                continue;
-                            }
-                            else
-                                continue;
-                        }
-                    default:
-                        continue;
-                }
-            }
-
-            return thingLoaded;
-        }
-        catch (JsonException je)
-        {
-            await Console.Error.WriteLineAsync($"ERR: Unable to deserialize thing {thingGuid} from {filePath}: {je.Message}");
-            return null;
-        }
-    }
-
-    public static async Task<Thing?> LoadFileAsync(string filePath, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(filePath))
-        {
-            await Console.Error.WriteLineAsync($"ERR: No file for thing found at {filePath}");
-            return null;
-        }
-
-        var fileInfo = new FileInfo(filePath);
-        if (fileInfo.Length == 0)
-        {
-            await Console.Error.WriteLineAsync($"ERR: Empty thing file found at {filePath}");
-            fileInfo.Delete();
-            return null;
-        }
-
-        var thingLoaded = new Thing("", "");
-        using var fs = new FileStream(filePath, FileMode.Open);
-        try
-        {
-            using var doc = await JsonDocument.ParseAsync(fs, cancellationToken: cancellationToken);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty(nameof(Guid), out JsonElement guidProperty))
-            {
-                thingLoaded.Guid = guidProperty.GetString() ?? "<UNDEFINED>";
-            }
-
-            if (root.TryGetProperty(nameof(Name), out JsonElement nameProperty))
-            {
-                thingLoaded.Name = nameProperty.GetString() ?? "<UNDEFINED>";
-            }
-
-            // Legacy
-            if (root.TryGetProperty("SchemaGuid", out JsonElement schemaGuidProperty))
-                thingLoaded.SchemaGuids = [schemaGuidProperty.GetString()];
-            else
-                thingLoaded.SchemaGuids = [];
-
-            if (root.TryGetProperty(nameof(SchemaGuids), out JsonElement schemaGuidsProperty))
-            {
-                var arrayCount = schemaGuidsProperty.GetArrayLength();
-                foreach (var element in schemaGuidsProperty.EnumerateArray())
-                {
-                    var elementValue = element.GetString();
-                    if (!string.IsNullOrWhiteSpace(elementValue))
-                        thingLoaded.SchemaGuids.Add(elementValue);
-                }
-            }
-
-
-            foreach (var prop in root.EnumerateObject())
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
-                if (
-                  string.CompareOrdinal(prop.Name, nameof(Name)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(Guid)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(SchemaGuids)) == 0
-                )
-                {
-                    // Ignore built-ins, as they're defined on root, not Properties
-                    continue;
-                }
-
-                switch (prop.Value.ValueKind)
-                {
-                    case JsonValueKind.String:
-                        var s = prop.Value.GetString();
-                        if (s != null) // We don't load nulls
-                            thingLoaded.Properties.TryAdd(prop.Name, s);
-                        continue;
-                    case JsonValueKind.True:
-                        thingLoaded.Properties.TryAdd(prop.Name, true);
-                        continue;
-                    case JsonValueKind.False:
-                        thingLoaded.Properties.TryAdd(prop.Name, false);
-                        continue;
-                    case JsonValueKind.Null:
-                        continue; // We don't load nulls
-                    case JsonValueKind.Object:
-                        {
-                            if (string.CompareOrdinal(prop.Name, "Properties") == 0)
-                            {
-                                foreach (var sub in prop.Value.EnumerateObject())
-                                {
-                                    switch (sub.Value.ValueKind)
-                                    {
-                                        case JsonValueKind.String:
-                                            var s2 = sub.Value.GetString();
-                                            if (s2 != null) // We don't load nulls
-                                                thingLoaded.Properties.TryAdd(sub.Name, s2);
-                                            continue;
-                                        case JsonValueKind.True:
-                                            thingLoaded.Properties.TryAdd(sub.Name, true);
-                                            continue;
-                                        case JsonValueKind.False:
-                                            thingLoaded.Properties.TryAdd(sub.Name, false);
-                                            continue;
-                                        case JsonValueKind.Null:
-                                            continue; // We don't load nulls
-                                        case JsonValueKind.Object:
-                                            continue; // We don't load sub-object graphs
-                                        default:
-                                            continue;
-                                    }
-                                }
-                                continue;
-                            }
-                            else
-                                continue;
-                        }
-                    default:
-                        continue;
-                }
-            }
-
-            return thingLoaded;
-        }
-        catch (JsonException je)
-        {
-            await Console.Error.WriteLineAsync($"ERR: Unable to deserialize thing from {filePath}: {je.Message}");
-            return null;
-        }
-    }
-
-
-    public async Task<bool> SaveAsync(CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            return false;
-
-        var fileName = $"{Guid}.thing.json";
-        var filePath = Path.Combine(thingDir.FullName, fileName);
-
-        using var fs = File.Create(filePath);
-        try
-        {
-            await JsonSerializer.SerializeAsync(fs, this, cancellationToken: cancellationToken);
-            await fs.FlushAsync(cancellationToken);
-            return true;
-        }
-        catch (Exception je)
-        {
-            await Console.Error.WriteLineAsync($"ERR: Unable to serialize thing {Guid} from {filePath}: {je.Message}");
-            return false;
-        }
-    }
-
-    public static async Task<bool> GuidExists(string thingGuid, CancellationToken _)
-    {
-        if (string.IsNullOrWhiteSpace(thingGuid))
-            return false;
-
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            return false;
-
-        var fileName = $"{thingGuid}.thing.json";
-        var filePath = Path.Combine(thingDir.FullName, fileName);
-        if (!File.Exists(filePath))
-            return false;
-
-        var fileInfo = new FileInfo(filePath);
-        if (fileInfo.Length == 0)
-        {
-            fileInfo.Delete();
-            return false;
-        }
-
-        return true;
-    }
-
     public static async IAsyncEnumerable<Reference> ResolveAsync(
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (await GuidExists(guidOrNamePart, cancellationToken))
+        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (tsp == null)
+            yield break;
+
+        if (await tsp.GuidExists(guidOrNamePart, cancellationToken))
         {
             yield return new Reference
             {
@@ -518,75 +33,47 @@ public class Thing(string Guid, string Name)
             yield break;
         }
 
-        // Nope, so name searching...
-        await foreach (var possible in ResolvePartialNameAsync(guidOrNamePart, cancellationToken))
-            yield return possible;
-    }
-
-    public static async IAsyncEnumerable<Reference> ResolvePartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
+        // Nope, so GLOBAL name searching...
+        var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        if (ssp == null)
             yield break;
 
-        // Load index
-        var indexFilePath = Path.Combine(thingDir.FullName, NameIndexFileName);
-        if (!File.Exists(indexFilePath))
-            yield break; // Happens on new install if no items, nothing in index, and so no file
-
-        await foreach (var guid in Program.ResolveGuidFromPartialNameAsync(indexFilePath, thingNamePart, cancellationToken))
-        {
-            yield return new Reference
+        await foreach (var schemaRef in ssp.GetAll(cancellationToken))
+            await foreach (var (reference, _) in tsp.FindByPartialNameAsync(schemaRef.reference.Guid, guidOrNamePart, cancellationToken))
             {
-                Type = Reference.ReferenceType.Thing,
-                Guid = guid
-            };
-        }
-    }
-
-    public static async IAsyncEnumerable<(Reference, string name)> ResolvePartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
-            yield break;
-
-        // Load index
-        var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
-        if (!File.Exists(indexFilePath))
-            yield break; // Happens on new install if no items, nothing in index, and so no file
-
-        await foreach (var guid in Program.ResolveGuidFromPartialNameAsync(indexFilePath, thingNamePart, cancellationToken))
-        {
-            var thing = await LoadAsync(guid, cancellationToken);
-            if (thing == null || string.IsNullOrWhiteSpace(thing.Name))
-                continue;
-            yield return (new Reference
-            {
-                Type = Reference.ReferenceType.Thing,
-                Guid = guid
-            }, thing.Name);
-        }
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+                yield return reference;
+            }
     }
 
     public async IAsyncEnumerable<Schema> GetAssociatedSchemas([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
-        if (SchemaGuids != null)
+        if (SchemaGuids != null && SchemaGuids.Count > 0)
+        {
+            var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+            if (ssp == null)
+                yield break;
+
             foreach (var schemaGuid in SchemaGuids)
                 if (!string.IsNullOrWhiteSpace(schemaGuid))
                 {
                     if (cancellationToken.IsCancellationRequested)
                         yield break;
-                    var schema = await Schema.LoadAsync(schemaGuid, cancellationToken);
+                    var schema = await ssp.LoadAsync(schemaGuid, cancellationToken);
                     if (schema != null)
                         yield return schema;
                 }
+        }
         yield break;
     }
 
     public static (string escapedPropKey, string fullDisplayName, string simpleDisplayName)
         CarvePropertyName(string truePropertyName, Schema? schema)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(truePropertyName);
+
         if (schema != default)
         {
             // Yes, this property belongs to a schema, so chop the schema guid off it for display purposes.
@@ -598,7 +85,7 @@ public class Thing(string Guid, string Name)
             // Watch out, the schema field could have been deleted but it's still there on the instance.
             if (!schema.Properties.TryGetValue(choppedPropName, out SchemaFieldBase? schemaField))
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {Markup.Escape(truePropertyName)} ({Markup.Escape(escapedPropKey)}) on thing, but it doesn't appear on schema {Markup.Escape(schema.Name)} ({Markup.Escape(schema.Guid)}).");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
                 escapedPropKey = truePropertyName.Contains(' ') && !truePropertyName.StartsWith('[') && !truePropertyName.EndsWith(']') ? $"[{truePropertyName}]" : truePropertyName;
                 fullDisplayName = escapedPropKey; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
                 simpleDisplayName = truePropertyName; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
@@ -719,6 +206,9 @@ public class Thing(string Guid, string Name)
         // Step 1, Check EXISTING properties on this thing.
         await foreach (var prop in GetProperties(cancellationToken))
         {
+            if (cancellationToken.IsCancellationRequested)
+                return false;
+
             if (string.Compare(propName, prop.FullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
                 && string.Compare(propName, nameof(Schema.Plural), StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
             )
@@ -736,6 +226,9 @@ public class Thing(string Guid, string Name)
         // Step 2, Check properties on associated schemas NOT already set on this object
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
         {
+            if (cancellationToken.IsCancellationRequested)
+                return false;
+
             foreach (var schemaProperty in schema.Properties)
             {
                 var truePropertyName = $"{schema.Guid}.{schemaProperty.Key}";
@@ -806,6 +299,10 @@ public class Thing(string Guid, string Name)
             }
         }
 
+        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (provider == null)
+            return false;
+
         switch (candidateProperties.Count)
         {
             case 0:
@@ -820,7 +317,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (string.IsNullOrWhiteSpace(propValue))
                     {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {Markup.Escape(nameof(Name))} cannot be empty.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {nameof(Name)} cannot be empty.\r\n");
                         return false;
                     }
                     Name = propValue;
@@ -835,7 +332,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (Properties.Remove(candidateProperties[0].TruePropertyName)
                         && candidateProperties[0].Required)
-                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Required {Markup.Escape(propName)} was removed.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Required {propName} was removed.\r\n");
                     return await SaveAsync(cancellationToken);
                 }
 
@@ -847,15 +344,15 @@ public class Thing(string Guid, string Name)
                     {
                         var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length + 1)..];
 
-                        var disambig = ResolvePartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
+                        var disambig = provider.FindByPartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
                             .ToBlockingEnumerable(cancellationToken)
-                            .Select(p => new PossibleNameMatch(p.Item1, p.name))
+                            .Select(p => new PossibleNameMatch(p.reference, p.name))
                             .ToArray();
 
                         if (disambig.Length == 1)
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                            AnsiConsole.MarkupLineInterpolated($"[blue]INFO[/]: Set {Markup.Escape(propName)} to {Markup.Escape(disambig[0].Name)}.");
+                            AnsiConsole.MarkupLineInterpolated($"[blue]INFO[/]: Set {propName} to {disambig[0].Name}.");
                             return await SaveAsync(cancellationToken);
                         }
                         else if (disambig.Length > 1)
@@ -873,14 +370,14 @@ public class Thing(string Guid, string Name)
                         else
                         {
                             Properties[candidateProperties[0].TruePropertyName] = propValue;
-                            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {Markup.Escape(propName)} is invalid.\r\n");
+                            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
                             return await SaveAsync(cancellationToken);
                         }
                     }
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = propValue;
-                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {Markup.Escape(propName)} is invalid.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
                         return await SaveAsync(cancellationToken);
                     }
                 }
@@ -890,7 +387,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (string.IsNullOrWhiteSpace(propValue))
                     {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {Markup.Escape(nameof(Name))} cannot be empty.\r\n");
+                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {nameof(Name)} cannot be empty.\r\n");
                         return false;
                     }
                     Name = propValue;
@@ -901,82 +398,30 @@ public class Thing(string Guid, string Name)
                 return await SaveAsync(cancellationToken);
             default:
                 // Ambiguous
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to determine which property between {Markup.Escape(candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}"))} to update.\r\n");
+                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.\r\n");
                 return false;
         }
 
     }
-
-    public static async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
+    
+    public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
-        var thingDir = await GetThingDatabaseDirectory();
-        if (thingDir == null)
+        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (provider == null)
             return false;
+    
+        var success = await provider.SaveAsync(this, cancellationToken);
+        return success;
+    }
 
-        Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
-        Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingIndexes = [];
-        Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingNames = [];
-
-        await foreach (var schema in Schema.GetAll(cancellationToken))
-        {
-            schemaGuidsAndThingIndexes.Add(schema.Guid, []);
-            schemaGuidsAndThingNames.Add(schema.Guid, []);
-        }
-
-        Dictionary<string, string> namesIndex = [];
-        foreach (var thingFileName in thingDir.GetFiles("*.thing.json"))
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-
-            var thing = await LoadFileAsync(thingFileName.FullName, cancellationToken);
-            if (thing == null)
-                continue;
-
-            namesIndex.Add(thing.Name, thingFileName.Name);
-            if (thing.SchemaGuids != null)
-                foreach (var schemaGuid in thing.SchemaGuids)
-                    if (!string.IsNullOrWhiteSpace(schemaGuid)
-                        && schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
-                        value.Add(thing.Guid, thingFileName.Name);
-
-            if (thing.SchemaGuids != null)
-                foreach (var schemaGuid in thing.SchemaGuids)
-                    if (!string.IsNullOrWhiteSpace(schemaGuid)
-                && schemaGuidsAndThingNames.TryGetValue(schemaGuid, out Dictionary<string, string>? value2))
-                        value2.Add(thing.Name, thingFileName.Name);
-        }
-        indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
-        foreach (var kvp in schemaGuidsAndThingIndexes)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-            indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.schema.{kvp.Key}.csv"), kvp.Value);
-        }
-
-        foreach (var kvp in schemaGuidsAndThingNames)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-            indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.names.schema.{kvp.Key}.csv"), kvp.Value);
-        }
-
-        foreach (var index in indexesToWrite)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-            if (index.Value.Count == 0)
-            {
-                if (File.Exists(index.Key)) { }
-                File.Delete(index.Key);
-                continue;
-            }
-
-            using var fs = File.Create(index.Key);
-            await IndexManager.AddAsync(fs, index.Value, cancellationToken);
-        }
-
-        return true;
+    public async Task<bool> DeleteAsync(CancellationToken cancellationToken)
+    {
+        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (provider == null)
+            return false;
+    
+        var success = await provider.DeleteAsync(Guid, cancellationToken);
+        return success;
     }
 
     public override string ToString() => Name;
