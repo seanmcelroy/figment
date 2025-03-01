@@ -1,4 +1,4 @@
-namespace Figment.Data;
+namespace Figment.Common.Data;
 
 public interface IThingStorageProvider
 {

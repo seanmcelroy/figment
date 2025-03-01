@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class SchemaDateField(string Name) : SchemaTextField(Name)
 {

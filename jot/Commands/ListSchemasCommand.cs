@@ -1,5 +1,4 @@
-using Figment;
-using Figment.Data;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -16,9 +15,9 @@ public class ListSchemasCommand : CancellableAsyncCommand
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        await foreach (var schemaRef in provider.GetAll(cancellationToken))
+        await foreach (var (_, name) in provider.GetAll(cancellationToken))
         {
-            Console.WriteLine(schemaRef.name);
+            Console.WriteLine(name);
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

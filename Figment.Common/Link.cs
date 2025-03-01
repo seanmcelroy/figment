@@ -1,4 +1,4 @@
-namespace Figment;
+namespace Figment.Common;
 
 public class Link(string Guid, string SourceGuid, string DestinationGuid)
 {

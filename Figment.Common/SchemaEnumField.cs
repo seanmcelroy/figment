@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Name)
 {
@@ -93,8 +93,8 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
         if (Values == null || Values.Length == 0)
-            return Task.FromResult(Spectre.Console.Markup.Escape("enum []"));
+            return Task.FromResult("enum []");
         var fields = Values.Select(v => v?.ToString() ?? "null").Aggregate((c, n) => $"{c},{n}");
-        return Task.FromResult(Spectre.Console.Markup.Escape($"enum [{fields}]"));
+        return Task.FromResult($"enum [{fields}]");
     }
 }

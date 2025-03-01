@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Spectre.Console;
+using Figment.Common;
+using Figment.Common.Data;
 
 namespace Figment.Data.Local;
 

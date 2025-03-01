@@ -1,5 +1,5 @@
-using Figment;
-using Figment.Data;
+using Figment.Common;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -101,8 +101,24 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
             default:
+                var loadAnyEntity = new Func<Reference, CancellationToken, Task<object?>>(
+                        async (reference, cancellationToken1) =>
+                {
+                    switch (reference.Type)
+                    {
+                        case Reference.ReferenceType.Schema:
+                            var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+                            return ssp == null ? null : await ssp.LoadAsync(reference.Guid, cancellationToken1);
+                        case Reference.ReferenceType.Thing:
+                            var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+                            return tsp == null ? null : await tsp.LoadAsync(reference.Guid, cancellationToken1);
+                        default:
+                            return null;
+                    }
+                });
+
                 var disambig = possibilities
-                    .Select(p => new { Guid = p, Object = p.LoadAsync(cancellationToken).Result })
+                    .Select(p => new { Guid = p, Object = loadAnyEntity(p, cancellationToken).Result })
                     .Where(p => p.Object != null)
                     .Select(p => new PossibleEntityMatch(p.Guid, p.Object!))
                     .ToArray();

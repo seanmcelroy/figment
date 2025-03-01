@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Figment.Common;
 
 namespace Figment.Data.Local;
 

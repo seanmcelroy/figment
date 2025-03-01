@@ -1,4 +1,4 @@
-using Figment.Data;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -15,9 +15,9 @@ public class ListThingsCommand : CancellableAsyncCommand
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        await foreach (var thing in thingProvider.GetAll(cancellationToken))
+        await foreach (var (_, name) in thingProvider.GetAll(cancellationToken))
         {
-            Console.WriteLine(thing.name);
+            Console.WriteLine(name);
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

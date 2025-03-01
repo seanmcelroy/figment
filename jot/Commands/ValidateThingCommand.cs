@@ -1,5 +1,5 @@
-using Figment;
-using Figment.Data;
+using Figment.Common;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

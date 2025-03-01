@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 {

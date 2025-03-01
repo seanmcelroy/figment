@@ -1,6 +1,4 @@
-using Figment;
-
-namespace jot;
+namespace Figment.Common;
 
 public readonly record struct PossibleNameMatch(Reference Reference, string Name)
 {

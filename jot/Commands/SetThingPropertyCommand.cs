@@ -1,5 +1,5 @@
-using Figment;
-using Figment.Data;
+using Figment.Common;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -77,8 +77,21 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
 
         var propValue = settings.Value;
 
-        var saved = await thingLoaded.Set(propName, propValue, cancellationToken);
-        if (!saved)
+        static PossibleNameMatch chooserHandler(string title, IEnumerable<PossibleNameMatch> choices)
+        {
+            var which = AnsiConsole.Prompt(
+                new SelectionPrompt<PossibleNameMatch>()
+                    .Title(title)
+                    .PageSize(5)
+                    .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
+                    .AddChoices(choices));
+            return which;
+        }
+
+        var saved = await thingLoaded.Set(propName, propValue, cancellationToken,
+            AnsiConsole.Profile.Capabilities.Interactive ? chooserHandler : null);
+
+        if (!saved.Success)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;

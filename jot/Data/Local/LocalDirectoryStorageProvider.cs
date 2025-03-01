@@ -1,5 +1,6 @@
 
 using System.Runtime.CompilerServices;
+using Figment.Common.Data;
 using Spectre.Console;
 
 namespace Figment.Data.Local;

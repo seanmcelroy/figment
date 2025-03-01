@@ -1,11 +1,11 @@
 using System.Text.Json.Serialization;
-using Figment.Data;
+using Figment.Common.Data;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Name)
 {
-    internal const string TYPE = "ref";
+    public const string TYPE = "ref";
 
     [JsonIgnore] // Only for enums.
     public override string Type { get; } = TYPE;
@@ -54,27 +54,6 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
             return false;
 
         return true;
-    }
-
-    public override async Task<string?> GetMarkedUpFieldValue(object? value, CancellationToken cancellationToken)
-    {
-        if (value == null)
-            return default;
-
-        if (value is not string str)
-            return default;
-
-        var thingGuid = str[(str.IndexOf('.') + 1)..];
-
-        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
-        if (tsp == null)
-            return str;
-
-        var thing = await tsp.LoadAsync(thingGuid, cancellationToken);
-        if (thing == null)
-            return str;
-
-        return thing.Name;
     }
 
     public override async Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)

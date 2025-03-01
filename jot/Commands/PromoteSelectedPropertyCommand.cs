@@ -1,4 +1,4 @@
-using Figment;
+using Figment.Common;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

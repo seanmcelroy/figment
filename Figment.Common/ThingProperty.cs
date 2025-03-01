@@ -1,4 +1,4 @@
-namespace Figment;
+namespace Figment.Common;
 
 public readonly record struct ThingProperty
 {

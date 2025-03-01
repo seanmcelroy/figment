@@ -1,7 +1,7 @@
 using System.Net.Mail;
 using System.Text.Json.Serialization;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
 {

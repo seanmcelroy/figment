@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
-using Figment.Data;
+using Figment.Common.Data;
 
-namespace Figment;
+namespace Figment.Common;
 
 /// <summary>
 /// A set of field definitions a thing can optionally implement

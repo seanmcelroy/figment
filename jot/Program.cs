@@ -1,9 +1,11 @@
-﻿using Figment;
-using Figment.Data;
-using jot.Commands;
+﻿using jot.Commands;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Diagnostics;
+using Figment.Common.Data;
+using Figment.Common;
+using Figment.Common.Errors;
+using jot.Errors;
 
 namespace jot;
 
@@ -22,7 +24,8 @@ internal class Program
         var interactive = args.Length == 0
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
-        // Setup the storage provider. TODO: Allow CLI config
+        // Setup the providers. TODO: Allow CLI config
+        AmbientErrorContext.ErrorProvider = new SpectreConsoleErrorProvider();
         StorageUtility.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
 
         var app = new CommandApp();

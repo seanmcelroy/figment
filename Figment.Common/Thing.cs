@@ -1,9 +1,8 @@
 using System.Runtime.CompilerServices;
-using Figment.Data;
-using jot;
-using Spectre.Console;
+using Figment.Common.Data;
+using Figment.Common.Errors;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class Thing(string Guid, string Name)
 {
@@ -85,7 +84,7 @@ public class Thing(string Guid, string Name)
             // Watch out, the schema field could have been deleted but it's still there on the instance.
             if (!schema.Properties.TryGetValue(choppedPropName, out SchemaFieldBase? schemaField))
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
+                AmbientErrorContext.ErrorProvider.LogWarning($"Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
                 escapedPropKey = truePropertyName.Contains(' ') && !truePropertyName.StartsWith('[') && !truePropertyName.EndsWith(']') ? $"[{truePropertyName}]" : truePropertyName;
                 fullDisplayName = escapedPropKey; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
                 simpleDisplayName = truePropertyName; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
@@ -191,10 +190,12 @@ public class Thing(string Guid, string Name)
         return unsetSchemaFields.Values.ToList();
     }
 
-    public async Task<bool> Set(
+    public async Task<ThingSetResult> Set(
         string propName,
         string? propValue,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null
+        )
     {
         // If prop name came in unescaped, and it should be escaled, then escape it here for comparisons.
         if (propName.Contains(' ') && !propName.StartsWith('[') && !propName.EndsWith(']'))
@@ -207,7 +208,7 @@ public class Thing(string Guid, string Name)
         await foreach (var prop in GetProperties(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
-                return false;
+                return new ThingSetResult(false);
 
             if (string.Compare(propName, prop.FullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
                 && string.Compare(propName, nameof(Schema.Plural), StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
@@ -227,7 +228,7 @@ public class Thing(string Guid, string Name)
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
-                return false;
+                return new ThingSetResult(false);
 
             foreach (var schemaProperty in schema.Properties)
             {
@@ -299,31 +300,34 @@ public class Thing(string Guid, string Name)
             }
         }
 
-        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
-        if (provider == null)
-            return false;
+        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        if (tsp == null)
+            return new ThingSetResult(false);
 
         switch (candidateProperties.Count)
         {
             case 0:
-                // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
-                if (string.IsNullOrWhiteSpace(propValue))
-                    Properties.Remove(propName);
-                else
-                    Properties[propName] = propValue;
-
-                // Special case for Name.
-                if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
                 {
+                    // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
                     if (string.IsNullOrWhiteSpace(propValue))
-                    {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {nameof(Name)} cannot be empty.\r\n");
-                        return false;
-                    }
-                    Name = propValue;
-                }
+                        Properties.Remove(propName);
+                    else
+                        Properties[propName] = propValue;
 
-                return await SaveAsync(cancellationToken);
+                    // Special case for Name.
+                    if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        if (string.IsNullOrWhiteSpace(propValue))
+                        {
+                            AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
+                            return new ThingSetResult(false);
+                        }
+                        Name = propValue;
+                    }
+
+                    var saved = await SaveAsync(cancellationToken);
+                    return new ThingSetResult(saved);
+                }
             case 1:
                 // Exactly one, we need to update:
 
@@ -332,19 +336,21 @@ public class Thing(string Guid, string Name)
                 {
                     if (Properties.Remove(candidateProperties[0].TruePropertyName)
                         && candidateProperties[0].Required)
-                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Required {propName} was removed.\r\n");
-                    return await SaveAsync(cancellationToken);
+                        AmbientErrorContext.ErrorProvider.LogWarning($"Required {propName} was removed.");
+
+                    var saved = await SaveAsync(cancellationToken);
+                    return new ThingSetResult(saved);
                 }
 
                 if (!candidateProperties[0].Valid)
                 {
-                    if (AnsiConsole.Profile.Capabilities.Interactive
+                    if (chooserHandler != null
                         && candidateProperties[0].SchemaGuid != null
                         && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.TYPE) ?? false))
                     {
                         var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length + 1)..];
 
-                        var disambig = provider.FindByPartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
+                        var disambig = tsp.FindByPartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
                             .ToBlockingEnumerable(cancellationToken)
                             .Select(p => new PossibleNameMatch(p.reference, p.name))
                             .ToArray();
@@ -352,64 +358,68 @@ public class Thing(string Guid, string Name)
                         if (disambig.Length == 1)
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                            AnsiConsole.MarkupLineInterpolated($"[blue]INFO[/]: Set {propName} to {disambig[0].Name}.");
-                            return await SaveAsync(cancellationToken);
+                            AmbientErrorContext.ErrorProvider.LogInfo($"Set {propName} to {disambig[0].Name}.");
+                            var saved = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved);
                         }
                         else if (disambig.Length > 1)
                         {
-                            var which = AnsiConsole.Prompt(
-                                new SelectionPrompt<PossibleNameMatch>()
-                                    .Title($"There was more than one {candidateProperties[0].SchemaName} matching '{propValue}'.  Which do you want to select?")
-                                    .PageSize(5)
-                                    .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
-                                    .AddChoices(disambig));
+                            var which = chooserHandler(
+                                $"There was more than one {candidateProperties[0].SchemaName} matching '{propValue}'.  Which do you want to select?",
+                                disambig);
 
                             Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            return await SaveAsync(cancellationToken);
+                            var saved = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved);
                         }
                         else
                         {
                             Properties[candidateProperties[0].TruePropertyName] = propValue;
-                            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
-                            return await SaveAsync(cancellationToken);
+                            AmbientErrorContext.ErrorProvider.LogWarning($"Value of {propName} is invalid.");
+                            var saved = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved);
                         }
                     }
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = propValue;
-                        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Value of {propName} is invalid.\r\n");
-                        return await SaveAsync(cancellationToken);
+                        AmbientErrorContext.ErrorProvider.LogWarning($"Value of {propName} is invalid.");
+                        var saved = await SaveAsync(cancellationToken);
+                        return new ThingSetResult(saved);
                     }
                 }
 
                 // Special case for Name.
-                if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    if (string.IsNullOrWhiteSpace(propValue))
+                    if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Value of {nameof(Name)} cannot be empty.\r\n");
-                        return false;
+                        if (string.IsNullOrWhiteSpace(propValue))
+                        {
+                            AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
+                            return new ThingSetResult(false);
+                        }
+                        Name = propValue;
                     }
-                    Name = propValue;
-                }
-                else
-                    Properties[candidateProperties[0].TruePropertyName] = propValue;
+                    else
+                        Properties[candidateProperties[0].TruePropertyName] = propValue;
 
-                return await SaveAsync(cancellationToken);
+                    var saved = await SaveAsync(cancellationToken);
+                    return new ThingSetResult(saved);
+                }
             default:
                 // Ambiguous
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.\r\n");
-                return false;
+                AmbientErrorContext.ErrorProvider.LogError($"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.");
+                return new ThingSetResult(false);
         }
 
     }
-    
+
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
         var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
         if (provider == null)
             return false;
-    
+
         var success = await provider.SaveAsync(this, cancellationToken);
         return success;
     }
@@ -419,7 +429,7 @@ public class Thing(string Guid, string Name)
         var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
         if (provider == null)
             return false;
-    
+
         var success = await provider.DeleteAsync(Guid, cancellationToken);
         return success;
     }

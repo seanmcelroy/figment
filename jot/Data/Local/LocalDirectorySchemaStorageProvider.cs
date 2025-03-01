@@ -2,6 +2,8 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Figment.Common;
+using Figment.Common.Data;
 using jot;
 using Spectre.Console;
 

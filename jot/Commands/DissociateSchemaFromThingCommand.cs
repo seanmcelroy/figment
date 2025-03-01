@@ -1,5 +1,6 @@
-using Figment;
-using Figment.Data;
+using Figment.Common;
+using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -25,7 +26,7 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Associat
         // Schema first
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
-            AnsiConsole.MarkupLine("[yellow]ERROR[/]: Schema name must be specified.");
+            AmbientErrorContext.ErrorProvider.LogWarning("Schema name must be specified.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 

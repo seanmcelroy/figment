@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Figment;
+namespace Figment.Common;
 
 public class SchemaUriField(string Name) : SchemaTextField(Name)
 {

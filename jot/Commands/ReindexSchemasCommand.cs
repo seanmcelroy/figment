@@ -1,4 +1,4 @@
-using Figment.Data;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

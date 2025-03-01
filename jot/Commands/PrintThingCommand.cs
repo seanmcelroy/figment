@@ -1,6 +1,7 @@
+using System.Diagnostics;
 using System.Text;
-using Figment;
-using Figment.Data;
+using Figment.Common;
+using Figment.Common.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -66,11 +67,12 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
+        var schemaProvider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+
         Dictionary<string, Schema> schemas = [];
         if (thingLoaded.SchemaGuids != null)
         {
-            var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
-            if (provider == null)
+            if (schemaProvider == null)
             {
                 AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
@@ -78,7 +80,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
 
             foreach (var schemaGuid in thingLoaded.SchemaGuids)
             {
-                var schema = await provider.LoadAsync(schemaGuid, cancellationToken);
+                var schema = await schemaProvider.LoadAsync(schemaGuid, cancellationToken);
                 if (schema != null)
                     schemas.Add(schema.Guid, schema);
                 else
@@ -118,7 +120,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch)
                 && sch.Properties.TryGetValue(prop.Key[(prop.Key.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
             {
-                var text = await schprop.GetMarkedUpFieldValue(prop.Value.fieldValue, cancellationToken);
+                var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
                 if (prop.Value.valid)
                     propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {text}");
                 else
@@ -143,6 +145,25 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             }
         }
 
+        var linksBuilder = new StringBuilder();
+        if (schemas.Count > 0)
+        {
+            linksBuilder.AppendLine("[red]Links[/]");
+            foreach (var schema in schemas)
+            {
+                var linkedFields = schema.Value.Properties
+                    .Where(p => string.CompareOrdinal(p.Value.Type, SchemaRefField.TYPE) == 0)
+                    .ToDictionary(k => k.Key, v => (SchemaRefField)v.Value);
+
+                foreach (var lf in linkedFields)
+                {
+                    var linkedSchema = await schemaProvider.LoadAsync(lf.Value.SchemaGuid, cancellationToken);
+                    var linkedPlural = linkedSchema.Plural;
+                    linksBuilder.AppendLine($"    {lf.Key} ({linkedPlural})");
+                }
+            }
+        }
+
         AnsiConsole.MarkupLine(
             $"""
             [silver]Instance[/]   : [bold white]{thingLoaded.Name}[/]
@@ -151,7 +172,56 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             [chartreuse4]Properties[/] : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
             {propBuilder}
             {unsetPropBuilder}
+            {linksBuilder}
             """);
         return (int)ERROR_CODES.SUCCESS;
+    }
+
+    private static async Task<string?> GetMarkedUpFieldValue<T>(T _, object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
+    {
+        return await GetMarkedUpFieldValue<T>(value, cancellationToken);
+    }
+
+    private static async Task<string?> GetMarkedUpFieldValue<T>(object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
+    {
+        if (typeof(T).Equals(typeof(SchemaPhoneField)))
+        {
+            if (value == null)
+                return default;
+
+            var str = value as string;
+
+            if (Debugger.IsAttached
+                || !AnsiConsole.Profile.Capabilities.Links
+                || str?.IndexOfAny(['[', ']']) > -1)
+                return str; // No link wrapping.
+
+            return (string?)$"[link=tel:{value}]{value}[/]";
+        }
+        else if (typeof(T).Equals(typeof(SchemaRefField)))
+        {
+            if (value == null)
+                return default;
+
+            if (value is not string str)
+                return default;
+
+            var thingGuid = str[(str.IndexOf('.') + 1)..];
+
+            var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+            if (tsp == null)
+                return str;
+
+            var thing = await tsp.LoadAsync(thingGuid, cancellationToken);
+            if (thing == null)
+                return str;
+
+            return thing.Name;
+        }
+        else
+        {
+            return value?.ToString();
+        }
+
     }
 }

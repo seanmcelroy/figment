@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Figment;
+namespace Figment.Common;
 
 [JsonPolymorphic]
 [JsonDerivedType(typeof(SchemaBooleanField), typeDiscriminator: "bool")]
@@ -31,6 +31,4 @@ public abstract class SchemaFieldBase(string Name)
     public abstract Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken);
 
     public abstract Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken);
-
-    public virtual Task<string?> GetMarkedUpFieldValue(object? value, CancellationToken cancellationToken) => Task.FromResult(value?.ToString());
 }
