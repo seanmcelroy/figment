@@ -1,7 +1,5 @@
 using System.Text.Json.Serialization;
 using Figment.Data;
-using jot;
-using Spectre.Console;
 
 namespace Figment;
 

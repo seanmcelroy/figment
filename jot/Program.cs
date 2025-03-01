@@ -4,7 +4,6 @@ using jot.Commands;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace jot;
 
@@ -24,7 +23,7 @@ internal class Program
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
         // Setup the storage provider. TODO: Allow CLI config
-        StorageUtility.StorageProvider = new LocalDirectoryStorageProvider();
+        StorageUtility.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
 
         var app = new CommandApp();
         app.Configure(config =>

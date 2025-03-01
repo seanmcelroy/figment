@@ -5,7 +5,7 @@ using System.Text.Json;
 using jot;
 using Spectre.Console;
 
-namespace Figment.Data;
+namespace Figment.Data.Local;
 
 public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : ISchemaStorageProvider
 {

@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Spectre.Console;
 
-namespace Figment.Data;
+namespace Figment.Data.Local;
 
 public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : IThingStorageProvider
 {

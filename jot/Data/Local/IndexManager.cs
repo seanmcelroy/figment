@@ -5,7 +5,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using Spectre.Console;
 
-namespace Figment;
+namespace Figment.Data.Local;
 
 public static class IndexManager
 {

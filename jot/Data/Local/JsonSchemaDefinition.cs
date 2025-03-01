@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Figment.Data;
+namespace Figment.Data.Local;
 
 /// <summary>
 /// This is the definition of a <see cref="Figment.Schema"/> when it is persisted

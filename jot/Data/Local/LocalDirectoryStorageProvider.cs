@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using Spectre.Console;
 
-namespace Figment.Data;
+namespace Figment.Data.Local;
 
 public class LocalDirectoryStorageProvider : IStorageProvider
 {
