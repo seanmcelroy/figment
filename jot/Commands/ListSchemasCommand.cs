@@ -1,4 +1,6 @@
+using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -15,10 +17,31 @@ public class ListSchemasCommand : CancellableAsyncCommand
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        await foreach (var (_, name) in provider.GetAll(cancellationToken))
+        List<Schema> schemas = [];
+
+        await foreach (var (reference, name) in provider.GetAll(cancellationToken))
         {
+            var schema = await provider.LoadAsync(reference.Guid, cancellationToken);
+            if (schema == null)
+            {
+                AmbientErrorContext.ErrorProvider.LogError($"Unable to load schema '{name}' ({reference.Guid}).");
+                continue;
+            }
+
+            schemas.Add(schema);
             Console.WriteLine(name);
         }
+
+        schemas.Sort((x, y) => x.Name.CompareTo(y.Name));
+
+        Table t = new();
+        t.AddColumn("Name");
+        t.AddColumn("Description");
+        t.AddColumn("Plural");
+
+        foreach (var s in schemas)
+            t.AddRow(s.Name, s.Description ?? string.Empty, s.Plural ?? string.Empty);
+        AnsiConsole.Write(t);
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

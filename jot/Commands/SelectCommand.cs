@@ -41,7 +41,8 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
             Schema.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)]
-                ).ToArray();
+                ).Distinct()
+                .ToArray();
 
         switch (possibilities.Length)
         {

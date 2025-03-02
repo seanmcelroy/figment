@@ -89,7 +89,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
                 thing = await thingProvider.LoadAsync(thingPossibilities[0].Guid, cancellationToken);
                 if (thing == null)
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{settings.ThingName}'.");
+                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing '{settings.ThingName}'.");
                     return (int)ERROR_CODES.THING_LOAD_ERROR;
                 }
                 break;

@@ -177,14 +177,12 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         return (int)ERROR_CODES.SUCCESS;
     }
 
-    private static async Task<string?> GetMarkedUpFieldValue<T>(T _, object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
+    private static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
     {
-        return await GetMarkedUpFieldValue<T>(value, cancellationToken);
-    }
+        ArgumentNullException.ThrowIfNull(field);
 
-    private static async Task<string?> GetMarkedUpFieldValue<T>(object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
-    {
-        if (typeof(T).Equals(typeof(SchemaPhoneField)))
+        var fieldType = field.GetType();
+        if (fieldType.Equals(typeof(SchemaPhoneField)))
         {
             if (value == null)
                 return default;
@@ -198,7 +196,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
 
             return (string?)$"[link=tel:{value}]{value}[/]";
         }
-        else if (typeof(T).Equals(typeof(SchemaRefField)))
+        else if (fieldType.Equals(typeof(SchemaRefField)))
         {
             if (value == null)
                 return default;
