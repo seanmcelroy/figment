@@ -30,7 +30,7 @@ public class Schema(string Guid, string Name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
-        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
             return null;
 
@@ -44,7 +44,7 @@ public class Schema(string Guid, string Name)
 
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
             return false;
     
@@ -76,7 +76,7 @@ public class Schema(string Guid, string Name)
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
             yield break;;
 

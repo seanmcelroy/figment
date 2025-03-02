@@ -54,7 +54,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 {
                     case Reference.ReferenceType.Schema:
                         {
-                            var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+                            var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                             if (provider == null)
                             {
                                 AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
@@ -76,7 +76,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                             }
                         }
                     case Reference.ReferenceType.Thing:
-                        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+                        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
                         if (thingProvider == null)
                         {
                             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
@@ -108,10 +108,10 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                     switch (reference.Type)
                     {
                         case Reference.ReferenceType.Schema:
-                            var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+                            var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                             return ssp == null ? null : await ssp.LoadAsync(reference.Guid, cancellationToken1);
                         case Reference.ReferenceType.Thing:
-                            var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+                            var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
                             return tsp == null ? null : await tsp.LoadAsync(reference.Guid, cancellationToken1);
                         default:
                             return null;

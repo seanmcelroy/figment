@@ -3,6 +3,10 @@ namespace Figment.Common.Errors;
 
 public class DefaultConsoleErrorProvider : IErrorProvider
 {
+    public void LogDone(FormattableString formattableString) => Console.Out.WriteLine(formattableString);
+
+    public void LogDone(string message) => Console.Out.WriteLine(message);
+
     public void LogError(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
     public void LogError(string message) => Console.Error.WriteLine(message);

@@ -1,6 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
-using Spectre.Console;
+using Figment.Common.Errors;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;
@@ -27,7 +27,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a thing, you must first 'select' a thing.");
+                AmbientErrorContext.ErrorProvider.LogError("To view properties on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -37,13 +37,13 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
+                    AmbientErrorContext.ErrorProvider.LogError("Nothing found with that name.");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.ErrorProvider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
@@ -51,27 +51,27 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         var propName = settings.PropertyName;
         if (string.IsNullOrWhiteSpace(propName))
         {
-            AnsiConsole.MarkupLine("[yellow]ERROR[/]: To change a property on a schema, specify the property's name.");
+            AmbientErrorContext.ErrorProvider.LogError("To change a property on a schema, specify the property's name.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AmbientErrorContext.ErrorProvider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var schemaStorageProvider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var schemaStorageProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaStorageProvider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            AmbientErrorContext.ErrorProvider.LogError("Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var schemaLoaded = await schemaStorageProvider.LoadAsync(selected.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
+            AmbientErrorContext.ErrorProvider.LogError($"Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -83,7 +83,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             // Built-in
             if (string.IsNullOrWhiteSpace(propType))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: The name of a schema cannot be empty.");
+                AmbientErrorContext.ErrorProvider.LogError("The name of a schema cannot be empty.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -114,25 +114,28 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var propToDelete = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.OrdinalIgnoreCase) == 0);
             if (propToDelete.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No property named '{propName}' found on schema '{schemaLoaded.Name}'");
+                AmbientErrorContext.ErrorProvider.LogError($"No property named '{propName}' found on schema '{schemaLoaded.Name}'");
                 return (int)ERROR_CODES.NOT_FOUND;
             }
 
             schemaLoaded.Properties.Remove(propToDelete.Key);
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Deleted property name '{propName}'.");
+            AmbientErrorContext.ErrorProvider.LogWarning($"Deleted property name '{propName}'.");
         }
         else if (string.CompareOrdinal(propType, "bool") == 0)
         {
+            // Boolean
             var sbf = new SchemaBooleanField(propName);
             schemaLoaded.Properties[propName] = sbf;
         }
         else if (string.CompareOrdinal(propType, "date") == 0)
         {
+            // Date
             var sdf = new SchemaDateField(propName);
             schemaLoaded.Properties[propName] = sdf;
         }
         else if (string.CompareOrdinal(propType, "email") == 0)
         {
+            // Email
             var sef = new SchemaEmailField(propName);
             schemaLoaded.Properties[propName] = sef;
         }
@@ -141,6 +144,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             || string.CompareOrdinal(propType, "int") == 0
         )
         {
+            // Number (integer)
             var sif = new SchemaIntegerField(propName);
             schemaLoaded.Properties[propName] = sif;
         }
@@ -151,26 +155,37 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             || string.CompareOrdinal(propType, "float") == 0
         )
         {
+            // Number (double)
             var snf = new SchemaNumberField(propName);
             schemaLoaded.Properties[propName] = snf;
         }
         else if (string.CompareOrdinal(propType, "phone") == 0)
         {
+            // Phone
             var spf = new SchemaPhoneField(propName);
             schemaLoaded.Properties[propName] = spf;
         }
+        else if (string.CompareOrdinal(propType, "schema") == 0)
+        {
+            // Email
+            var ssf = new SchemaSchemaField(propName);
+            schemaLoaded.Properties[propName] = ssf;
+        }
         else if (string.CompareOrdinal(propType, "text") == 0)
         {
+            // Text
             var stf = new SchemaTextField(propName);
             schemaLoaded.Properties[propName] = stf;
         }
         else if (string.CompareOrdinal(propType, "uri") == 0)
         {
+            // Uri
             var suf = new SchemaUriField(propName);
             schemaLoaded.Properties[propName] = suf;
         }
         else if (propType != null && propType.StartsWith('[') && propType.EndsWith(']') && propType.Length >= 5 && propType.Contains(','))
         {
+            // Enum
             var enumValues = propType[1..^1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var sef = new SchemaEnumField(propName, enumValues);
             schemaLoaded.Properties[propName] = sef;
@@ -181,7 +196,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var refSchema = await schemaStorageProvider.FindByNameAsync(propType!, cancellationToken);
             if (refSchema == Reference.EMPTY)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: I do not understand that type of field ({propType}).");
+                AmbientErrorContext.ErrorProvider.LogError($"I do not understand that type of field ({propType}).");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -192,11 +207,11 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         var saved = await schemaLoaded.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to save schema with Guid '{selected.Guid}'.");
+            AmbientErrorContext.ErrorProvider.LogError($"Unable to save schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {schemaLoaded.Name} saved.\r\n");
+        AmbientErrorContext.ErrorProvider.LogDone($"{schemaLoaded.Name} saved.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

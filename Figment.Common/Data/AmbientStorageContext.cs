@@ -1,6 +1,6 @@
 namespace Figment.Common.Data;
 
-public static class StorageUtility
+public static class AmbientStorageContext
 {
     private static readonly AsyncLocal<IStorageProvider> _StorageProvider = new();
 

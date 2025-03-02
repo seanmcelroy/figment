@@ -53,7 +53,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
@@ -67,7 +67,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
-        var schemaProvider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
 
         Dictionary<string, Schema> schemas = [];
         if (thingLoaded.SchemaGuids != null)
@@ -141,7 +141,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 maxPropNameLen = grp.Max(g => g.SimpleDisplayName.Length);
                 unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver]({grp.Key.SchemaGuid})[/]");
                 foreach (var prop in grp)
-                    unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{await prop.Field.GetReadableFieldTypeAsync(cancellationToken)}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
+                    unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
             }
         }
 
@@ -206,7 +206,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
 
             var thingGuid = str[(str.IndexOf('.') + 1)..];
 
-            var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+            var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
             if (tsp == null)
                 return str;
 

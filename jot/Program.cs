@@ -26,7 +26,7 @@ internal class Program
 
         // Setup the providers. TODO: Allow CLI config
         AmbientErrorContext.ErrorProvider = new SpectreConsoleErrorProvider();
-        StorageUtility.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
+        AmbientStorageContext.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
 
         var app = new CommandApp();
         app.Configure(config =>
@@ -120,14 +120,14 @@ internal class Program
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
         AnsiConsole.MarkupLine("\r\nThere are additional undocumented commands in this mode.  Type [purple bold]ihelp[/] for help on this mode interactive.");
 
-        var schemaProvider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaProvider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");

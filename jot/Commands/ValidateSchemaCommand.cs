@@ -51,7 +51,7 @@ public class ValidateSchemaCommand : CancellableAsyncCommand<SchemaCommandSettin
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");

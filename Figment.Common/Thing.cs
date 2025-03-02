@@ -18,7 +18,7 @@ public class Thing(string Guid, string Name)
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
             yield break;
 
@@ -33,7 +33,7 @@ public class Thing(string Guid, string Name)
         }
 
         // Nope, so GLOBAL name searching...
-        var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
             yield break;
 
@@ -51,7 +51,7 @@ public class Thing(string Guid, string Name)
         // Does this thing adhere to any schemas?
         if (SchemaGuids != null && SchemaGuids.Count > 0)
         {
-            var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+            var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
             if (ssp == null)
                 yield break;
 
@@ -300,7 +300,7 @@ public class Thing(string Guid, string Name)
             }
         }
 
-        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
             return new ThingSetResult(false);
 
@@ -416,7 +416,7 @@ public class Thing(string Guid, string Name)
 
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
             return false;
 
@@ -426,7 +426,7 @@ public class Thing(string Guid, string Name)
 
     public async Task<bool> DeleteAsync(CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
             return false;
 

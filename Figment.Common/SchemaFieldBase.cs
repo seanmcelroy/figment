@@ -11,6 +11,7 @@ namespace Figment.Common;
 [JsonDerivedType(typeof(SchemaNumberField), typeDiscriminator: "number")]
 [JsonDerivedType(typeof(SchemaPhoneField), typeDiscriminator: "phone")]
 [JsonDerivedType(typeof(SchemaRefField), typeDiscriminator: "ref")]
+[JsonDerivedType(typeof(SchemaSchemaField), typeDiscriminator: "schema")]
 [JsonDerivedType(typeof(SchemaTextField), typeDiscriminator: "text")]
 [JsonDerivedType(typeof(SchemaUriField), typeDiscriminator: "url")]
 public abstract class SchemaFieldBase(string Name)

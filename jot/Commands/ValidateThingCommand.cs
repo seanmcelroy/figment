@@ -52,7 +52,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
@@ -87,7 +87,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
         if (thing.SchemaGuids.Count > 0)
         {
-            var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+            var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
             if (provider == null)
             {
                 AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");

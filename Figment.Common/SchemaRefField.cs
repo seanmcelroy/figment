@@ -3,6 +3,11 @@ using Figment.Common.Data;
 
 namespace Figment.Common;
 
+/// <summary>
+/// This field is a reference to a thing in a given <see cref="Schema"/>
+/// </summary>
+/// <param name="Name">The name of the field</param>
+/// <param name="SchemaGuid">The schema to which the thing (whose guid is the value of this field) must adhere</param>
 public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Name)
 {
     public const string TYPE = "ref";
@@ -39,14 +44,14 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
         if (Required && value == null)
             return false;
 
-        var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
             return false;
 
         if (!await ssp.GuidExists(SchemaGuid, cancellationToken))
             return false;
 
-        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
             return false;
 
@@ -58,7 +63,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
 
     public override async Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
             return "???";
 

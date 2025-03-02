@@ -8,7 +8,7 @@ public class ReindexThingsCommand : CancellableAsyncCommand
 {
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");

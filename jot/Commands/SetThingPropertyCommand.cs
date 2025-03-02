@@ -61,7 +61,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");

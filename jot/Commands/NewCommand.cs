@@ -21,7 +21,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var ssp = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
@@ -89,7 +89,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
 
         //var thingName = inputSplit[2..].Aggregate((c, n) => $"{c} {n}");
 
-        var tsp = StorageUtility.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");

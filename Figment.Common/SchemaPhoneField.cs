@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace Figment.Common;
 
 public class SchemaPhoneField(string Name) : SchemaTextField(Name)

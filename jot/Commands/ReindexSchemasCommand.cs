@@ -8,7 +8,7 @@ public class ReindexSchemasCommand : CancellableAsyncCommand
 {
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
-        var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");

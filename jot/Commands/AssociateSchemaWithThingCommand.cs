@@ -41,7 +41,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
                 return (int)ERROR_CODES.NOT_FOUND;
             case 1:
                 {
-                    var provider = StorageUtility.StorageProvider.GetSchemaStorageProvider();
+                    var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                     if (provider == null)
                     {
                         AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
@@ -79,7 +79,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
                 AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No thing found named '{settings.ThingName}'");
                 return (int)ERROR_CODES.NOT_FOUND;
             case 1:
-                var thingProvider = StorageUtility.StorageProvider.GetThingStorageProvider();
+                var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
                 if (thingProvider == null)
                 {
                     AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
