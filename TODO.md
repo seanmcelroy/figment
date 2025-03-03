@@ -6,8 +6,17 @@
 - [x] abstract data layer
 - [x] array of strings
 - [x] views
-- [ ] Schema inheritence
 - [ ] Calculated fields (age=now() - birthdate)
+- [ ] default schema values
+- [ ] pretty field names
+- [ ] filtered views
+- [ ] tasks
+- [ ] events
+- [ ] today
+- [ ] calendar
+- [ ] travel planner
+- [ ] Schema inheritence
+- [ ] workflows/processes (see github repo bpm)
 - [ ] Field formatters (store as RFC 3339 date, accept many, show MMMM d, yyyy)
 - [ ] Array of references (owner/owners of teams) properties
 - [ ] org chart command ("app"?ee)

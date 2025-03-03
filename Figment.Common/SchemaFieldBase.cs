@@ -5,6 +5,7 @@ namespace Figment.Common;
 [JsonPolymorphic]
 [JsonDerivedType(typeof(SchemaArrayField), typeDiscriminator: "array")]
 [JsonDerivedType(typeof(SchemaBooleanField), typeDiscriminator: "bool")]
+[JsonDerivedType(typeof(SchemaCalculatedField), typeDiscriminator: "calculated")]
 [JsonDerivedType(typeof(SchemaDateField), typeDiscriminator: "date")]
 [JsonDerivedType(typeof(SchemaEmailField), typeDiscriminator: "email")]
 [JsonDerivedType(typeof(SchemaEnumField), typeDiscriminator: "enum")]

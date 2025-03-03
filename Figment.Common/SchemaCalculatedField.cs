@@ -1,0 +1,20 @@
+using System.Text.Json.Serialization;
+
+namespace Figment.Common;
+
+public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
+{
+    [JsonPropertyName("type")]
+    public override string Type { get; } = "calculated";
+
+    [JsonPropertyName("formula")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Formula { get; set; }
+
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("calculated");
+
+    public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
+    {
+        return true;
+    }
+}

@@ -133,11 +133,23 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             };
             schemaLoaded.Properties[propName] = saf;
         }
-        else if (string.CompareOrdinal(propType, "bool") == 0)
+        else if (
+            string.CompareOrdinal(propType, "bool") == 0
+            || string.CompareOrdinal(propType, "boolean") == 0
+            )
         {
             // Boolean
             var sbf = new SchemaBooleanField(propName);
             schemaLoaded.Properties[propName] = sbf;
+        }
+        else if (
+            string.CompareOrdinal(propType, "calc") == 0
+            || string.CompareOrdinal(propType, "calculated") == 0
+            )
+        {
+            // Calculated
+            var scf = new SchemaCalculatedField(propName);
+            schemaLoaded.Properties[propName] = scf;
         }
         else if (string.CompareOrdinal(propType, "date") == 0)
         {

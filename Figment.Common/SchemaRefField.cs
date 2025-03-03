@@ -18,7 +18,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
     [JsonIgnore]
     public string SchemaGuid { get; set; } = SchemaGuid;
 
-    [JsonPropertyName("ref")]
+    [JsonPropertyName("ref")] // TODO: Someday, make this a $ meta property
     public string Id
     {
         get
