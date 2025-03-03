@@ -248,9 +248,9 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
         return Reference.EMPTY;
     }
 
-    private async IAsyncEnumerable<(Reference reference, string name)> FindByNameAsync(Func<string, bool> selector, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<(Reference reference, string name)> FindByNameAsync(Func<string, bool> nameSelector, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(selector);
+        ArgumentNullException.ThrowIfNull(nameSelector);
 
         // Add to index
         var indexFilePath = Path.Combine(SchemaDirectoryPath, NameIndexFileName);
@@ -259,7 +259,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
 
         await foreach (var entry in IndexManager.LookupAsync(
             indexFilePath
-            , e => selector(e.Key)
+            , e => nameSelector(e.Key)
             , cancellationToken))
         {
             var schemaFileName = entry.Value;

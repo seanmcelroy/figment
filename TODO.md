@@ -4,6 +4,8 @@
 - [x] associate schema command
 - [x] dissociate schema command
 - [x] abstract data layer
+- [x] array of strings
+- [x] views
 - [ ] Schema inheritence
 - [ ] Calculated fields (age=now() - birthdate)
 - [ ] Field formatters (store as RFC 3339 date, accept many, show MMMM d, yyyy)

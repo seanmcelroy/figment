@@ -121,6 +121,18 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             schemaLoaded.Properties.Remove(propToDelete.Key);
             AmbientErrorContext.ErrorProvider.LogWarning($"Deleted property name '{propName}'.");
         }
+        else if (string.CompareOrdinal(propType, "array") == 0)
+        {
+            // Array
+            var saf = new SchemaArrayField(propName)
+            {
+                Items = new SchemaArrayField.SchemaArrayFieldItems
+                {
+                    Type = "string",
+                }
+            };
+            schemaLoaded.Properties[propName] = saf;
+        }
         else if (string.CompareOrdinal(propType, "bool") == 0)
         {
             // Boolean

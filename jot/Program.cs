@@ -157,23 +157,29 @@ internal class Program
             if (!string.IsNullOrWhiteSpace(input))
             {
                 var handled = false;
+                Schema? schema = null;
+                List<Thing> thingsToDisplay = [];
                 await foreach (var schemaRef in schemaProvider.FindByPluralNameAsync(input, cts.Token))
                 {
-                    var schema = await schemaProvider.LoadAsync(schemaRef.Guid, cts.Token);
+                    schema = await schemaProvider.LoadAsync(schemaRef.Guid, cts.Token);
                     if (schema != null)
                     {
                         await foreach (var thingRef in thingProvider.GetBySchemaAsync(schema.Guid, cts.Token))
                         {
                             var thing = await thingProvider.LoadAsync(thingRef.Guid, cts.Token);
                             if (thing != null)
-                                await Console.Out.WriteLineAsync(thing.Name);
+                                thingsToDisplay.Add(thing);
                         }
                         handled = true;
                         break;
                     }
                 }
                 if (handled)
+                {
+                    // Display, then 'continue' to break out of await-for.
+                    await RenderView(schema!, thingsToDisplay, cts.Token);
                     continue;
+                }
             }
 
             // Proceed as normal in interactive mode
@@ -183,5 +189,95 @@ internal class Program
 
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+    }
+
+    private static async Task RenderView(
+        Schema commonSchema,
+        IEnumerable<Thing> thingsToDisplay,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(commonSchema);
+
+        // Is there a view for this schema?
+        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        if (ssp != null && tsp != null)
+        {
+            var viewSchemaRef = await ssp.FindByNameAsync("view", cancellationToken);
+            if (!viewSchemaRef.Equals(Reference.EMPTY))
+            {
+                await foreach (var viewRef in tsp.GetBySchemaAsync(viewSchemaRef.Guid, cancellationToken))
+                {
+                    var viewInstance = await tsp.LoadAsync(viewRef.Guid, cancellationToken);
+                    if (viewInstance != null
+                        && viewInstance.Properties.TryGetValue($"{viewSchemaRef.Guid}.for", out object? forSchemaGuidObject)
+                        && forSchemaGuidObject != null
+                        && forSchemaGuidObject is string forSchemaGuid
+                        && !string.IsNullOrWhiteSpace(forSchemaGuid)
+                        && string.CompareOrdinal(forSchemaGuid, commonSchema.Guid) == 0
+                        && await ssp.GuidExists(forSchemaGuid, cancellationToken))
+                    {
+                        // Found a matching view!
+                        var anyDisplayColumns = viewInstance.Properties.TryGetValue($"{viewSchemaRef.Guid}.displayColumns", out object? viewColumnsObject);
+                        var schema = await ssp.LoadAsync(forSchemaGuid, cancellationToken);
+
+                        Console.Error.WriteLine($"DEBUG: Using view '{viewInstance.Name}'");
+
+                        if (anyDisplayColumns
+                            && viewColumnsObject is System.Collections.IEnumerable viewColumns
+                            && schema != null)
+                        {
+                            // Do it this way so we preserve viewColumns order
+                            List<string> columns = [];
+                            var viewableColumns = schema.Properties.Select(p => p.Key)
+                                .Union([nameof(Thing.Name), nameof(Thing.Guid)])
+                                .ToArray();
+                            foreach (var vc in viewColumns.Cast<object?>().Select(v => v?.ToString()))
+                            {
+                                if (!string.IsNullOrWhiteSpace(vc) && viewableColumns.Contains(vc, StringComparer.InvariantCultureIgnoreCase))
+                                    columns.Add(vc);
+                            }
+
+                            Table t = new();
+                            foreach (var col in columns)
+                                t.AddColumn(col);
+
+                            foreach (var thing in thingsToDisplay)
+                            {
+                                Dictionary<string, object?> cellValues = [];
+                                // Add special view built-ins
+                                cellValues.Add(nameof(Thing.Name).ToLowerInvariant(), thing.Name);
+                                cellValues.Add(nameof(Thing.Guid).ToLowerInvariant(), thing.Guid);
+                                await foreach (var thingProperty in thing.GetProperties(cancellationToken))
+                                {
+                                    if (columns.Contains(thingProperty.SimpleDisplayName, StringComparer.InvariantCultureIgnoreCase)
+                                        && !cellValues.ContainsKey(thingProperty.SimpleDisplayName))
+                                        cellValues.Add(thingProperty.SimpleDisplayName.ToLowerInvariant(), thingProperty.Value);
+                                }
+
+                                List<string> cells = [];
+                                foreach (var col in columns)
+                                {
+                                    if (!cellValues.TryGetValue(col.ToLowerInvariant(), out object? cellValue))
+                                        cells.Add("<UNSET>");
+                                    else
+                                        cells.Add(cellValue?.ToString() ?? string.Empty);
+                                }
+                                t.AddRow(cells.ToArray());
+                            }
+                            AnsiConsole.Write(t);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback
+        foreach (var thing in thingsToDisplay)
+        {
+            await Console.Out.WriteLineAsync(thing.Name);
+        }
+
     }
 }

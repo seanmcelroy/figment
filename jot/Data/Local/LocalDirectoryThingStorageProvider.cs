@@ -3,6 +3,7 @@ using System.Text.Json;
 using Spectre.Console;
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
@@ -111,10 +112,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             yield break;
 
         foreach (var file in thingDir.EnumerateFiles("*.thing.json", new EnumerationOptions
-            {
-                AttributesToSkip = FileAttributes.Offline,
-                IgnoreInaccessible = true,
-            })
+        {
+            AttributesToSkip = FileAttributes.Offline,
+            IgnoreInaccessible = true,
+        })
         )
         {
             if (cancellationToken.IsCancellationRequested)
@@ -306,6 +307,23 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                             if (s2 != null) // We don't load nulls
                                                 thingLoaded.Properties.TryAdd(sub.Name, s2);
                                             continue;
+                                        case JsonValueKind.Number:
+                                            var sn = sub.Value.GetString();
+                                            if (sn != null && sn.Contains('.'))
+                                            {
+                                                if (ulong.TryParse(sn, out ulong u64))
+                                                    thingLoaded.Properties.TryAdd(sub.Name, u64);
+                                                else
+                                                    AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as integer from: {filePath}");
+                                            }
+                                            else if (sn != null)
+                                            {
+                                                if (double.TryParse(sn, out double u64))
+                                                    thingLoaded.Properties.TryAdd(sub.Name, u64);
+                                                else
+                                                    AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as number from: {filePath}");
+                                            }
+                                            continue;
                                         case JsonValueKind.True:
                                             thingLoaded.Properties.TryAdd(sub.Name, true);
                                             continue;
@@ -313,10 +331,36 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                             thingLoaded.Properties.TryAdd(sub.Name, false);
                                             continue;
                                         case JsonValueKind.Null:
+                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
                                             continue; // We don't load nulls
                                         case JsonValueKind.Object:
+                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
                                             continue; // We don't load sub-object graphs
+                                        case JsonValueKind.Array:
+                                            {
+                                                var aLen = sub.Value.GetArrayLength();
+                                                var array = new object?[aLen];
+                                                var ai = 0;
+
+                                                foreach (var element in sub.Value.EnumerateArray())
+                                                {
+                                                    switch (element.ValueKind)
+                                                    {
+                                                        case JsonValueKind.String:
+                                                            array[ai] = element.GetString();
+                                                            break;
+                                                        default:
+                                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' in array position {ai} (value='{element.GetString()}') from: {filePath}");
+                                                            break;
+                                                    }
+                                                    ai++;
+                                                }
+
+                                                thingLoaded.Properties.TryAdd(sub.Name, array);
+                                                continue;
+                                            }
                                         default:
+                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
                                             continue;
                                     }
                                 }
@@ -487,7 +531,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             await IndexManager.AddAsync(fs, index.Value, cancellationToken);
         }
 
-        return true;    }
+        return true;
+    }
 
     public async Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
     {
@@ -529,7 +574,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             }
         }
 
-        if (thing == null) {
+        if (thing == null)
+        {
             AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Unable to load thing {thingGuid}, so it may still exist in schema indexes.  Rebuild thing indexes to be sure.");
             return true;
         }

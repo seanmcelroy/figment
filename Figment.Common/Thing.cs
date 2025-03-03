@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -225,6 +226,8 @@ public class Thing(string Guid, string Name)
         }
 
         // Step 2, Check properties on associated schemas NOT already set on this object
+        object? massagedPropValue = propValue;
+
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
@@ -234,8 +237,12 @@ public class Thing(string Guid, string Name)
             {
                 var truePropertyName = $"{schema.Guid}.{schemaProperty.Key}";
 
+                // Does this schema field massage the string input?
+                var canMassage = schemaProperty.Value.TryMassageInput(propValue, out object? possibleMassagedPropValue);
+
                 // If this value was for this property, would it be valid?
-                var wouldBeValid = await schemaProperty.Value.IsValidAsync(propValue, cancellationToken);
+                var wouldBeValid = canMassage && await schemaProperty.Value.IsValidAsync(massagedPropValue, cancellationToken);
+
                 var candidatesMatch = false;
                 for (int i = 0; i < candidateProperties.Count; i++)
                 {
@@ -257,6 +264,7 @@ public class Thing(string Guid, string Name)
                             SchemaName = candidateProperties[i].SchemaName
                         };
                         candidatesMatch = true;
+                        massagedPropValue = possibleMassagedPropValue; 
                     }
                 }
                 if (candidatesMatch)
@@ -309,20 +317,20 @@ public class Thing(string Guid, string Name)
             case 0:
                 {
                     // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
-                    if (string.IsNullOrWhiteSpace(propValue))
+                    if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                         Properties.Remove(propName);
                     else
-                        Properties[propName] = propValue;
+                        Properties[propName] = massagedPropValue;
 
                     // Special case for Name.
                     if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        if (string.IsNullOrWhiteSpace(propValue))
+                        if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                         {
                             AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
-                        Name = propValue;
+                        Name = massagedPropValue.ToString()!;
                     }
 
                     var saved = await SaveAsync(cancellationToken);
@@ -332,7 +340,7 @@ public class Thing(string Guid, string Name)
                 // Exactly one, we need to update:
 
                 // Unset (null it out) case
-                if (string.IsNullOrWhiteSpace(propValue))
+                if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                 {
                     if (Properties.Remove(candidateProperties[0].TruePropertyName)
                         && candidateProperties[0].Required)
@@ -350,7 +358,7 @@ public class Thing(string Guid, string Name)
                     {
                         var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length + 1)..];
 
-                        var disambig = tsp.FindByPartialNameAsync(remoteSchemaGuid, propValue, cancellationToken)
+                        var disambig = tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString(), cancellationToken)
                             .ToBlockingEnumerable(cancellationToken)
                             .Select(p => new PossibleNameMatch(p.reference, p.name))
                             .ToArray();
@@ -374,7 +382,7 @@ public class Thing(string Guid, string Name)
                         }
                         else
                         {
-                            Properties[candidateProperties[0].TruePropertyName] = propValue;
+                            Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
                             AmbientErrorContext.ErrorProvider.LogWarning($"Value of {propName} is invalid.");
                             var saved = await SaveAsync(cancellationToken);
                             return new ThingSetResult(saved);
@@ -382,7 +390,7 @@ public class Thing(string Guid, string Name)
                     }
                     else
                     {
-                        Properties[candidateProperties[0].TruePropertyName] = propValue;
+                        Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
                         AmbientErrorContext.ErrorProvider.LogWarning($"Value of {propName} is invalid.");
                         var saved = await SaveAsync(cancellationToken);
                         return new ThingSetResult(saved);
@@ -393,15 +401,15 @@ public class Thing(string Guid, string Name)
                 {
                     if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        if (string.IsNullOrWhiteSpace(propValue))
+                        if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                         {
                             AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
-                        Name = propValue;
+                        Name = massagedPropValue.ToString()!;
                     }
                     else
-                        Properties[candidateProperties[0].TruePropertyName] = propValue;
+                        Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
 
                     var saved = await SaveAsync(cancellationToken);
                     return new ThingSetResult(saved);

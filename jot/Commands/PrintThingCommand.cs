@@ -124,10 +124,10 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 if (prop.Value.valid)
                     propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {text}");
                 else
-                    propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : [red bold]{Markup.Escape(text ?? string.Empty)}[/]");
+                    propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : [red bold]{text}[/]");
             }
             else
-                propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {prop.Value.fieldValue}");
+                propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {Markup.Escape(prop.Value.fieldValue?.ToString() ?? string.Empty)}");
         }
 
         var unsetPropBuilder = new StringBuilder();
@@ -182,7 +182,21 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         ArgumentNullException.ThrowIfNull(field);
 
         var fieldType = field.GetType();
-        if (fieldType.Equals(typeof(SchemaPhoneField)))
+        if (fieldType.Equals(typeof(SchemaArrayField)))
+        {
+            if (value == null)
+                return default;
+
+            if (value is not System.Collections.IEnumerable ie)
+                return default;
+
+            var contents = ie.Cast<object?>()
+                .Select(x => x?.ToString() ?? string.Empty)
+                .Aggregate((c, n) => $"{c},{n}");
+
+            return Markup.Escape($"[{contents}]"); // This needs to be escaped
+        }
+        else if (fieldType.Equals(typeof(SchemaPhoneField)))
         {
             if (value == null)
                 return default;
@@ -194,7 +208,12 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 || str?.IndexOfAny(['[', ']']) > -1)
                 return str; // No link wrapping.
 
-            return (string?)$"[link=tel:{value}]{value}[/]";
+            if (string.IsNullOrEmpty(str))
+            {
+                return str;
+            }
+
+            return (string?)$"[link=tel:{Markup.Escape(str)}]{Markup.Escape(str)}[/]";
         }
         else if (fieldType.Equals(typeof(SchemaRefField)))
         {
@@ -214,11 +233,15 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             if (thing == null)
                 return str;
 
-            return thing.Name;
+            return Markup.Escape(thing.Name);
         }
         else
         {
-            return value?.ToString();
+            var val = value?.ToString();
+            if (string.IsNullOrEmpty(val))
+                return val;
+
+            return Markup.Escape(val);
         }
 
     }

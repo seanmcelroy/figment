@@ -36,8 +36,6 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
             return Task.FromResult(false);
         if (!string.IsNullOrWhiteSpace(Pattern) && (str == null || !Regex.IsMatch(str, Pattern)))
             return Task.FromResult(false);
-        if (Required && value == null)
-            return Task.FromResult(false);
 
         return Task.FromResult(true);
     }
