@@ -1,6 +1,5 @@
 namespace Figment.Common.Test.Calculations;
 
-
 [TestClass]
 public sealed class Today
 {
@@ -15,6 +14,11 @@ public sealed class Today
         Assert.IsNotNull(root);
         var calcResult = root.Invoke();
         Assert.IsFalse(calcResult.IsError);
+
+        var result = calcResult.Result;
+        Assert.IsNotNull(result);
+        Assert.IsInstanceOfType<double>(result);
+        Assert.IsTrue((double)result >= 45718);
         Console.Out.WriteLine(calcResult.Result);
     }
 

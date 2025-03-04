@@ -6,4 +6,5 @@ public enum CalculationErrorType {
     NotANumber = 2,
     DivisionByZero = 3,
     Recursion = 4,
+    BadValue = 5,
 }
