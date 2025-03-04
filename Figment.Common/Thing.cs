@@ -266,9 +266,21 @@ public class Thing(string Guid, string Name)
         }
 
         // Step 2, Check properties on associated schemas NOT already set on this object
-        object? massagedPropValue = propValue;
+        Dictionary<string, object?> massagedPropValues = [];
+        //object? massagedPropValue = propValue; // comment
 
-        await foreach (var schema in GetAssociatedSchemas(cancellationToken))
+        var associatedSchemas = GetAssociatedSchemas(cancellationToken).ToBlockingEnumerable().ToArray();
+
+        // Massage values using schema field methods.
+        var x = associatedSchemas.SelectMany(s =>
+            s.Properties.Where(p => string.CompareOrdinal(p.Key, propName) == 0)
+            .Select(p => new { SchemaGuid = s.Guid, PropertyName = p.Key, Field = p.Value }))
+            .ToArray();
+        foreach (var y in x)
+            if (y.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
+                massagedPropValues.Add($"{y.SchemaGuid}.{y.PropertyName}", prePossibleMassaged);
+
+        foreach (var schema in associatedSchemas)
         {
             if (cancellationToken.IsCancellationRequested)
                 return new ThingSetResult(false);
@@ -281,7 +293,7 @@ public class Thing(string Guid, string Name)
                 var canMassage = schemaProperty.Value.TryMassageInput(propValue, out object? possibleMassagedPropValue);
 
                 // If this value was for this property, would it be valid?
-                var wouldBeValid = canMassage && await schemaProperty.Value.IsValidAsync(massagedPropValue, cancellationToken);
+                var wouldBeValid = canMassage && await schemaProperty.Value.IsValidAsync(possibleMassagedPropValue, cancellationToken);
 
                 var candidatesMatch = false;
                 for (int i = 0; i < candidateProperties.Count; i++)
@@ -304,14 +316,11 @@ public class Thing(string Guid, string Name)
                             SchemaName = candidateProperties[i].SchemaName
                         };
                         candidatesMatch = true;
-                        massagedPropValue = possibleMassagedPropValue;
+                        //massagedPropValue = possibleMassagedPropValue;
                     }
                 }
                 if (candidatesMatch)
                     continue;// Already set, no need to add a phantom.
-
-                //if (candidateProperties.Any(c => string.CompareOrdinal(c.TruePropertyName, truePropertyName) == 0))
-                //    continue; // Already set, no need to add a phantom.
 
                 var fullDisplayName = $"{schema.EscapedName}.{schemaProperty.Key}";
                 var simpleDisplayName = schemaProperty.Key.Contains(' ') && !schemaProperty.Key.StartsWith('[') && !schemaProperty.Key.EndsWith(']') ? $"[{schemaProperty.Key}]" : schemaProperty.Key;
@@ -357,20 +366,20 @@ public class Thing(string Guid, string Name)
             case 0:
                 {
                     // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
-                    if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
+                    if (propValue == null || string.IsNullOrWhiteSpace(propValue.ToString()))
                         Properties.Remove(propName);
                     else
-                        Properties[propName] = massagedPropValue;
+                        Properties[propName] = propValue;
 
                     // Special case for Name.
                     if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
+                        if (propValue == null || string.IsNullOrWhiteSpace(propValue.ToString()))
                         {
                             AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
-                        Name = massagedPropValue.ToString()!;
+                        Name = propValue.ToString()!;
                     }
 
                     var saved = await SaveAsync(cancellationToken);
@@ -378,6 +387,11 @@ public class Thing(string Guid, string Name)
                 }
             case 1:
                 // Exactly one, we need to update:
+
+                var massagedPropValue = massagedPropValues
+                    .Where(m => string.CompareOrdinal(m.Key, candidateProperties[0].TruePropertyName) == 0)
+                    .Select(m => m.Value)
+                    .FirstOrDefault(propValue);
 
                 // Unset (null it out) case
                 if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
