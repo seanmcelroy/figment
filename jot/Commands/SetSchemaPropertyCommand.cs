@@ -121,7 +121,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             schemaLoaded.Properties.Remove(propToDelete.Key);
             AmbientErrorContext.ErrorProvider.LogWarning($"Deleted property name '{propName}'.");
         }
-        else if (string.CompareOrdinal(propType, "array") == 0)
+        else if (string.CompareOrdinal(propType, SchemaArrayField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Array
             var saf = new SchemaArrayField(propName)
@@ -133,63 +133,50 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             };
             schemaLoaded.Properties[propName] = saf;
         }
-        else if (
-            string.CompareOrdinal(propType, "bool") == 0
-            || string.CompareOrdinal(propType, "boolean") == 0
-            )
+        else if (string.CompareOrdinal(propType, SchemaBooleanField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Boolean
             var sbf = new SchemaBooleanField(propName);
             schemaLoaded.Properties[propName] = sbf;
         }
-        else if (
-            string.CompareOrdinal(propType, "calc") == 0
-            || string.CompareOrdinal(propType, "calculated") == 0
-            )
+        else if (string.CompareOrdinal(propType, SchemaCalculatedField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Calculated
             var scf = new SchemaCalculatedField(propName);
             schemaLoaded.Properties[propName] = scf;
+            scf.Formula = settings.Formula;
         }
-        else if (string.CompareOrdinal(propType, "date") == 0)
+        else if (string.CompareOrdinal(propType, SchemaDateField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Date
             var sdf = new SchemaDateField(propName);
             schemaLoaded.Properties[propName] = sdf;
         }
-        else if (string.CompareOrdinal(propType, "email") == 0)
+        else if (string.CompareOrdinal(propType, SchemaEmailField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Email
             var sef = new SchemaEmailField(propName);
             schemaLoaded.Properties[propName] = sef;
         }
-        else if (
-            string.CompareOrdinal(propType, "integer") == 0
-            || string.CompareOrdinal(propType, "int") == 0
-        )
+        else if (string.CompareOrdinal(propType, SchemaIntegerField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Number (integer)
             var sif = new SchemaIntegerField(propName);
             schemaLoaded.Properties[propName] = sif;
         }
-        else if (
-            string.CompareOrdinal(propType, "number") == 0
-            || string.CompareOrdinal(propType, "num") == 0
-            || string.CompareOrdinal(propType, "double") == 0
-            || string.CompareOrdinal(propType, "float") == 0
-        )
+        else if (string.CompareOrdinal(propType, SchemaPhoneField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Number (double)
             var snf = new SchemaNumberField(propName);
             schemaLoaded.Properties[propName] = snf;
         }
-        else if (string.CompareOrdinal(propType, "phone") == 0)
+        else if (string.CompareOrdinal(propType, SchemaPhoneField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Phone
             var spf = new SchemaPhoneField(propName);
             schemaLoaded.Properties[propName] = spf;
         }
-        else if (string.CompareOrdinal(propType, "schema") == 0)
+        else if (string.CompareOrdinal(propType, SchemaSchemaField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Email
             var ssf = new SchemaSchemaField(propName);
@@ -201,7 +188,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var stf = new SchemaTextField(propName);
             schemaLoaded.Properties[propName] = stf;
         }
-        else if (string.CompareOrdinal(propType, "uri") == 0)
+        else if (string.CompareOrdinal(propType, SchemaUriField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Uri
             var suf = new SchemaUriField(propName);

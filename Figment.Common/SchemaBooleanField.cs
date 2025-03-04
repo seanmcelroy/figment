@@ -4,10 +4,12 @@ namespace Figment.Common;
 
 public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
 {
-    [JsonPropertyName("type")]
-    public override string Type { get; } = "boolean";
+    public const string SCHEMA_FIELD_TYPE = "bool";
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("bool");
+    [JsonPropertyName("type")]
+    public override string Type { get; } = SCHEMA_FIELD_TYPE;
+
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {

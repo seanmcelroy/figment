@@ -102,7 +102,8 @@ public class Thing(string Guid, string Name)
         }
     }
 
-    public async IAsyncEnumerable<ThingProperty> GetProperties([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ThingProperty> GetProperties(
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (Properties == null || Properties.Count == 0)
             yield break;
@@ -113,11 +114,6 @@ public class Thing(string Guid, string Name)
         {
             thingSchemas.Add(schema);
         }
-
-        var unsetSchemaFields = thingSchemas
-            .Select(s => new { Schema = s, s.Properties })
-            .SelectMany(s => s.Properties.Select(p => (s.Schema, p.Key, p.Value)))
-            .ToList();
 
         foreach (var thingProp in Properties)
         {
@@ -153,18 +149,62 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    public async Task ComputeCalculatedProperties(CancellationToken cancellationToken)
+    {
+        // Does this thing adhere to any schemas?
+        List<Schema> thingSchemas = [];
+        await foreach (var schema in GetAssociatedSchemas(cancellationToken))
+            thingSchemas.Add(schema);
+
+        var unsetProperties = (await GetUnsetProperties(cancellationToken))
+            .ToDictionary(k => $"{k.SchemaGuid}.{k.SimpleDisplayName}", v => (object?)null);
+
+        var allProperties = new Dictionary<string, object?>();
+        foreach (var setProperty in Properties)
+            allProperties.Add(setProperty.Key, setProperty.Value);
+        foreach (var unsetProperty in unsetProperties)
+            allProperties.Add(unsetProperty.Key, null);
+
+        foreach (var thingProp in allProperties)
+        {
+            // Does this property belong to a schema?
+            bool valid = true;
+            var schema = thingSchemas.FirstOrDefault(s => thingProp.Key.StartsWith($"{s.Guid}."));
+            var (escapedPropKey, fullDisplayName, simpleDisplayName) = CarvePropertyName(thingProp.Key, schema);
+            var required = false;
+            var schemaFieldType = default(string?);
+            if (schema == default)
+                continue; // If the schema was deleted, ignore this field.
+
+            // Watch out, the schema field could have been deleted but it's still there on the instance.
+            if (schema.Properties.TryGetValue(simpleDisplayName, out SchemaFieldBase? schemaField))
+            {
+                valid = schemaField == null || await schemaField.IsValidAsync(thingProp.Value, cancellationToken); // Valid if no schema.
+                required = schemaField != null && schemaField.Required;
+                schemaFieldType = schemaField?.Type;
+            }
+
+            if (schemaFieldType == null
+                || schemaFieldType.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0)
+                continue; // Not a calculate field.
+
+            // TODO
+            AmbientErrorContext.ErrorProvider.LogWarning($"Would recalculate {thingProp.Key}");
+        }
+    }
+
     public async Task<List<ThingUnsetProperty>> GetUnsetProperties(CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
         List<Schema> thingSchemas = [];
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
-        {
             thingSchemas.Add(schema);
-        }
 
         var unsetSchemaFields = thingSchemas
             .Select(s => new { Schema = s, s.Properties })
-            .SelectMany(s => s.Properties.Select(p => (s, s.Schema.Guid, s.Schema.Name, p.Key)))
+            .SelectMany(s => s.Properties
+                //.Where(p => p.Value.Type.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0) // Calculated properties are never 'unset'.
+                .Select(p => (s, s.Schema.Guid, s.Schema.Name, p.Key)))
             .ToDictionary(
                 k => (k.Guid, k.Key),
                 v =>
@@ -188,7 +228,7 @@ public class Thing(string Guid, string Name)
                 _ = unsetSchemaFields.Remove((thingProperty.SchemaGuid, thingProperty.SimpleDisplayName));
         }
 
-        return unsetSchemaFields.Values.ToList();
+        return [.. unsetSchemaFields.Values];
     }
 
     public async Task<ThingSetResult> Set(
@@ -258,13 +298,13 @@ public class Thing(string Guid, string Name)
                             Valid = wouldBeValid,
                             Required = schemaProperty.Value.Required,
                             SchemaFieldType =
-                                string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.TYPE) == 0
-                                    ? $"{SchemaRefField.TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                                string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0
+                                    ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                                     : schemaProperty.Value.Type,
                             SchemaName = candidateProperties[i].SchemaName
                         };
                         candidatesMatch = true;
-                        massagedPropValue = possibleMassagedPropValue; 
+                        massagedPropValue = possibleMassagedPropValue;
                     }
                 }
                 if (candidatesMatch)
@@ -285,8 +325,8 @@ public class Thing(string Guid, string Name)
                     Valid = wouldBeValid,
                     Required = schemaProperty.Value.Required,
                     SchemaFieldType =
-                        string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.TYPE) == 0
-                            ? $"{SchemaRefField.TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                        string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0
+                            ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                             : schemaProperty.Value.Type,
                     SchemaName = schema.Name
                 };
@@ -354,9 +394,9 @@ public class Thing(string Guid, string Name)
                 {
                     if (chooserHandler != null
                         && candidateProperties[0].SchemaGuid != null
-                        && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.TYPE) ?? false))
+                        && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.SCHEMA_FIELD_TYPE) ?? false))
                     {
-                        var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.TYPE.Length + 1)..];
+                        var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
 
                         var disambig = tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString(), cancellationToken)
                             .ToBlockingEnumerable(cancellationToken)

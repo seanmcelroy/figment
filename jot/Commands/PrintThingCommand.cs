@@ -67,6 +67,8 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
+        await thingLoaded.ComputeCalculatedProperties(cancellationToken);
+
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
 
         Dictionary<string, Schema> schemas = [];
@@ -152,7 +154,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             foreach (var schema in schemas)
             {
                 var linkedFields = schema.Value.Properties
-                    .Where(p => string.CompareOrdinal(p.Value.Type, SchemaRefField.TYPE) == 0)
+                    .Where(p => string.CompareOrdinal(p.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0)
                     .ToDictionary(k => k.Key, v => (SchemaRefField)v.Value);
 
                 foreach (var lf in linkedFields)

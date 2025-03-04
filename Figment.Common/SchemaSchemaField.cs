@@ -4,7 +4,9 @@ namespace Figment.Common;
 
 public class SchemaSchemaField(string Name) : SchemaTextField(Name)
 {
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("schema");
+    public const string SCHEMA_FIELD_TYPE = "schema";
+
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {

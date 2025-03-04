@@ -10,10 +10,10 @@ namespace Figment.Common;
 /// <param name="SchemaGuid">The schema to which the thing (whose guid is the value of this field) must adhere</param>
 public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Name)
 {
-    public const string TYPE = "ref";
+    public const string SCHEMA_FIELD_TYPE = "ref";
 
     [JsonIgnore] // Only for enums.
-    public override string Type { get; } = TYPE;
+    public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
     [JsonIgnore]
     public string SchemaGuid { get; set; } = SchemaGuid;

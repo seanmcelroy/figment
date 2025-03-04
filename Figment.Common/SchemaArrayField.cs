@@ -5,6 +5,8 @@ namespace Figment.Common;
 
 public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
 {
+    public const string SCHEMA_FIELD_TYPE = "array";
+
     public class SchemaArrayFieldItems
     {
         [JsonPropertyName("type")]
@@ -12,7 +14,7 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
     }
 
     [JsonPropertyName("type")]
-    public override string Type { get; } = "array";
+    public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
     [JsonPropertyName("minItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
