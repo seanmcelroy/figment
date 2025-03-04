@@ -20,4 +20,39 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
 
         return Task.FromResult(bool.TryParse(value!.ToString(), out bool _));
     }
+
+    public override bool TryMassageInput(object? input, out object? output)
+    {
+        if (input == null || input.GetType() == typeof(bool))
+        {
+            output = input;
+            return true;
+        }
+
+        if (input is int i) {
+            output = i != 0;
+            return true;
+        }
+
+        var prov = input.ToString();
+
+        if (bool.TryParse(prov, out bool provBool)) {
+            output = provBool;
+            return true;
+        }
+
+        if (string.Compare("yes", prov, StringComparison.CurrentCultureIgnoreCase) == 0)
+        {
+            output = true;
+            return true;
+        }
+
+        if (string.Compare("no", prov, StringComparison.CurrentCultureIgnoreCase) == 0)
+        {
+            output = false;
+            return true;
+        }
+
+        return base.TryMassageInput(input, out output);
+    }
 }

@@ -259,7 +259,7 @@ internal class Program
                                 foreach (var col in columns)
                                 {
                                     if (!cellValues.TryGetValue(col.ToLowerInvariant(), out object? cellValue))
-                                        cells.Add("<UNSET>");
+                                        cells.Add("[red]<UNSET>[/]");
                                     else
                                         cells.Add(cellValue?.ToString() ?? string.Empty);
                                 }
