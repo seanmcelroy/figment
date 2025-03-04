@@ -221,7 +221,7 @@ internal class Program
                         var anyDisplayColumns = viewInstance.Properties.TryGetValue($"{viewSchemaRef.Guid}.displayColumns", out object? viewColumnsObject);
                         var schema = await ssp.LoadAsync(forSchemaGuid, cancellationToken);
 
-                        Console.Error.WriteLine($"DEBUG: Using view '{viewInstance.Name}'");
+                        //Console.Error.WriteLine($"DEBUG: Using view '{viewInstance.Name}'");
 
                         if (anyDisplayColumns
                             && viewColumnsObject is System.Collections.IEnumerable viewColumns
@@ -252,12 +252,22 @@ internal class Program
                                 {
                                     if (columns.Contains(thingProperty.SimpleDisplayName, StringComparer.InvariantCultureIgnoreCase)
                                         && !cellValues.ContainsKey(thingProperty.SimpleDisplayName))
-                                        cellValues.Add(thingProperty.SimpleDisplayName.ToLowerInvariant(), thingProperty.Value);
+                                    {
+                                        string? text;
+                                        if (schema.Properties.TryGetValue(thingProperty.FullDisplayName[(thingProperty.FullDisplayName.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
+                                            text = await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken);
+                                        else
+                                            text = thingProperty.Value?.ToString();
+
+                                        // Use ToLowerInvariant so column definition casing in views is forgiving.
+                                        cellValues.Add(thingProperty.SimpleDisplayName.ToLowerInvariant(), text);
+                                    }
                                 }
 
                                 List<string> cells = [];
                                 foreach (var col in columns)
                                 {
+                                    // Use ToLowerInvariant so column definition casing in views is forgiving.
                                     if (!cellValues.TryGetValue(col.ToLowerInvariant(), out object? cellValue))
                                         cells.Add("[red]<UNSET>[/]");
                                     else

@@ -18,6 +18,9 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
         if (Required && value == null)
             return Task.FromResult(false);
 
+        if (value is string)
+            return Task.FromResult(false); // Should be native boolean.
+
         return Task.FromResult(bool.TryParse(value!.ToString(), out bool _));
     }
 
@@ -29,14 +32,16 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
             return true;
         }
 
-        if (input is int i) {
+        if (input is int i)
+        {
             output = i != 0;
             return true;
         }
 
         var prov = input.ToString();
 
-        if (bool.TryParse(prov, out bool provBool)) {
+        if (bool.TryParse(prov, out bool provBool))
+        {
             output = provBool;
             return true;
         }

@@ -179,7 +179,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         return (int)ERROR_CODES.SUCCESS;
     }
 
-    private static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
+    internal static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
     {
         ArgumentNullException.ThrowIfNull(field);
 
