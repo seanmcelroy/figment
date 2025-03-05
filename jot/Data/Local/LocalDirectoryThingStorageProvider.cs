@@ -193,8 +193,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Zero length file found but could not be deleted at: {filePath}");
-                AnsiConsole.WriteException(ex);
+                AmbientErrorContext.Provider.LogException(ex, $"Zero length file found but could not be deleted at: {filePath}");
             }
             return Task.FromResult(false);
         }
@@ -313,7 +312,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                             else if (sub.Value.TryGetDouble(out double dbl))
                                                 thingLoaded.Properties.TryAdd(sub.Name, dbl);
                                             else
-                                                AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as number from: {filePath}");
+                                                AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as number from: {filePath}");
                                             continue;
                                         case JsonValueKind.True:
                                             thingLoaded.Properties.TryAdd(sub.Name, true);
@@ -322,10 +321,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                             thingLoaded.Properties.TryAdd(sub.Name, false);
                                             continue;
                                         case JsonValueKind.Null:
-                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
+                                            AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
                                             continue; // We don't load nulls
                                         case JsonValueKind.Object:
-                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
+                                            AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
                                             continue; // We don't load sub-object graphs
                                         case JsonValueKind.Array:
                                             {
@@ -341,7 +340,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                                             array[ai] = element.GetString();
                                                             break;
                                                         default:
-                                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' in array position {ai} (value='{element.GetString()}') from: {filePath}");
+                                                            AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' in array position {ai} (value='{element.GetString()}') from: {filePath}");
                                                             break;
                                                     }
                                                     ai++;
@@ -351,7 +350,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                                 continue;
                                             }
                                         default:
-                                            AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
+                                            AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
                                             continue;
                                     }
                                 }
@@ -369,8 +368,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
         catch (JsonException je)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize thing from {filePath}");
-            AnsiConsole.WriteException(je);
+            AmbientErrorContext.Provider.LogException(je, $"Unable to deserialize thing from {filePath}");
             return null;
         }
     }
@@ -393,8 +391,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
         catch (Exception je)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to serialize thing {thing.Guid} from {filePath}");
-            AnsiConsole.WriteException(je);
+            AmbientErrorContext.Provider.LogException(je, $"Unable to serialize thing {thing.Guid} from {filePath}");
             return false;
         }
     }
@@ -551,7 +548,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
         catch (Exception ex)
         {
-            AnsiConsole.WriteException(ex);
+            AmbientErrorContext.Provider.LogException(ex, $"Unable to delete thing file '{thingFilePath}'");
             return false;
         }
 

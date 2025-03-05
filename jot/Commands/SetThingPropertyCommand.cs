@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -25,13 +26,13 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibilities.Length)
@@ -96,8 +97,8 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
-
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thingLoaded.Name} saved.\r\n");
+        
+        AmbientErrorContext.Provider.LogDone($"{thingLoaded.Name} saved.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

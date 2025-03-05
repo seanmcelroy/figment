@@ -12,6 +12,8 @@ public interface ISchemaStorageProvider
         string schemaName,
         CancellationToken cancellationToken);
 
+    public Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken);
+
     public Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken);
 
     public IAsyncEnumerable<Reference> FindByPartialNameAsync(string thingNamePart, CancellationToken cancellationToken);

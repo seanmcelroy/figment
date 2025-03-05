@@ -1,4 +1,5 @@
 using Figment.Common;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -30,11 +31,11 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new SetThingPropertyCommand();
-                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { Name = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Value }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Value }, cancellationToken);
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
+                    AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

@@ -26,7 +26,7 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Associat
         // Schema first
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
-            AmbientErrorContext.ErrorProvider.LogWarning("Schema name must be specified.");
+            AmbientErrorContext.Provider.LogWarning("Schema name must be specified.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -101,7 +101,7 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Associat
 
         if (!thing.SchemaGuids.Remove(schema.Guid))
         {
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} is not associated with schema {schema.Name}. No change.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} is not associated with schema {schema.Name}. No change.");
             return (int)ERROR_CODES.SUCCESS;
         }
 
@@ -113,9 +113,9 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Associat
         }
 
         if (thing.SchemaGuids.Count == 0)
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} is no longer associated to any schemas.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} is no longer associated to any schemas.");
         else
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} is no longer a '{schema.Name}'.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} is no longer a '{schema.Name}'.");
 
         return (int)ERROR_CODES.SUCCESS;
     }

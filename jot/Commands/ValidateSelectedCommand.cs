@@ -55,7 +55,7 @@ public class ValidateSelectedCommand : CancellableAsyncCommand<ValidateSelectedC
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new ValidateThingCommand();
-                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { Name = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { ThingName = selected.Guid }, cancellationToken);
                 }
             default:
                 {

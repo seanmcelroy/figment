@@ -25,7 +25,7 @@ internal class Program
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
         // Setup the providers. TODO: Allow CLI config
-        AmbientErrorContext.ErrorProvider = new SpectreConsoleErrorProvider();
+        AmbientErrorContext.Provider = new SpectreConsoleErrorProvider();
         AmbientStorageContext.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
 
         var app = new CommandApp<HelpCommand>();
@@ -46,6 +46,8 @@ internal class Program
                 {
                     schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
                         .WithDescription("Associates a thing with a schema");
+                    schema.AddCommand<DeleteSchemaCommand>("delete")
+                        .WithDescription("Permanently deletes a schema");
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ListSchemaMembersCommand>("members")

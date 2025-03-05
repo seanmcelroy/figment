@@ -11,11 +11,11 @@ public class ThingCommandSettings : CommandSettings
 
     [Description("The thing to select")]
     [CommandArgument(ARG_POSITION_NAME, "<NAME>")]
-    public string? Name { get; init; }
+    public string? ThingName { get; init; }
 
     public override ValidationResult Validate()
     {
-        return string.IsNullOrWhiteSpace(Name)
+        return string.IsNullOrWhiteSpace(ThingName)
             ? ValidationResult.Error("Name must either be the GUID of a thing or a name that resolves to just one")
             : ValidationResult.Success();
     }

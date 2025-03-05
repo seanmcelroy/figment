@@ -25,7 +25,7 @@ public class PromoteSelectedPropertyCommand : CancellableAsyncCommand<PromoteSel
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new PromoteThingPropertyCommand();
-                    return await cmd.ExecuteAsync(context, new PromoteThingPropertyCommandSettings { Name = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new PromoteThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName }, cancellationToken);
                 }
             default:
                 {

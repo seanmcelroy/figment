@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -27,13 +28,13 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To promote a property on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibilities.Length)
@@ -120,7 +121,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         if (!thingSaved)
             return (int)ERROR_CODES.THING_SAVE_ERROR;
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: '{property.Key}' is now promoted from a one-off property on {thingLoaded.Name} to a property on associated schema(s).\r\n");
+        AmbientErrorContext.Provider.LogDone($"'{property.Key}' is now promoted from a one-off property on {thingLoaded.Name} to a property on associated schema(s).");
         return (int)ERROR_CODES.SUCCESS;
 
         // Is there a conflicting name?

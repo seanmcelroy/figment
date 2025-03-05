@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -24,13 +25,13 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To delete a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibilities.Length)
@@ -72,7 +73,7 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         var deleted = await thing.DeleteAsync(cancellationToken);
         if (deleted)
         {
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} ({thing.Guid}) deleted.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} ({thing.Guid}) deleted.");
             Program.SelectedEntity = Reference.EMPTY;
             Program.SelectedEntityName = string.Empty;
             return (int)ERROR_CODES.SUCCESS;

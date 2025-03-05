@@ -24,13 +24,13 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibilities.Length)

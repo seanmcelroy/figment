@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -88,7 +89,7 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {schemaLoaded.Name} saved.\r\n");
+        AmbientErrorContext.Provider.LogDone($"{schemaLoaded.Name} saved.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

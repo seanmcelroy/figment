@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -100,7 +101,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
 
         if (thing.SchemaGuids.Any(s => string.CompareOrdinal(s, schema.Guid) == 0))
         {
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} is already associated with schema {schema.Name}. No change.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} is already associated with schema {schema.Name}. No change.");
             return (int)ERROR_CODES.SUCCESS;
         }
 
@@ -113,9 +114,9 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
         }
 
         if (thing.SchemaGuids.Count == 1)
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} is now a '{schema.Name}'.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} is now a '{schema.Name}'.");
         else
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} is now also a '{schema.Name}'.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thing.Name} is now also a '{schema.Name}'.");
 
         return (int)ERROR_CODES.SUCCESS;
     }

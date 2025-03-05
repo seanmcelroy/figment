@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Figment.Common.Errors;
 using Spectre.Console;
 
 namespace Figment.Data.Local;
@@ -60,7 +61,7 @@ public static class IndexManager
         }
         catch (Exception ex)
         {
-            AnsiConsole.WriteException(ex);
+            AmbientErrorContext.Provider.LogException(ex, $"Unable to add entry to index at '{indexFilePath}'");
             return false;
         }
     }
@@ -82,7 +83,7 @@ public static class IndexManager
         }
         catch (Exception ex)
         {
-            AnsiConsole.WriteException(ex);
+            AmbientErrorContext.Provider.LogException(ex, $"Unable to add entry to index at '{fs.Name}'");
             return false;
         }
     }
@@ -148,7 +149,7 @@ public static class IndexManager
         }
         catch (Exception ex)
         {
-            AnsiConsole.WriteException(ex);
+            AmbientErrorContext.Provider.LogException(ex, $"Unable to remove entry from index at '{indexFilePath}'");
             return false;
         }
 

@@ -86,7 +86,7 @@ public class Thing(string Guid, string Name)
             // Watch out, the schema field could have been deleted but it's still there on the instance.
             if (!schema.Properties.TryGetValue(choppedPropName, out SchemaFieldBase? schemaField))
             {
-                AmbientErrorContext.ErrorProvider.LogWarning($"Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
+                AmbientErrorContext.Provider.LogWarning($"Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
                 escapedPropKey = truePropertyName.Contains(' ') && !truePropertyName.StartsWith('[') && !truePropertyName.EndsWith(']') ? $"[{truePropertyName}]" : truePropertyName;
                 fullDisplayName = escapedPropKey; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
                 simpleDisplayName = truePropertyName; // b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.phone
@@ -193,13 +193,13 @@ public class Thing(string Guid, string Name)
 
             if (string.IsNullOrWhiteSpace(calcField.Formula))
             {
-                AmbientErrorContext.ErrorProvider.LogWarning($"Calculated field {calcField.Name} on {schema.Name} is missing its formula");
+                AmbientErrorContext.Provider.LogWarning($"Calculated field {calcField.Name} on {schema.Name} is missing its formula");
                 continue;
             }
 
             var result = await Parser.CalculateAsync(calcField.Formula, this);
             if (result.IsError)
-                AmbientErrorContext.ErrorProvider.LogWarning($"Unable to calculate field {calcField.Name}: {result.Message}");
+                AmbientErrorContext.Provider.LogWarning($"Unable to calculate field {calcField.Name}: {result.Message}");
             else if ((thingProp.Value == null && result.Result != null)
                 || (thingProp.Value != null && !thingProp.Value.Equals(result.Result)))
                 changedProperties.Add(thingProp.Key, result.Result);
@@ -411,7 +411,7 @@ public class Thing(string Guid, string Name)
                     {
                         if (propValue == null || string.IsNullOrWhiteSpace(propValue.ToString()))
                         {
-                            AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
+                            AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
                         Name = propValue.ToString()!;
@@ -433,7 +433,7 @@ public class Thing(string Guid, string Name)
                 {
                     if (Properties.Remove(candidateProperties[0].TruePropertyName)
                         && candidateProperties[0].Required)
-                        AmbientErrorContext.ErrorProvider.LogWarning($"Required {propName} was removed.");
+                        AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
 
                     var saved = await SaveAsync(cancellationToken);
                     return new ThingSetResult(saved);
@@ -455,7 +455,7 @@ public class Thing(string Guid, string Name)
                         if (disambig.Length == 1)
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                            AmbientErrorContext.ErrorProvider.LogInfo($"Set {propName} to {disambig[0].Name}.");
+                            AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
                             var saved = await SaveAsync(cancellationToken);
                             return new ThingSetResult(saved);
                         }
@@ -472,7 +472,7 @@ public class Thing(string Guid, string Name)
                         else
                         {
                             Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
-                            AmbientErrorContext.ErrorProvider.LogWarning($"Value of {propName} is invalid.");
+                            AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
                             var saved = await SaveAsync(cancellationToken);
                             return new ThingSetResult(saved);
                         }
@@ -480,7 +480,7 @@ public class Thing(string Guid, string Name)
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
-                        AmbientErrorContext.ErrorProvider.LogWarning($"Value of {propName} is invalid.");
+                        AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
                         var saved = await SaveAsync(cancellationToken);
                         return new ThingSetResult(saved);
                     }
@@ -492,7 +492,7 @@ public class Thing(string Guid, string Name)
                     {
                         if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                         {
-                            AmbientErrorContext.ErrorProvider.LogError($"Value of {nameof(Name)} cannot be empty.");
+                            AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
                         Name = massagedPropValue.ToString()!;
@@ -505,7 +505,7 @@ public class Thing(string Guid, string Name)
                 }
             default:
                 // Ambiguous
-                AmbientErrorContext.ErrorProvider.LogError($"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.");
+                AmbientErrorContext.Provider.LogError($"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.");
                 return new ThingSetResult(false);
         }
 

@@ -1,6 +1,7 @@
 
 using System.Runtime.CompilerServices;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 
 namespace Figment.Data.Local;
@@ -12,11 +13,20 @@ public class LocalDirectoryStorageProvider : IStorageProvider
     public ISchemaStorageProvider? GetSchemaStorageProvider()
     {
         var schemaDir = Path.Combine(DB_PATH, "schemas");
-        var ready = EnsureDirectoryReady(schemaDir);
-        if (!ready)
-            return null;
+        {
+            var ready = EnsureDirectoryReady(schemaDir);
+            if (!ready)
+                return null;
+        }
 
-        return new LocalDirectorySchemaStorageProvider(schemaDir);
+        var thingDir = Path.Combine(DB_PATH, "things");
+        {
+            var ready = EnsureDirectoryReady(thingDir);
+            if (!ready)
+                return null;
+        }
+
+        return new LocalDirectorySchemaStorageProvider(schemaDir, thingDir);
     }
 
     public IThingStorageProvider? GetThingStorageProvider()
@@ -50,8 +60,7 @@ public class LocalDirectoryStorageProvider : IStorageProvider
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Cannot create directory at: {path}");
-            AnsiConsole.WriteException(ex);
+            AmbientErrorContext.Provider.LogException(ex, $"Cannot create directory at: {path}");
             return false;
         }
     }

@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -27,7 +28,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
             if (Program.SelectedEntity != Reference.EMPTY)
             {
                 // Select with no arguments just clears the selection
-                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Selection cleared.\r\n");
+                AmbientErrorContext.Provider.LogDone($"Selection cleared.");
                 Program.SelectedEntity = Reference.EMPTY;
                 Program.SelectedEntityName = string.Empty;
                 return (int)ERROR_CODES.SUCCESS;
@@ -72,7 +73,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                                 return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
                             }
 
-                            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schemaLoaded.Name} selected.\r\n");
+                            AmbientErrorContext.Provider.LogDone($"Schema {schemaLoaded.Name} selected.");
                             Program.SelectedEntity = possibilities[0];
                             Program.SelectedEntityName = schemaLoaded.Name;
                             return (int)ERROR_CODES.SUCCESS;
@@ -94,7 +95,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                             return (int)ERROR_CODES.THING_LOAD_ERROR;
                         }
 
-                        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Thing {thingLoaded.Name} selected.\r\n");
+                        AmbientErrorContext.Provider.LogDone($"Thing {thingLoaded.Name} selected.");
                         Program.SelectedEntity = possibilities[0];
                         Program.SelectedEntityName = thingLoaded.Name;
                         return (int)ERROR_CODES.SUCCESS;
@@ -147,7 +148,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
 
                 Program.SelectedEntity = which.Reference;
                 Program.SelectedEntityName = which.Entity.ToString() ?? which.Reference.Guid ?? string.Empty;
-                AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {which.Entity} selected.\r\n");
+                AmbientErrorContext.Provider.LogDone($"{which.Entity} selected.");
                 return (int)ERROR_CODES.SUCCESS;
         }
     }

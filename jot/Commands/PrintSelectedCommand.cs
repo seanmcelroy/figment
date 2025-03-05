@@ -55,7 +55,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new PrintThingCommand();
-                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { Name = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { ThingName = selected.Guid }, cancellationToken);
                 }
             default:
                 {

@@ -42,6 +42,16 @@ public class Schema(string Guid, string Name)
         return newSchema;
     }
 
+    public async Task<bool> DeleteAsync(CancellationToken cancellationToken)
+    {
+        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        if (provider == null)
+            return false;
+
+        var success = await provider.DeleteAsync(Guid, cancellationToken);
+        return success;
+    }
+
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();

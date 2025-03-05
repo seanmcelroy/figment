@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -76,7 +77,7 @@ public class ValidateSchemaCommand : CancellableAsyncCommand<SchemaCommandSettin
             AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Plural is not set, rendering listing of all things with this schema on the REPL inaccessible.  Resolve with: [bold]set Plural {schema.Name.ToLowerInvariant()}s[/]");
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");
+        AmbientErrorContext.Provider.LogDone($"Validation has finished.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

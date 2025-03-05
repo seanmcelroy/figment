@@ -27,7 +27,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AmbientErrorContext.ErrorProvider.LogError("To view properties on a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To view properties on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -37,13 +37,13 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             switch (possibilities.Length)
             {
                 case 0:
-                    AmbientErrorContext.ErrorProvider.LogError("Nothing found with that name.");
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name.");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;
                 default:
-                    AmbientErrorContext.ErrorProvider.LogError("Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
@@ -51,27 +51,27 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         var propName = settings.PropertyName;
         if (string.IsNullOrWhiteSpace(propName))
         {
-            AmbientErrorContext.ErrorProvider.LogError("To change a property on a schema, specify the property's name.");
+            AmbientErrorContext.Provider.LogError("To change a property on a schema, specify the property's name.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AmbientErrorContext.ErrorProvider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var schemaStorageProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaStorageProvider == null)
         {
-            AmbientErrorContext.ErrorProvider.LogError("Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var schemaLoaded = await schemaStorageProvider.LoadAsync(selected.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AmbientErrorContext.ErrorProvider.LogError($"Unable to load schema with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -83,7 +83,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             // Built-in
             if (string.IsNullOrWhiteSpace(propType))
             {
-                AmbientErrorContext.ErrorProvider.LogError("The name of a schema cannot be empty.");
+                AmbientErrorContext.Provider.LogError("The name of a schema cannot be empty.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -114,12 +114,12 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var propToDelete = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.OrdinalIgnoreCase) == 0);
             if (propToDelete.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
             {
-                AmbientErrorContext.ErrorProvider.LogError($"No property named '{propName}' found on schema '{schemaLoaded.Name}'");
+                AmbientErrorContext.Provider.LogError($"No property named '{propName}' found on schema '{schemaLoaded.Name}'");
                 return (int)ERROR_CODES.NOT_FOUND;
             }
 
             schemaLoaded.Properties.Remove(propToDelete.Key);
-            AmbientErrorContext.ErrorProvider.LogWarning($"Deleted property name '{propName}'.");
+            AmbientErrorContext.Provider.LogWarning($"Deleted property name '{propName}'.");
         }
         else if (string.CompareOrdinal(propType, SchemaArrayField.SCHEMA_FIELD_TYPE) == 0)
         {
@@ -207,7 +207,7 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
             var refSchema = await schemaStorageProvider.FindByNameAsync(propType!, cancellationToken);
             if (refSchema == Reference.EMPTY)
             {
-                AmbientErrorContext.ErrorProvider.LogError($"I do not understand that type of field ({propType}).");
+                AmbientErrorContext.Provider.LogError($"I do not understand that type of field ({propType}).");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -218,11 +218,11 @@ public class SetSchemaPropertyCommand : CancellableAsyncCommand<SetSchemaPropert
         var saved = await schemaLoaded.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AmbientErrorContext.ErrorProvider.LogError($"Unable to save schema with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to save schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AmbientErrorContext.ErrorProvider.LogDone($"{schemaLoaded.Name} saved.");
+        AmbientErrorContext.Provider.LogDone($"{schemaLoaded.Name} saved.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

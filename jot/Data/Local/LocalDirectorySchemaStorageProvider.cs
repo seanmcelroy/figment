@@ -1,15 +1,14 @@
 
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using Figment.Common;
 using Figment.Common.Data;
-using jot;
+using Figment.Common.Errors;
 using Spectre.Console;
 
 namespace Figment.Data.Local;
 
-public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : ISchemaStorageProvider
+public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, string ThingDirectoryPath) : ISchemaStorageProvider
 {
     private const string NameIndexFileName = $"_schema.names.csv";
 
@@ -36,7 +35,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
 
         if (File.Exists(schemaFilePath))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: File for schema {schemaName} already exists at {schemaFilePath}");
+            AmbientErrorContext.Provider.LogError($"File for schema {schemaName} already exists at {schemaFilePath}");
             return new CreateSchemaResult { Success = false };
         }
 
@@ -60,6 +59,87 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
 
         return new CreateSchemaResult { Success = true, NewGuid = schemaGuid };
     }
+
+    public async Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
+        var schemaDir = new DirectoryInfo(SchemaDirectoryPath);
+        if (schemaDir == null || !schemaDir.Exists)
+            return false;
+
+        var schemaFileName = $"{schemaGuid}.schema.json";
+        var schemaFilePath = Path.Combine(schemaDir.FullName, schemaFileName);
+
+        if (!File.Exists(schemaFilePath))
+        {
+            AmbientErrorContext.Provider.LogWarning($"File for schema {schemaGuid} does not exist at {schemaFilePath}. Nothing to do.");
+            return false;
+        }
+
+        // Must do this before delete
+        var schema = await LoadAsync(schemaGuid, cancellationToken);
+
+        try
+        {
+            File.Delete(schemaFilePath);
+        }
+        catch (Exception ex)
+        {
+            AmbientErrorContext.Provider.LogException(ex, $"Unable to delete schema file '{schemaFilePath}'");
+            return false;
+        }
+
+        // Remove from name index
+        {
+            var indexFilePath = Path.Combine(schemaDir.FullName, NameIndexFileName);
+            if (File.Exists(indexFilePath))
+            {
+                await IndexManager.RemoveByValueAsync(indexFilePath, schemaFileName, cancellationToken);
+                AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Path.GetFileName(indexFilePath)}");
+            }
+        }
+
+        // Remove from plural index
+        {
+            var indexFilePath = Path.Combine(schemaDir.FullName, PluralIndexFileName);
+            if (File.Exists(indexFilePath))
+            {
+                await IndexManager.RemoveByValueAsync(indexFilePath, schemaFileName, cancellationToken);
+                AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from plural index {Path.GetFileName(indexFilePath)}");
+            }
+        }
+
+        // Remove schema thing index
+        {
+            var thingDir = new DirectoryInfo(ThingDirectoryPath);
+            if (thingDir != null && thingDir.Exists)
+            {
+                var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
+                if (File.Exists(indexFilePath))
+                {
+                    try
+                    {
+                        File.Delete(indexFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        AmbientErrorContext.Provider.LogException(ex, $"Unable to delete thing schema file '{indexFilePath}'");
+                        // Don't return, this isn't fatal.
+                    }
+                }
+            }
+        }
+
+        if (schema == null)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Unable to load schema {schemaGuid}, so it may still exist in schema indexes.  Rebuild thing indexes to be sure.");
+            return true;
+        }
+
+        return true;
+    }
+
 
     /// <summary>
     /// Gets all schemas
@@ -142,15 +222,14 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
             var schemaDefinition = await JsonSerializer.DeserializeAsync<JsonSchemaDefinition>(fs, jsonSerializerOptions, cancellationToken);
             if (schemaDefinition == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize schema from {filePath}");
+                AmbientErrorContext.Provider.LogError($"Unable to deserialize schema from {filePath}");
                 return null;
             }
             return schemaDefinition.ToSchema();
         }
         catch (JsonException je)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to deserialize schema from {filePath}");
-            AnsiConsole.WriteException(je);
+            AmbientErrorContext.Provider.LogException(je, $"Unable to deserialize schema from {filePath}");
             return null;
         }
     }
@@ -174,8 +253,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
         }
         catch (Exception je)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to serialize schema {schema.Guid} from {filePath}");
-            AnsiConsole.WriteException(je);
+            AmbientErrorContext.Provider.LogException(je, $"Unable to serialize schema {schema.Guid} from {filePath}");
             return false;
         }
     }
@@ -313,8 +391,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath) : I
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Zero length file found but could not be deleted at: {filePath}");
-                AnsiConsole.WriteException(ex);
+                AmbientErrorContext.Provider.LogException(ex, $"Zero length file found but could not be deleted at: {filePath}");
             }
             return Task.FromResult(false);
         }

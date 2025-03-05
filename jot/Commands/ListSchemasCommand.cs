@@ -24,7 +24,7 @@ public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSett
             var schema = await provider.LoadAsync(reference.Guid, cancellationToken);
             if (schema == null)
             {
-                AmbientErrorContext.ErrorProvider.LogError($"Unable to load schema '{name}' ({reference.Guid}).");
+                AmbientErrorContext.Provider.LogError($"Unable to load schema '{name}' ({reference.Guid}).");
                 continue;
             }
 

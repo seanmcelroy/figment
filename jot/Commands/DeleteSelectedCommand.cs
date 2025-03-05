@@ -1,4 +1,5 @@
 using Figment.Common;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -34,26 +35,31 @@ public class DeleteSelectedCommand : CancellableAsyncCommand<DeleteSelectedComma
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         switch (selected.Type)
         {
+            case Reference.ReferenceType.Schema:
+                {
+                    var cmd = new DeleteSchemaCommand();
+                    return await cmd.ExecuteAsync(context, new SchemaCommandSettings { SchemaName = selected.Guid }, cancellationToken);
+                }
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new DeleteThingCommand();
-                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { Name = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { ThingName = selected.Guid }, cancellationToken);
                 }
             default:
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+                AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
                 return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
     }

@@ -1,4 +1,5 @@
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -30,7 +31,7 @@ public class ReindexSchemasCommand : CancellableAsyncCommand
                     ctx.Status("Failed!");
             });
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: All schemas reindexed.\r\n");
+        AmbientErrorContext.Provider.LogDone($"All schemas reindexed.");
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

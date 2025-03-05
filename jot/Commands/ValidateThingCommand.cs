@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -23,13 +24,13 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.Name))
+            if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AnsiConsole.MarkupLine("[yellow]ERROR[/]: To validate a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Thing.ResolveAsync(settings.Name, cancellationToken)
+            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibilities.Length)
@@ -81,7 +82,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         if (thing.SchemaGuids == null
             || thing.SchemaGuids.Count == 0)
         {
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");
+            AmbientErrorContext.Provider.LogDone($"Validation has finished.");
             return (int)ERROR_CODES.SUCCESS;
         }
 
@@ -117,7 +118,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             }
         }
 
-        AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Validation has finished.\r\n");
+        AmbientErrorContext.Provider.LogDone($"Validation has finished.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

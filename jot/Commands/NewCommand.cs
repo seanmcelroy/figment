@@ -1,5 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -50,7 +51,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                 return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
             }
 
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema '{settings.SchemaName}' created. ({schema.Guid})\r\n");
+            AmbientErrorContext.Provider.LogDone($"Schema '{settings.SchemaName}' created. ({schema.Guid})");
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
@@ -102,9 +103,9 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         Program.SelectedEntityName = thing?.Name ?? thing?.Guid ?? string.Empty;
 
         if (createdNewSchema)
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schema.Name} created, and new instance {thingName} created.\r\n");
+            AmbientErrorContext.Provider.LogDone($"Schema {schema.Name} created, and new instance {thingName} created.");
         else
-            AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thingName}, a type of {schema.Name}, created.\r\n");
+            AmbientErrorContext.Provider.LogDone($"{thingName}, a type of {schema.Name}, created.");
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }
