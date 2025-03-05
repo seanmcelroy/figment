@@ -99,6 +99,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         var thingName = settings.ThingName;
         var thing = await tsp.CreateAsync(schema.Guid, thingName, cancellationToken);
         Program.SelectedEntity = thing;
+        Program.SelectedEntityName = thing?.Name ?? thing?.Guid ?? string.Empty;
 
         if (createdNewSchema)
             AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: Schema {schema.Name} created, and new instance {thingName} created.\r\n");

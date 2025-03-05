@@ -13,7 +13,7 @@ public class NewCommandSettings : CommandSettings
     [CommandArgument(ARG_POSITION_SCHEMA, "<SCHEMA>")]
     public string? SchemaName { get; init; }
 
-    public const int ARG_POSITION_NAME = 0;
+    public const int ARG_POSITION_NAME = 1;
 
     [Description("The name of the new entity.  If omitted, only a schema will be created but no thing of that schema's type.")]
     [CommandArgument(ARG_POSITION_NAME, "[NAME]")]

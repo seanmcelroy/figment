@@ -10,7 +10,7 @@ public class SchemaCommandSettings : CommandSettings
     public const int ARG_POSITION_NAME = 0;
 
     [Description("Name of the schema to target")]
-    [CommandArgument(ARG_POSITION_NAME, "<SCHEMA_NAME>")]
+    [CommandArgument(ARG_POSITION_NAME, "<SCHEMA>")]
     public string? SchemaName { get; init; }
 
     public override ValidationResult Validate()

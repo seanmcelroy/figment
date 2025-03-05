@@ -6,9 +6,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
-public class ListSchemasCommand : CancellableAsyncCommand
+public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSettings>
 {
-    public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, ListSchemasCommandSettings settings, CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
@@ -29,19 +29,27 @@ public class ListSchemasCommand : CancellableAsyncCommand
             }
 
             schemas.Add(schema);
-            Console.WriteLine(name);
         }
 
         schemas.Sort((x, y) => x.Name.CompareTo(y.Name));
 
-        Table t = new();
-        t.AddColumn("Name");
-        t.AddColumn("Description");
-        t.AddColumn("Plural");
+        if (settings.AsTable ?? false)
+        {
+            Table t = new();
+            t.AddColumn("Name");
+            t.AddColumn("Description");
+            t.AddColumn("Plural");
+            t.AddColumn("GUID");
 
-        foreach (var s in schemas)
-            t.AddRow(s.Name, s.Description ?? string.Empty, s.Plural ?? string.Empty);
-        AnsiConsole.Write(t);
+            foreach (var s in schemas)
+                t.AddRow(s.Name, s.Description ?? string.Empty, s.Plural ?? string.Empty, s.Guid);
+            AnsiConsole.Write(t);
+        }
+        else
+        {
+            foreach (var schema in schemas)
+                Console.Out.WriteLine(schema.Name);
+        }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

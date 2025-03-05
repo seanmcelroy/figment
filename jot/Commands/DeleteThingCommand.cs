@@ -74,6 +74,7 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         {
             AnsiConsole.MarkupLineInterpolated($"[green]DONE[/]: {thing.Name} ({thing.Guid}) deleted.\r\n");
             Program.SelectedEntity = Reference.EMPTY;
+            Program.SelectedEntityName = string.Empty;
             return (int)ERROR_CODES.SUCCESS;
         }
         else

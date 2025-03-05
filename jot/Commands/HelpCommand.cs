@@ -16,6 +16,7 @@ public class HelpCommand : CancellableAsyncCommand
         [gold3_1]ADDITIONAL INTERACTIVE COMMANDS:[/]
             select <NAME>         [white]Selects an entity as the target for other interactive commands[/]
             delete                [white]Deletes the selected entity[/]
+            members               [white]Enumerates things associated with the selected schema.[/]
             print                 [white]Prints the details about the entity. '?' is also an alias for 'print'.[/]
             promote <PROP>        [white]Promotes a property on a thing to become a schema property.[/]
             set <PROP> [[VALUE]]    [white]Same as the 'set' CLI command, just against the selected entity.[/]

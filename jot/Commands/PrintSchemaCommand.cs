@@ -65,6 +65,8 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
+        Program.SelectedEntityName = schemaLoaded.Name;
+
         var propBuilder = new StringBuilder();
         if (schemaLoaded.Properties != null && schemaLoaded.Properties.Count > 0)
         {

@@ -15,10 +15,10 @@ internal class Program
     /// For interactive mode, this is the currently selected entity that commands can reference in a REPL.
     /// </summary>
     internal static Reference SelectedEntity = Reference.EMPTY;
+    internal static string SelectedEntityName = string.Empty;
 
     private static async Task<int> Main(string[] args)
     {
-        AnsiConsole.MarkupLine("[bold fuchsia]jot[/] v0.0.1");
         var cts = new CancellationTokenSource();
 
         var interactive = args.Length == 0
@@ -28,7 +28,7 @@ internal class Program
         AmbientErrorContext.ErrorProvider = new SpectreConsoleErrorProvider();
         AmbientStorageContext.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
 
-        var app = new CommandApp();
+        var app = new CommandApp<HelpCommand>();
         app.Configure(config =>
         {
             config.AddCommand<NewCommand>("new")
@@ -48,6 +48,8 @@ internal class Program
                         .WithDescription("Associates a thing with a schema");
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
+                    schema.AddCommand<ListSchemaMembersCommand>("members")
+                        .WithDescription("Lists all the things associated to a schema");
                     schema.AddCommand<RequireSchemaPropertyCommand>("require")
                         .WithDescription("Changes whether a property is required");
                     schema.AddCommand<SetSchemaPropertyCommand>("set")
@@ -64,7 +66,8 @@ internal class Program
                 {
                     thing.AddCommand<DeleteThingCommand>("delete")
                         .WithDescription("Permanently deletes a thing");
-                    thing.AddCommand<PromoteThingPropertyCommand>("promote");
+                    thing.AddCommand<PromoteThingPropertyCommand>("promote")
+                        .WithDescription("Promotes a property on one thing to become a property defined on a schema");
                     thing.AddCommand<SetThingPropertyCommand>("set")
                         .WithDescription("Sets the value of a property on a thing");
                     thing.AddCommand<ValidateThingCommand>("validate")
@@ -82,6 +85,9 @@ internal class Program
                 config.AddCommand<DeleteSelectedCommand>("delete")
                     .WithAlias("del")
                     .WithDescription("Interactive mode command.  Deletes the currently selected entity.")
+                    .IsHidden();
+
+                config.AddCommand<ListSelectedSchemaMembersCommand>("members")
                     .IsHidden();
 
                 config.AddCommand<PrintSelectedCommand>("print")
@@ -117,6 +123,7 @@ internal class Program
         }
 
         // Interactive mode
+        AnsiConsole.MarkupLine("[bold fuchsia]jot[/] v0.0.1");
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
         AnsiConsole.MarkupLine("\r\nThere are additional undocumented commands in this mode.  Type [purple bold]ihelp[/] for help on this mode interactive.");
 
@@ -139,12 +146,18 @@ internal class Program
             string? input;
             if (AnsiConsole.Profile.Capabilities.Interactive)
             {
-                input = AnsiConsole.Prompt(new TextPrompt<string>("[green]>[/]"));
+                if (string.IsNullOrWhiteSpace(SelectedEntityName))
+                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]>[/]"));
+                else
+                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]"));
             }
             else
             {
                 // Handle vscode Debug Console
-                Console.Write("> ");
+                if (string.IsNullOrWhiteSpace(SelectedEntityName))
+                    Console.Write($"> ");
+                else
+                    Console.Write($"({SelectedEntityName})> ");
                 input = Console.ReadLine();
             }
 
