@@ -107,4 +107,40 @@ One last thing: You can use the `schemas` command in CLI or interactive modes to
 
 ## Schema Fields
 
-If you wanted to specify restaurants have common attributes, you could select the 'restaurant' schema and then set the attribute for the schema.
+If you wanted to specify restaurants have common attributes, you could select the 'restaurant' schema and then set the attribute for the schema.  Schemas can have any number of fields for types that are supported by Figment.  The supported field types are:
+
+| Field Type | Description                                                   |
+| ---------- | ------------------------------------------------------------- |
+| array      | multiple text values                                          |
+| bool       | yes/no or true/false                                          |
+| calculated | A value calculated using a formula defined on the schema.  More on this in a later section. |
+| date       | Date and time                                                 |
+| email      | Email address                                                 |
+| enum       | A single value from a defined list of possible values         |
+| integer    | Whole number with no fractional part                          |
+| number     | Floating point number with a decimal point                    |
+| phone      | Phone number                                                  |
+| ref        | A single reference to a thing of a type defined on this field |
+| schema     | A single reference to a schema                                |
+| text       | Text                                                          |
+| uri        | A uri, which could include a web address, like a URL          |
+
+### Arrays
+
+An `array` field holds any number of individual text lines.  We can select a schema and create an array field on it schema like so in jot's interactive mode;
+
+```
+> s person
+DONE: Schema person selected
+(person)> set address array
+DONE: person saved.
+```
+
+Then, we can set that value on an instance of a person using these continuing statements:
+
+```
+s sean
+DONE: Thing Sean selected
+(Sean)> set address "[1000 Main Street,Anytown,MA,01583]"
+DONE: Sean saved.
+```

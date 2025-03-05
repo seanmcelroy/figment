@@ -124,8 +124,8 @@ public class Thing(string Guid, string Name)
         else
         {
             var escapedPropKey = truePropertyName.Contains(' ') && !truePropertyName.StartsWith('[') && !truePropertyName.EndsWith(']') ? $"[{truePropertyName}]" : truePropertyName;
-            var fullDisplayName = escapedPropKey;
-            var simpleDisplayName = truePropertyName;
+            var fullDisplayName = escapedPropKey.Contains(' ') && escapedPropKey.StartsWith('[') && escapedPropKey.EndsWith(']') ? escapedPropKey[1..^1] : escapedPropKey;
+            var simpleDisplayName = fullDisplayName;
             return (escapedPropKey, fullDisplayName, simpleDisplayName);
         }
     }

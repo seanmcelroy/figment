@@ -124,12 +124,12 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             {
                 var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
                 if (prop.Value.valid)
-                    propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {text}");
+                    propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : {text}");
                 else
-                    propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : [red bold]{text}[/]");
+                    propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : [red bold]{text}[/]");
             }
             else
-                propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {Markup.Escape(prop.Value.fieldValue?.ToString() ?? string.Empty)}");
+                propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : {Markup.Escape(prop.Value.fieldValue?.ToString() ?? string.Empty)}");
         }
 
         var unsetPropBuilder = new StringBuilder();

@@ -14,6 +14,7 @@
 - [ ] pretty field names
 - [ ] calculated views
 - [ ] filtered views
+- [ ] C/M/A times on entities from filesystem in local provider
 - [ ] tasks
 - [ ] events
 - [ ] today
@@ -25,4 +26,3 @@
 - [ ] Array of references (owner/owners of teams) properties
 - [ ] org chart command ("app"?ee)
 - [ ] schema export/import maps / .VCF export/imports
-- [ ] C/M/A times on entities from filesystem in local provider
