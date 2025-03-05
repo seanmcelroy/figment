@@ -1,12 +1,10 @@
-using System.Diagnostics;
-using System.Text;
 using Figment.Common.Calculations.Functions;
 
 namespace Figment.Common.Calculations;
 
 public static class Parser
 {
-    public static (bool success, string? message, Func<CalculationResult>? root) ParseFormula(string formula)
+    public static (bool success, string? message, Func<IEnumerable<Thing>, CalculationResult>? root) ParseFormula(string formula)
     {
         // Example =TODAY()
         // Example =LOWER(UPPER(LOWER("HELLO")))
@@ -18,17 +16,21 @@ public static class Parser
         var depth = 0;
         var pos = 1;
         var (success, message, root) = ParseFormulaInternal(formula, ref pos, ref depth);
-        Debug.Assert(depth == -1);
-        Debug.Assert(pos == formula.Length);
-        return new(success, message, () => root());
+        if (depth != -1) 
+            return (false, "Formula parse error: Uneven grouping", null);
+        if (pos != formula.Length)
+            return (false, "Formula parse error: Incomplete processing of formula", null);
+        if (success && root == null)
+            return (false, "Formula parse error: Missing parse tree on success", null);
+        return new(success, message, success ? t => root!(t) : null);
     }
 
-    private static (bool success, string? message, Func<CalculationResult>? root) ParseFormulaInternal(string formula, ref int pos, ref int depth)
+    private static (bool success, string? message, Func<IEnumerable<Thing>, CalculationResult>? root) ParseFormulaInternal(string formula, ref int pos, ref int depth)
     {
         // Example LOWER(UPPER(LOWER("HELLO")))
-        List<Func<CalculationResult>> parameters = [];
-        Func<CalculationResult[], CalculationResult> nextFunction = null;
-        CalculationResult whatToReturn() => nextFunction([.. parameters.Select(p => p())]);
+        List<Func<IEnumerable<Thing>, CalculationResult>> parameters = [];
+        Func<IEnumerable<Thing>, CalculationResult[], CalculationResult> nextFunction = null;
+        CalculationResult whatToReturn(IEnumerable<Thing> t) => nextFunction(t, [.. parameters.Select(p => p(t))]);
 
         while (pos < formula.Length)
         {
@@ -38,6 +40,7 @@ public static class Parser
             var nextRightParen = formula.IndexOf(')', pos);
             var nextDoubleQuotation = formula.IndexOf('"', pos);
             var nextSingleQuotation = formula.IndexOf('\'', pos);
+            var nextBracket = formula.IndexOf('[', pos);
 
             if (formula[pos] == ',' || formula[pos] == ' ')
             {
@@ -66,7 +69,7 @@ public static class Parser
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
                     depth--;
-                return (true, "static value", () => CalculationResult.Success(quoted));
+                return (true, "static value", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
             }
             else if (nextSingleQuotation == pos) // Ending a capture with a spurious right parenthesis
             {
@@ -85,7 +88,26 @@ public static class Parser
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
                     depth--;
-                return (true, "static value", () => CalculationResult.Success(quoted));
+                return (true, "static value", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
+            }
+            else if (nextBracket == pos)
+            {
+                // Same as before
+                nextToken = "]";
+                var closingBracketStartPos = pos;
+                pos++;
+                nextBracket = formula.IndexOf(']', pos);
+                if (nextBracket == -1)
+                    return (false, $"Unterminated bracketed expression starts at position {closingBracketStartPos}", null);
+                var bracketed = formula[pos..nextBracket];
+                pos = nextBracket + 1;
+
+                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Bracketed expression from {closingBracketStartPos} to {pos - 1}: {bracketed}");
+                // Do not adjust depth, just return.
+                // Do not adjust depth unless we hit a right parenth after this.
+                if (formula.Length > pos && formula[pos] == ')')
+                    depth--;
+                return (true, "property value", t => CalculationResult.Success(bracketed, CalculationResultType.PropertyValue));
             }
             else
             {
@@ -94,25 +116,25 @@ public static class Parser
                     switch (nextToken.ToLowerInvariant())
                     {
                         case "datediff(":
-                            nextFunction = p => new DateDiff().Evaluate(p);
+                            nextFunction = (t,p) => new DateDiff().Evaluate(p, t);
                             break;
                         case "lower(":
-                            nextFunction = p => new Lower().Evaluate(p);
+                            nextFunction = (t,p) => new Lower().Evaluate(p, t);
                             break;
                         case "now(":
-                            nextFunction = p => new Now().Evaluate(p);
+                            nextFunction = (t,p) => new Now().Evaluate(p, t);
                             break;
                         case "today(":
-                            nextFunction = p => new Today().Evaluate(p);
+                            nextFunction = (t,p) => new Today().Evaluate(p, t);
                             break;
                         case "upper(":
-                            nextFunction = p => new Upper().Evaluate(p);
+                            nextFunction = (t,p) => new Upper().Evaluate(p, t);
                             break;
                         case "(":
                             // Let this fall through.
                             // This occurs when there's an extra ( grouping in front of the token
                             // like in =(TODAY())
-                            nextFunction = p => new NoOp().Evaluate(p);
+                            nextFunction = (t,p) => new NoOp().Evaluate(p, t);
                             break;
                         default:
                             throw new InvalidOperationException();
@@ -135,7 +157,7 @@ public static class Parser
             depth++;
 
             var startingDepth = depth;
-            (bool success, string? message, Func<CalculationResult>? root) sub = default;
+            (bool success, string? message, Func<IEnumerable<Thing>, CalculationResult>? root) sub = default;
             while (startingDepth == depth)
             {
                 sub = ParseFormulaInternal(formula, ref pos, ref depth);
@@ -159,8 +181,15 @@ public static class Parser
         throw new InvalidOperationException($"Ran out of groupings at position {pos}!");
     }
 
-    public static async Task<CalculationResult> Calculate(string formula, Thing target)
+    public static async Task<CalculationResult> CalculateAsync(string formula, params Thing[] targets)
     {
-        return CalculationResult.Error(CalculationErrorType.FormulaParse, "???");
+        var (success, message, root) = ParseFormula(formula);
+        if (!success)
+            return CalculationResult.Error(CalculationErrorType.FormulaParse, message ?? "Error when parsing formula");
+        if (root == null)
+            return CalculationResult.Error(CalculationErrorType.InternalError, message ?? "Internal error, root was null");
+
+        var result = root.Invoke(targets);
+        return result;
     }
 }

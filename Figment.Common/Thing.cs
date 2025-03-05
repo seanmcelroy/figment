@@ -1,5 +1,5 @@
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Figment.Common.Calculations;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 
@@ -185,10 +185,19 @@ public class Thing(string Guid, string Name)
             }
 
             if (schemaFieldType == null
-                || schemaFieldType.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0)
+                || schemaFieldType.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0
+                || schemaField is not SchemaCalculatedField calcField)
                 continue; // Not a calculate field.
 
+            if (string.IsNullOrWhiteSpace(calcField.Formula))
+            {
+                AmbientErrorContext.ErrorProvider.LogWarning($"Calculated field {calcField.Name} on {schema.Name} is missing its formula");
+                continue;
+            }
+
             // TODO
+            var result = await Parser.CalculateAsync(calcField.Formula, this);
+
             AmbientErrorContext.ErrorProvider.LogWarning($"Would recalculate {thingProp.Key}");
         }
     }

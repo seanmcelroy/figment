@@ -7,3 +7,6 @@ The purpose of figment is to let individuals build repositories and graphs of kn
 `jot` is a command-line interpreter (CLI) for using Figment.
 
 jot runs in two modes, one that takes command line arguments, like most other CLI tools.  Running jot with no arguments on an interactive console runs it in an interactive REPL-style mode.
+
+# Features
+

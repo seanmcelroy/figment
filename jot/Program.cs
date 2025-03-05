@@ -139,10 +139,7 @@ internal class Program
             string? input;
             if (AnsiConsole.Profile.Capabilities.Interactive)
             {
-                input = AnsiConsole.Prompt(
-                   new TextPrompt<string>("[green]>[/]")
-
-               );
+                input = AnsiConsole.Prompt(new TextPrompt<string>("[green]>[/]"));
             }
             else
             {

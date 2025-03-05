@@ -12,7 +12,7 @@ public sealed class DateDiff
         var (success, message, root) = Common.Calculations.Parser.ParseFormula("=DATEDIFF(\"yyyy\", '1981-01-26', '2025-01-26')");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
-        var calcResult = root.Invoke();
+        var calcResult = root.Invoke([]);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;

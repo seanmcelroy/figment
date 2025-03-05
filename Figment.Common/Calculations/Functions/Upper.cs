@@ -1,8 +1,8 @@
 namespace Figment.Common.Calculations.Functions;
 
-public class Upper : IFunction
+public class Upper : FunctionBase
 {
-    public CalculationResult Evaluate(CalculationResult[] parameters)
+    public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
     {
         if (parameters.Length != 1)
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "UPPER() takes one parameter");
@@ -12,6 +12,6 @@ public class Upper : IFunction
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "UPPER() takes one non-null parameter");
 
         var x = v.ToString();
-        return CalculationResult.Success(v.ToString()?.ToUpperInvariant() ?? string.Empty);
+        return CalculationResult.Success(v.ToString()?.ToUpperInvariant() ?? string.Empty, CalculationResultType.FunctionResult);
     }
 }

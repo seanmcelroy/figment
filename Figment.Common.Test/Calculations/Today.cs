@@ -12,7 +12,7 @@ public sealed class Today
         var (success, message, root) = Common.Calculations.Parser.ParseFormula("=TODAY()");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
-        var calcResult = root.Invoke();
+        var calcResult = root.Invoke([]);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
@@ -31,7 +31,7 @@ public sealed class Today
         var (success, message, root) = Common.Calculations.Parser.ParseFormula("=(TODAY())");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
-        var calcResult = root.Invoke();
+        var calcResult = root.Invoke([]);
         Assert.IsFalse(calcResult.IsError);
         Console.Out.WriteLine(calcResult.Result);
     }
@@ -45,7 +45,7 @@ public sealed class Today
         var (success, message, root) = Common.Calculations.Parser.ParseFormula("=LOWER(TODAY())");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
-        var calcResult = root.Invoke();
+        var calcResult = root.Invoke([]);
         Assert.IsFalse(calcResult.IsError);
         Console.Out.WriteLine(calcResult.Result);
     }
@@ -59,7 +59,7 @@ public sealed class Today
         var (success, message, root) = Common.Calculations.Parser.ParseFormula("=LOWER((TODAY()))");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
-        var calcResult = root.Invoke();
+        var calcResult = root.Invoke([]);
         Assert.IsFalse(calcResult.IsError);
         Console.Out.WriteLine(calcResult.Result);
     }
@@ -73,7 +73,7 @@ public sealed class Today
         var (success, message, root) = Common.Calculations.Parser.ParseFormula("=LOWER((LOWER((TODAY()))))");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
-        var calcResult = root.Invoke();
+        var calcResult = root.Invoke([]);
         Assert.IsFalse(calcResult.IsError);
         Console.Out.WriteLine(calcResult.Result);
     }
