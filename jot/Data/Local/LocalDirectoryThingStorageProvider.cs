@@ -4,6 +4,7 @@ using Spectre.Console;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using System.Net.Sockets;
 
 namespace Figment.Data.Local;
 
@@ -431,21 +432,101 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
         }
 
-        // Add to schema name index, if applicable
         if (!string.IsNullOrWhiteSpace(schemaGuid))
+            await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
+
+        // Load fresh to handle any schema defaults/calculated fields
+        return await LoadAsync(thingGuid, cancellationToken);
+    }
+
+    public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    {
+        var thing = await LoadAsync(thingGuid, cancellationToken);
+        if (thing == null)
+            return (false, null);
+
+        return await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
+    }
+
+    private async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(thing);
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
+        var thingFileName = $"{thing.Guid}.thing.json";
+        var thingFilePath = Path.Combine(ThingDirectoryPath, thingFileName);
+
+        if (!File.Exists(thingFilePath))
+            return (false, null); // Thing doesn't exist...
+
+        if (!thing.SchemaGuids.Contains(schemaGuid))
         {
-            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.names.schema.{schemaGuid}.csv");
-            await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
+            thing.SchemaGuids.Add(schemaGuid);
+            var saved = await thing.SaveAsync(cancellationToken);
+            if (!saved)
+                return (false, null);
         }
 
-        // If this has a schema, add it to the schema index
-        if (!string.IsNullOrWhiteSpace(schemaGuid))
+        // Add to schema name index, if applicable
+        {
+            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.names.schema.{schemaGuid}.csv");
+            await IndexManager.AddAsync(indexFilePath, thing.Name, thingFileName, cancellationToken);
+        }
+
+        // Add it to the schema index
         {
             var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.schema.{schemaGuid}.csv");
             await IndexManager.AddAsync(indexFilePath, thing.Guid, thingFileName, cancellationToken);
         }
 
-        return await LoadAsync(thingGuid, cancellationToken);
+        return (true, thing);
+    }
+
+    public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    {
+        var thing = await LoadAsync(thingGuid, cancellationToken);
+        if (thing == null)
+            return (false, null);
+
+        return await DissociateFromSchemaInternal(thing, schemaGuid, cancellationToken);
+    }
+
+    private async Task<(bool, Thing?)> DissociateFromSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(thing);
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
+        var thingFileName = $"{thing.Guid}.thing.json";
+        var thingFilePath = Path.Combine(ThingDirectoryPath, thingFileName);
+
+        if (!File.Exists(thingFilePath))
+            return (false, null); // Thing doesn't exist...
+
+        if (thing.SchemaGuids.Contains(schemaGuid))
+        {
+            thing.SchemaGuids.RemoveAll(new Predicate<string>(s => string.Compare(schemaGuid, s, StringComparison.InvariantCultureIgnoreCase) == 0));
+            var saved = await thing.SaveAsync(cancellationToken);
+            if (!saved)
+                return (false, null);
+        }
+
+        // Remove from schema name index, if applicable, and ignore any errors
+        {
+            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.names.schema.{schemaGuid}.csv");
+            var edited = await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
+            if (!edited)
+                AmbientErrorContext.Provider.LogWarning($"Unable to remove from schema names index at: {indexFilePath}");
+        }
+
+        // Remove from the schema index
+        {
+            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.schema.{schemaGuid}.csv");
+            var edited = await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
+            if (!edited)
+                AmbientErrorContext.Provider.LogWarning($"Unable to remove from schema index at: {indexFilePath}");
+        }
+
+        return (true, thing);
     }
 
     public async Task<bool> RebuildIndexes(CancellationToken cancellationToken)

@@ -2,9 +2,13 @@ namespace Figment.Common.Data;
 
 public interface IThingStorageProvider
 {
+    public Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
+
     public Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken);
 
     public Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken);
+
+    public Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
 
     public IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
 

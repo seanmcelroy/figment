@@ -20,6 +20,8 @@ public class Thing(string Guid, string Name)
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(guidOrNamePart);
+
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
             yield break;
@@ -39,11 +41,18 @@ public class Thing(string Guid, string Name)
         if (ssp == null)
             yield break;
 
+        List<Reference> alreadyReturned = [];
+
         await foreach (var schemaRef in ssp.GetAll(cancellationToken))
             await foreach (var (reference, _) in tsp.FindByPartialNameAsync(schemaRef.reference.Guid, guidOrNamePart, cancellationToken))
             {
                 if (cancellationToken.IsCancellationRequested)
                     yield break;
+
+                if (alreadyReturned.Contains(reference))
+                    continue;
+
+                alreadyReturned.Add(reference);
                 yield return reference;
             }
     }
@@ -447,10 +456,12 @@ public class Thing(string Guid, string Name)
                     {
                         var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
 
-                        var disambig = tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString(), cancellationToken)
-                            .ToBlockingEnumerable(cancellationToken)
-                            .Select(p => new PossibleNameMatch(p.reference, p.name))
-                            .ToArray();
+                        var disambig = (massagedPropValue == null || massagedPropValue.ToString() == null)
+                            ? []
+                            : tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken)
+                                .ToBlockingEnumerable(cancellationToken)
+                                .Select(p => new PossibleNameMatch(p.reference, p.name))
+                                .ToArray();
 
                         if (disambig.Length == 1)
                         {
@@ -518,6 +529,30 @@ public class Thing(string Guid, string Name)
             return false;
 
         var success = await provider.SaveAsync(this, cancellationToken);
+        return success;
+    }
+
+    public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
+        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        if (provider == null)
+            return (false, null);
+
+        var success = await provider.AssociateWithSchemaAsync(Guid, schemaGuid, cancellationToken);
+        return success;
+    }
+
+    public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
+        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        if (provider == null)
+            return (false, null);
+
+        var success = await provider.DissociateFromSchemaAsync(Guid, schemaGuid, cancellationToken);
         return success;
     }
 

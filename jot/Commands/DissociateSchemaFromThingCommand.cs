@@ -99,23 +99,17 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Associat
                 return (int)ERROR_CODES.AMBIGUOUS_MATCH;
         }
 
-        if (!thing.SchemaGuids.Remove(schema.Guid))
+        var (success, modifiedThing) = await thing.DissociateFromSchemaAsync(schema.Guid, cancellationToken);
+        if (!success || modifiedThing == null)
         {
-            AmbientErrorContext.Provider.LogDone($"{thing.Name} is not associated with schema {schema.Name}. No change.");
-            return (int)ERROR_CODES.SUCCESS;
-        }
-
-        var thingSaved = await thing.SaveAsync(cancellationToken);
-        if (!thingSaved)
-        {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{thing.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to edit thing with Guid '{thing.Guid}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
 
-        if (thing.SchemaGuids.Count == 0)
-            AmbientErrorContext.Provider.LogDone($"{thing.Name} is no longer associated to any schemas.");
+        if (modifiedThing.SchemaGuids.Count == 0)
+            AmbientErrorContext.Provider.LogDone($"{modifiedThing.Name} is no longer associated to any schemas.");
         else
-            AmbientErrorContext.Provider.LogDone($"{thing.Name} is no longer a '{schema.Name}'.");
+            AmbientErrorContext.Provider.LogDone($"{modifiedThing.Name} is no longer a '{schema.Name}'.");
 
         return (int)ERROR_CODES.SUCCESS;
     }

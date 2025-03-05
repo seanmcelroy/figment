@@ -9,7 +9,7 @@
 - [x] BUG: Setting boolean (active) to 'yes' warns when value unset, but not on subsequent settings
 - [x] Calculated fields (age=now() - birthdate)
 - [ ] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
-- [ ] BUG: Associating an item to a schema should rebuild that schema's index, or update it (better)
+- [x] BUG: Associating an item to a schema should rebuild that schema's index, or update it (better)
 - [ ] default schema values
 - [ ] pretty field names
 - [ ] calculated views

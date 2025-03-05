@@ -105,18 +105,17 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
             return (int)ERROR_CODES.SUCCESS;
         }
 
-        thing.SchemaGuids.Add(schema.Guid);
-        var thingSaved = await thing.SaveAsync(cancellationToken);
-        if (!thingSaved)
+        var (success, modifiedThing) = await thing.AssociateWithSchemaAsync(schema.Guid, cancellationToken);
+        if (!success || modifiedThing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{thing.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to edit thing with Guid '{thing.Guid}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
 
-        if (thing.SchemaGuids.Count == 1)
-            AmbientErrorContext.Provider.LogDone($"{thing.Name} is now a '{schema.Name}'.");
+        if (modifiedThing.SchemaGuids.Count == 1)
+            AmbientErrorContext.Provider.LogDone($"{modifiedThing.Name} is now a '{schema.Name}'.");
         else
-            AmbientErrorContext.Provider.LogDone($"{thing.Name} is now also a '{schema.Name}'.");
+            AmbientErrorContext.Provider.LogDone($"{modifiedThing.Name} is now also a '{schema.Name}'.");
 
         return (int)ERROR_CODES.SUCCESS;
     }

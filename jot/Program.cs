@@ -1,11 +1,11 @@
-﻿using jot.Commands;
+﻿using Figment.Common;
+using Figment.Common.Data;
+using Figment.Common.Errors;
+using jot.Commands;
+using jot.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Diagnostics;
-using Figment.Common.Data;
-using Figment.Common;
-using Figment.Common.Errors;
-using jot.Errors;
 
 namespace jot;
 
