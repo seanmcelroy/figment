@@ -8,7 +8,7 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
     public const string SCHEMA_FIELD_TYPE = "date";
 
     // RFC 3339 Formats
-    private static readonly string[] _formats = [
+    internal static readonly string[] _formats = [
         "yyyy-MM-ddTHH:mm:ssK",
         "yyyy-MM-ddTHH:mm:ss.ffK",
         "yyyy-MM-ddTHH:mm:ssZ",
@@ -21,7 +21,7 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
         "MMM d, yyyy",
         "MMMM d, yyyy",
         "MMM d yyyy",
-        "MMMM  yyyy",
+        "MMMM d yyyy",
     ];
 
     [JsonPropertyName("type")]
@@ -39,6 +39,6 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
 
         var str = value as string;
 
-        return DateTimeOffset.TryParseExact(str, _formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out _);
+        return DateTimeOffset.TryParseExact(str, _formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out _);
     }    
 }

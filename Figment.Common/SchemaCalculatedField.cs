@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Figment.Common.Calculations;
 
 namespace Figment.Common;
 
@@ -13,10 +14,14 @@ public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Formula { get; set; }
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
 
-    public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
+    public override Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
-        return true;
+        if (string.IsNullOrWhiteSpace(Formula))
+            return Task.FromResult(false);
+
+        var (success, _, _) = Parser.ParseFormula(Formula);
+        return Task.FromResult(success);
     }
 }

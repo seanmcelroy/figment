@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using Figment.Common.Calculations;
 using Figment.Common.Data;
@@ -165,6 +166,7 @@ public class Thing(string Guid, string Name)
         foreach (var unsetProperty in unsetProperties)
             allProperties.Add(unsetProperty.Key, null);
 
+        var changedProperties = new Dictionary<string, object?>();
         foreach (var thingProp in allProperties)
         {
             // Does this property belong to a schema?
@@ -195,10 +197,23 @@ public class Thing(string Guid, string Name)
                 continue;
             }
 
-            // TODO
             var result = await Parser.CalculateAsync(calcField.Formula, this);
+            if (result.IsError)
+                AmbientErrorContext.ErrorProvider.LogWarning($"Unable to calculate field {calcField.Name}: {result.Message}");
+            else if ((thingProp.Value == null && result.Result != null)
+                || (thingProp.Value != null && !thingProp.Value.Equals(result.Result)))
+                changedProperties.Add(thingProp.Key, result.Result);
+        }
 
-            AmbientErrorContext.ErrorProvider.LogWarning($"Would recalculate {thingProp.Key}");
+        if (changedProperties.Count > 0)
+        {
+            foreach (var changed in changedProperties)
+                if (changed.Value == null)
+                    Properties.Remove(changed.Key);
+                else
+                    Properties[changed.Key] = changed.Value;
+
+            await SaveAsync(cancellationToken);
         }
     }
 
@@ -240,6 +255,33 @@ public class Thing(string Guid, string Name)
         return [.. unsetSchemaFields.Values];
     }
 
+    public async IAsyncEnumerable<ThingProperty> GetPropertyByName(string propName, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var prop in GetProperties(cancellationToken))
+        {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
+
+            if (string.Compare(propName, prop.TruePropertyName, StringComparison.CurrentCultureIgnoreCase) == 0)
+            {
+                // For instance: c9882fca-62ed-4456-8dbb-231ae518a410.[Work Phone]
+                yield return prop;
+            }
+            else if (string.Compare(propName, prop.FullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
+                && string.Compare(propName, nameof(Schema.Plural), StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
+            )
+            {
+                // For instance: vendor.[Work Phone]
+                yield return prop;
+            }
+            else if (string.Compare(propName, prop.SimpleDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0)
+            {
+                // For instance: [Work Phone]
+                yield return prop;
+            }
+        }
+    }
+
     public async Task<ThingSetResult> Set(
         string propName,
         string? propValue,
@@ -247,32 +289,14 @@ public class Thing(string Guid, string Name)
         Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null
         )
     {
-        // If prop name came in unescaped, and it should be escaled, then escape it here for comparisons.
+        // If prop name came in unescaped, and it should be escaped, then escape it here for comparisons.
         if (propName.Contains(' ') && !propName.StartsWith('[') && !propName.EndsWith(']'))
             propName = $"[{propName}]";
 
         // Is this property alerady set?
-        List<ThingProperty> candidateProperties = [];
 
         // Step 1, Check EXISTING properties on this thing.
-        await foreach (var prop in GetProperties(cancellationToken))
-        {
-            if (cancellationToken.IsCancellationRequested)
-                return new ThingSetResult(false);
-
-            if (string.Compare(propName, prop.FullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
-                && string.Compare(propName, nameof(Schema.Plural), StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
-            )
-            {
-                // For instance, user does set vendor.[Work Phone]=+12125551234
-                candidateProperties.Add(prop);
-            }
-            else if (string.Compare(propName, prop.SimpleDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0)
-            {
-                // For instance, user does set [Work Phone]=+12125551234
-                candidateProperties.Add(prop);
-            }
-        }
+        var existingProperties = GetPropertyByName(propName, cancellationToken).ToBlockingEnumerable(cancellationToken).ToFrozenSet();
 
         // Step 2, Check properties on associated schemas NOT already set on this object
         Dictionary<string, object?> massagedPropValues = [];
@@ -288,6 +312,8 @@ public class Thing(string Guid, string Name)
         foreach (var y in x)
             if (y.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
                 massagedPropValues.Add($"{y.SchemaGuid}.{y.PropertyName}", prePossibleMassaged);
+
+        List<ThingProperty> candidateProperties = [.. existingProperties];
 
         foreach (var schema in associatedSchemas)
         {

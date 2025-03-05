@@ -16,7 +16,7 @@ public static class Parser
         var depth = 0;
         var pos = 1;
         var (success, message, root) = ParseFormulaInternal(formula, ref pos, ref depth);
-        if (depth != -1) 
+        if (depth != -1)
             return (false, "Formula parse error: Uneven grouping", null);
         if (pos != formula.Length)
             return (false, "Formula parse error: Incomplete processing of formula", null);
@@ -116,28 +116,31 @@ public static class Parser
                     switch (nextToken.ToLowerInvariant())
                     {
                         case "datediff(":
-                            nextFunction = (t,p) => new DateDiff().Evaluate(p, t);
+                            nextFunction = (t, p) => new DateDiff().Evaluate(p, t);
+                            break;
+                        case "floor(":
+                            nextFunction = (t, p) => new Floor().Evaluate(p, t);
                             break;
                         case "lower(":
-                            nextFunction = (t,p) => new Lower().Evaluate(p, t);
+                            nextFunction = (t, p) => new Lower().Evaluate(p, t);
                             break;
                         case "now(":
-                            nextFunction = (t,p) => new Now().Evaluate(p, t);
+                            nextFunction = (t, p) => new Now().Evaluate(p, t);
                             break;
                         case "today(":
-                            nextFunction = (t,p) => new Today().Evaluate(p, t);
+                            nextFunction = (t, p) => new Today().Evaluate(p, t);
                             break;
                         case "upper(":
-                            nextFunction = (t,p) => new Upper().Evaluate(p, t);
+                            nextFunction = (t, p) => new Upper().Evaluate(p, t);
                             break;
                         case "(":
                             // Let this fall through.
                             // This occurs when there's an extra ( grouping in front of the token
                             // like in =(TODAY())
-                            nextFunction = (t,p) => new NoOp().Evaluate(p, t);
+                            nextFunction = (t, p) => new NoOp().Evaluate(p, t);
                             break;
                         default:
-                            throw new InvalidOperationException();
+                            return (false, $"Unable to parse token: {nextToken}", null);
                     }
             }
 

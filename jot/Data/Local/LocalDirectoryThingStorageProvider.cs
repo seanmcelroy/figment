@@ -308,21 +308,12 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                                 thingLoaded.Properties.TryAdd(sub.Name, s2);
                                             continue;
                                         case JsonValueKind.Number:
-                                            var sn = sub.Value.GetString();
-                                            if (sn != null && sn.Contains('.'))
-                                            {
-                                                if (ulong.TryParse(sn, out ulong u64))
-                                                    thingLoaded.Properties.TryAdd(sub.Name, u64);
-                                                else
-                                                    AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as integer from: {filePath}");
-                                            }
-                                            else if (sn != null)
-                                            {
-                                                if (double.TryParse(sn, out double u64))
-                                                    thingLoaded.Properties.TryAdd(sub.Name, u64);
-                                                else
-                                                    AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as number from: {filePath}");
-                                            }
+                                            if (sub.Value.TryGetUInt64(out ulong u64))
+                                                thingLoaded.Properties.TryAdd(sub.Name, u64);
+                                            else if (sub.Value.TryGetDouble(out double dbl))
+                                                thingLoaded.Properties.TryAdd(sub.Name, dbl);
+                                            else
+                                                AmbientErrorContext.ErrorProvider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as number from: {filePath}");
                                             continue;
                                         case JsonValueKind.True:
                                             thingLoaded.Properties.TryAdd(sub.Name, true);

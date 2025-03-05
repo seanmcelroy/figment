@@ -7,7 +7,7 @@ public class Lower : FunctionBase
         if (parameters.Length != 1)
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "LOWER() takes one parameter");
 
-        if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult? _, out string? text))
+        if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? text))
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "LOWER() takes one non-null parameter");
 
         return CalculationResult.Success(text?.ToLowerInvariant() ?? string.Empty, CalculationResultType.FunctionResult);
