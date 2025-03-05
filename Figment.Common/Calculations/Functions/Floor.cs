@@ -8,7 +8,7 @@ public class Floor : FunctionBase
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "FLOOR() takes one parameter");
 
         if (!TryGetDoubleParameter(1, true, parameters, targets, out CalculationResult _, out double dbl))
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "LOWER() takes one non-null parameter");
+            return CalculationResult.Error(CalculationErrorType.FormulaParse, "FLOOR() takes one non-null parameter");
 
         return CalculationResult.Success(Math.Floor(dbl), CalculationResultType.FunctionResult);
     }

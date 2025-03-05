@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using Figment.Common.Calculations.Functions;
 
 namespace Figment.Common.Calculations;
@@ -29,14 +47,17 @@ public static class Parser
     {
         // Example LOWER(UPPER(LOWER("HELLO")))
         List<Func<IEnumerable<Thing>, CalculationResult>> parameters = [];
-        Func<IEnumerable<Thing>, CalculationResult[], CalculationResult> nextFunction = null;
-        CalculationResult whatToReturn(IEnumerable<Thing> t) => nextFunction(t, [.. parameters.Select(p => p(t))]);
+        Func<IEnumerable<Thing>, CalculationResult[], CalculationResult>? nextFunction = null;
+        CalculationResult whatToReturn(IEnumerable<Thing> t)
+        {
+            return nextFunction == null
+                ? CalculationResult.Error(CalculationErrorType.InternalError, "nextFunction undefined")
+                : nextFunction(t, [.. parameters.Select(p => p(t))]);
+        }
 
         while (pos < formula.Length)
         {
             var nextLeftParen = formula.IndexOf('(', pos);
-            //if (nextLeftParen == -1)
-            //    Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - No next left paren");
             var nextRightParen = formula.IndexOf(')', pos);
             var nextDoubleQuotation = formula.IndexOf('"', pos);
             var nextSingleQuotation = formula.IndexOf('\'', pos);
@@ -65,7 +86,7 @@ public static class Parser
                 var quoted = formula[pos..nextDoubleQuotation];
                 pos = nextDoubleQuotation + 1;
 
-                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
+                //debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
                     depth--;
@@ -83,7 +104,7 @@ public static class Parser
                 var quoted = formula[pos..nextSingleQuotation];
                 pos = nextSingleQuotation + 1;
 
-                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
+                //debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
                 // Do not adjust depth, just return.
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
@@ -102,7 +123,7 @@ public static class Parser
                 var bracketed = formula[pos..nextBracket];
                 pos = nextBracket + 1;
 
-                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Bracketed expression from {closingBracketStartPos} to {pos - 1}: {bracketed}");
+                //debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Bracketed expression from {closingBracketStartPos} to {pos - 1}: {bracketed}");
                 // Do not adjust depth, just return.
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
@@ -148,14 +169,14 @@ public static class Parser
              && formula[pos + (nextToken?.Length ?? 0)] == ')')
             {
                 // End capture
-                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Captured {nextToken[..^1]}");
+                //debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Captured {nextToken[..^1]}");
                 pos += (nextToken?.Length - 1 ?? 0) + 2;
                 depth--;
                 return new(true, null, whatToReturn);
             }
 
             // A nested function
-            Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Starting capture {nextToken}");
+            //debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Starting capture {nextToken}");
             pos += (nextToken?.Length - 1 ?? 0) + 1;
             depth++;
 
@@ -166,13 +187,15 @@ public static class Parser
                 sub = ParseFormulaInternal(formula, ref pos, ref depth);
                 if (!sub.success)
                     return sub;
+                if (sub.root == null)
+                    return (false, $"Internal error: sub.root undefined at formula: {formula}, pos:{pos}, depth:{depth}", null);
                 parameters.Add(sub.root);
             }
 
             // Handle closing parenthesis
             if (pos < formula.Length && formula[pos] == ')')
             {
-                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Ending capture {nextToken}");
+                //debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Ending capture {nextToken}");
                 pos++;
                 depth--;
                 return new(true, null, whatToReturn);
@@ -184,7 +207,7 @@ public static class Parser
         throw new InvalidOperationException($"Ran out of groupings at position {pos}!");
     }
 
-    public static async Task<CalculationResult> CalculateAsync(string formula, params Thing[] targets)
+    public static CalculationResult Calculate(string formula, params Thing[] targets)
     {
         var (success, message, root) = ParseFormula(formula);
         if (!success)

@@ -2,7 +2,7 @@
 
 `Figment` is a creative solution for iteratively building knowledge through quick ideation.
 
-The purpose of figment is to let individuals build repositories and graphs of knowledge that help them go about their daily business.
+The purpose of figment is to let individuals build repositories and graphs of knowledge that help them go about their daily business.  At its core, Figment is a personal information manager (PIM) tool.
 
 `jot` is a command-line interpreter (CLI) for using Figment.
 
