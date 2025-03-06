@@ -6,10 +6,10 @@ namespace jot.Commands;
 
 public class ThingRenameCommandSettings : ThingCommandSettings
 {
-    public const int ARG_POSITION_FORMULA = 0;
+    public const int ARG_POSITION_NEW_NAME = 0;
 
     [Description("The new name for the thing.")]
-    [CommandArgument(ARG_POSITION_FORMULA, "<NEW_NAME>")]
+    [CommandArgument(ARG_POSITION_NEW_NAME, "<NEW_NAME>")]
     public string? NewName { get; init; }
 
     public override ValidationResult Validate()

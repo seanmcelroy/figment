@@ -62,6 +62,13 @@ public class HelpCommand : CancellableAsyncCommand
         if (Program.SelectedEntity == Reference.EMPTY
             || (Program.SelectedEntity.Type != Reference.ReferenceType.Schema
                 && Program.SelectedEntity.Type != Reference.ReferenceType.Thing))
+            sb.AppendLine("[grey62]    rename <NEW_NAME>     Renames the selected entity to the new name.[/]");
+        else
+            sb.AppendLine("    rename <NEW_NAME>     [white]Renames the selected entity to the new name.[/]");
+
+        if (Program.SelectedEntity == Reference.EMPTY
+            || (Program.SelectedEntity.Type != Reference.ReferenceType.Schema
+                && Program.SelectedEntity.Type != Reference.ReferenceType.Thing))
             sb.AppendLine("[grey62]    set <PROP> [[VALUE]]    Same as the 'set' CLI command, just against the selected entity.[/]");
         else
             sb.AppendLine("    set <PROP> [[VALUE]]    [white]Same as the 'set' CLI command, just against the selected entity.[/]");

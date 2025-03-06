@@ -84,6 +84,10 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         // For 'name', we know we should rebuild indexes.
         await tsp.RebuildIndexes(cancellationToken);
         AmbientErrorContext.Provider.LogDone($"'{oldName}' renamed to '{thing.Name}'.");
+
+        if (string.CompareOrdinal(Program.SelectedEntity.Guid, thing.Guid) == 0)
+            Program.SelectedEntityName = thing.Name;
+
         return (int)ERROR_CODES.SUCCESS;
     }
 }

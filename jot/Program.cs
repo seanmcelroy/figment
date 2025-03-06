@@ -141,6 +141,9 @@ internal class Program
                     .WithAlias("exit")
                     .IsHidden();
 
+                config.AddCommand<RenameSelectedCommand>("rename")
+                    .IsHidden();
+
                 config.AddCommand<SelectCommand>("select")
                     .WithAlias("sel")
                     .WithAlias("s")
