@@ -6,7 +6,7 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
-public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchemaPropertyCommandSettings>
+public class SetSchemaPropertyRequiredCommand : CancellableAsyncCommand<SetSchemaPropertyRequiredCommandSettings>
 {
     private enum ERROR_CODES : int
     {
@@ -19,7 +19,7 @@ public class RequireSchemaPropertyCommand : CancellableAsyncCommand<RequireSchem
         SCHEMA_SAVE_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR,
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, RequireSchemaPropertyCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, SetSchemaPropertyRequiredCommandSettings settings, CancellationToken cancellationToken)
     {
         // require "work phone" true 
         // require "work phone"

@@ -64,16 +64,28 @@ internal class Program
                 {
                     schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
                         .WithDescription("Associates a thing with a schema");
+                    schema.AddCommand<SetSchemaDescriptionCommand>("describe")
+                        .WithDescription("Changes the description of a schema");
                     schema.AddCommand<DeleteSchemaCommand>("delete")
                         .WithDescription("Permanently deletes a schema");
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated to a schema");
-                    schema.AddCommand<RequireSchemaPropertyCommand>("require")
-                        .WithDescription("Changes whether a property is required");
-                    schema.AddCommand<SetSchemaPropertyCommand>("set")
+                    schema.AddCommand<SetSchemaPluralCommand>("plural")
                         .WithDescription("Sets the data type of a property");
+                    schema.AddCommand<SchemaRenameCommand>("rename")
+                        .WithDescription("Changes the name of a schema");
+                    schema.AddBranch<SchemaPropertyCommandSettings>("set", set =>
+                    {
+                        // Note, adding one here requires a manual edit to SetSelectedPropertyCommand
+                        set.AddCommand<SetSchemaPropertyTypeCommand>("type")
+                            .WithDescription("Sets the data type of a property");
+                        set.AddCommand<SetSchemaPropertyRequiredCommand>("require")
+                            .WithDescription("Changes whether a property is required");
+                        set.AddCommand<SetSchemaPropertyFormulaCommand>("formula")
+                            .WithDescription("Sets the formula expression of a calculated property");
+                    });
                     schema.AddCommand<ValidateSchemaCommand>("validate")
                         .WithDescription("Validates the schema is consistent");
                     schema.AddCommand<PrintSchemaCommand>("view")
@@ -133,7 +145,7 @@ internal class Program
                     .IsHidden();
 
                 config.AddCommand<SetSelectedPropertyCommand>("set")
-                    .IsHidden();
+                    .IsHidden(); // TODO this is probably busted with the 'set' refactor
 
                 config.AddCommand<ValidateSelectedCommand>("validate")
                     .WithAlias("val");

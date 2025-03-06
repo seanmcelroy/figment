@@ -4,16 +4,11 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
-public class RequireSchemaPropertyCommandSettings : SchemaCommandSettings
+public class SetSchemaPropertyRequiredCommandSettings : SchemaPropertyCommandSettings
 {
-    public const int ARG_POSITION_PROPERTY_NAME = 0;
-
-    [Description("The name of the property to change")]
-    [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<PROPERTY>")]
-    public string? PropertyName { get; init; }
-
+    public const int ARG_POSITION_REQUIRED = 0;
     [Description("The value indicating whether the property is required")]
-    [CommandOption("--required")]
+    [CommandArgument(ARG_POSITION_REQUIRED, "<REQUIRED>")]
     public bool? Required { get; init; } = true;
 
     public override ValidationResult Validate()

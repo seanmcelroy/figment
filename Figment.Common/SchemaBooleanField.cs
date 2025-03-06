@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Figment.Common;
@@ -42,6 +43,29 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
         return Task.FromResult(bool.TryParse(value!.ToString(), out bool _));
     }
 
+    public static bool TryParseBoolean([NotNullWhen(true)] string? input, out bool output) {
+        if (bool.TryParse(input, out bool provBool))
+        {
+            output = provBool;
+            return true;
+        }
+
+        if (string.Compare("yes", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        {
+            output = true;
+            return true;
+        }
+
+        if (string.Compare("no", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        {
+            output = false;
+            return true;
+        }
+
+        output = false;
+        return false;
+    }
+
     public override bool TryMassageInput(object? input, out object? output)
     {
         if (input == null || input.GetType() == typeof(bool))
@@ -58,21 +82,9 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
 
         var prov = input.ToString();
 
-        if (bool.TryParse(prov, out bool provBool))
+        if (TryParseBoolean(prov, out bool provBool))
         {
             output = provBool;
-            return true;
-        }
-
-        if (string.Compare("yes", prov, StringComparison.CurrentCultureIgnoreCase) == 0)
-        {
-            output = true;
-            return true;
-        }
-
-        if (string.Compare("no", prov, StringComparison.CurrentCultureIgnoreCase) == 0)
-        {
-            output = false;
             return true;
         }
 

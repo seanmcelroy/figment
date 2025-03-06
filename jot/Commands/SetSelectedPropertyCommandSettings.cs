@@ -13,9 +13,9 @@ public class SetSelectedPropertyCommandSettings : CommandSettings
     [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<PROPERTY>")]
     public string? PropertyName { get; init; }
 
-    [Description("The value to set, or to delete if blank")]
-    [CommandArgument(ARG_POSITION_VALUE, "[VALUE]")]
-    public string? Value { get; init; }
+    [Description("The subcommand and parameter specifying what to change")]
+    [CommandArgument(ARG_POSITION_VALUE, "[VALUES]")]
+    public string[]? Values { get; init; }
 
     public override ValidationResult Validate()
     {
