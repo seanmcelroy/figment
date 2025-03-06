@@ -58,35 +58,37 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var schemaLoaded = await provider.LoadAsync(Program.SelectedEntity.Guid, cancellationToken);
-        if (schemaLoaded == null)
+        var schema = await provider.LoadAsync(Program.SelectedEntity.Guid, cancellationToken);
+        if (schema == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Program.SelectedEntity.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
-        Program.SelectedEntityName = schemaLoaded.Name;
+        Program.SelectedEntityName = schema.Name;
 
         var propBuilder = new StringBuilder();
-        if (schemaLoaded.Properties != null && schemaLoaded.Properties.Count > 0)
+        if (schema.Properties != null && schema.Properties.Count > 0)
         {
-            var maxPropNameLen = schemaLoaded.Properties.Max(p => p.Key.Length); // In case it will be escaped
-            foreach (var prop in schemaLoaded.Properties)
+            var maxPropNameLen = schema.Properties.Max(p => p.Key.Length); // In case it will be escaped
+            foreach (var prop in schema.Properties)
             {
                 propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {await prop.Value.GetReadableFieldTypeAsync(cancellationToken)}{(prop.Value.Required ? " (REQUIRED)" : string.Empty)}");
             }
         }
 
-        Console.WriteLine(
+        AnsiConsole.MarkupLine(
             $"""
-            Instance    : {schemaLoaded.Name}
-            GUID        : {schemaLoaded.Guid}
+            [silver]Instance[/]    : [bold white]{schema.Name}[/]
+            [silver]GUID[/]        : '{schema.Guid}'
+            [silver]Created On[/]  : {schema.CreatedOn.ToLocalTime().ToLongDateString()} at {schema.CreatedOn.ToLocalTime().ToLongTimeString()}
+            [silver]Modified On[/] : {schema.LastModified.ToLocalTime().ToLongDateString()} at {schema.LastModified.ToLocalTime().ToLongTimeString()}
             Type        : {nameof(Schema)}
 
-            Description : {schemaLoaded.Description}
-            Plural      : {schemaLoaded.Plural}
+            Description : {schema.Description}
+            Plural      : {schema.Plural}
 
-            Properties  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
+            [chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
             {propBuilder}
             """);
         return (int)ERROR_CODES.SUCCESS;

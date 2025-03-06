@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using Figment.Common.Calculations;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -33,6 +34,13 @@ public class Thing(string Guid, string Name)
     //    public string? SchemaGuid { get; set; }
     public List<string> SchemaGuids { get; set; } = [];
     public Dictionary<string, object> Properties { get; init; } = [];
+
+    [JsonIgnore]
+    public DateTime CreatedOn { get; init; }
+    [JsonIgnore]
+    public DateTime LastModified { get; set; }
+    [JsonIgnore]
+    public DateTime LastAccessed { get; set; }
 
     public static async IAsyncEnumerable<Reference> ResolveAsync(
         string guidOrNamePart,
@@ -133,6 +141,8 @@ public class Thing(string Guid, string Name)
     public async IAsyncEnumerable<ThingProperty> GetProperties(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        MarkAccessed();
+
         if (Properties == null || Properties.Count == 0)
             yield break;
 
@@ -284,6 +294,8 @@ public class Thing(string Guid, string Name)
 
     public async IAsyncEnumerable<ThingProperty> GetPropertyByName(string propName, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        MarkAccessed();
+
         await foreach (var prop in GetProperties(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
@@ -316,6 +328,8 @@ public class Thing(string Guid, string Name)
         Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null
         )
     {
+        MarkAccessed();
+
         // If prop name came in unescaped, and it should be escaped, then escape it here for comparisons.
         if (propName.Contains(' ') && !propName.StartsWith('[') && !propName.EndsWith(']'))
             propName = $"[{propName}]";
@@ -547,6 +561,7 @@ public class Thing(string Guid, string Name)
             return false;
 
         var success = await provider.SaveAsync(this, cancellationToken);
+        MarkModified();
         return success;
     }
 
@@ -581,8 +596,15 @@ public class Thing(string Guid, string Name)
             return false;
 
         var success = await provider.DeleteAsync(Guid, cancellationToken);
+        MarkModified();
         return success;
     }
+
+    public void MarkModified() {
+        LastModified = DateTime.UtcNow;
+        LastAccessed = LastModified;
+    }
+    public void MarkAccessed() => LastAccessed = DateTime.UtcNow;
 
     public override string ToString() => Name;
 }

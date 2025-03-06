@@ -25,7 +25,7 @@ public class SetSchemaDescriptionCommand : CancellableAsyncCommand<SetSchemaDesc
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AmbientErrorContext.Provider.LogError("To view properties on a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To modify a thing, you must first 'select' one.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 

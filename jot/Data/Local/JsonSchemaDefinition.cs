@@ -71,13 +71,16 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
         }
     }
 
-    public Schema ToSchema()
+    public Schema ToSchema(FileInfo schemaFileInfo)
     {
         var schema = new Schema(Guid, Name)
         {
             // Optional built-ins
             Description = Description,
-            Plural = Plural
+            Plural = Plural,
+            CreatedOn = schemaFileInfo.CreationTimeUtc,
+            LastModified = schemaFileInfo.LastWriteTimeUtc,
+            LastAccessed = schemaFileInfo.LastAccessTimeUtc
         };
 
         foreach (var prop in Properties)

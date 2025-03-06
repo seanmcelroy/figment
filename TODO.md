@@ -9,18 +9,18 @@
 - [x] BUG: Setting boolean (active) to 'yes' warns when value unset, but not on subsequent settings
 - [x] Calculated fields (age=now() - birthdate)
 - [x] BUG: Associating an item to a schema should rebuild that schema's index, or update it (better)
+- [x] C/M/A times on entities from filesystem in local provider
 - [ ] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
 - [ ] default schema values
+- [ ] Schema inheritence
 - [ ] pretty field names
 - [ ] calculated views
 - [ ] filtered views
-- [ ] C/M/A times on entities from filesystem in local provider
 - [ ] tasks
 - [ ] events
 - [ ] today
 - [ ] calendar
 - [ ] travel planner
-- [ ] Schema inheritence
 - [ ] workflows/processes (see github repo bpm)
 - [ ] Field formatters (store as RFC 3339 date, accept many, show MMMM d, yyyy)
 - [ ] Array of references (owner/owners of teams) properties

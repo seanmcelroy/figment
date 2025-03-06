@@ -60,19 +60,19 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thingLoaded = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
-        if (thingLoaded == null)
+        var thing = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
+        if (thing == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
-        await thingLoaded.ComputeCalculatedProperties(cancellationToken);
+        await thing.ComputeCalculatedProperties(cancellationToken);
 
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
 
         Dictionary<string, Schema> schemas = [];
-        if (thingLoaded.SchemaGuids != null)
+        if (thing.SchemaGuids != null)
         {
             if (schemaProvider == null)
             {
@@ -80,7 +80,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
-            foreach (var schemaGuid in thingLoaded.SchemaGuids)
+            foreach (var schemaGuid in thing.SchemaGuids)
             {
                 var schema = await schemaProvider.LoadAsync(schemaGuid, cancellationToken);
                 if (schema != null)
@@ -93,7 +93,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         var propDict = new Dictionary<string, (string? schemaGuid, object? fieldValue, bool valid)>();
 
         var maxPropNameLen = 0;
-        await foreach (var property in thingLoaded.GetProperties(cancellationToken))
+        await foreach (var property in thing.GetProperties(cancellationToken))
         {
             maxPropNameLen = Math.Max(maxPropNameLen, property.FullDisplayName.Length);
             propDict.Add(property.FullDisplayName, (property.SchemaGuid, property.Value, property.Valid));
@@ -102,7 +102,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         var schemaBuilder = new StringBuilder();
         foreach (var schema in schemas)
         {
-            schemaBuilder.AppendLine($"[silver]Schema[/]     : {schema.Value.Name} [silver]({schema.Value.Guid})[/]");
+            schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name} [silver]({schema.Value.Guid})[/]");
         }
         if (schemaBuilder.Length == 0)
             schemaBuilder.AppendLine();
@@ -133,7 +133,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         }
 
         var unsetPropBuilder = new StringBuilder();
-        var anyUnset = await thingLoaded.GetUnsetProperties(cancellationToken);
+        var anyUnset = await thing.GetUnsetProperties(cancellationToken);
         if (anyUnset.Count > 0)
         {
             unsetPropBuilder.AppendLine("[red]Unset Properties[/]");
@@ -168,10 +168,12 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
 
         AnsiConsole.MarkupLine(
             $"""
-            [silver]Instance[/]   : [bold white]{thingLoaded.Name}[/]
-            [silver]GUID[/]       : '{thingLoaded.Guid}'
+            [silver]Instance[/]    : [bold white]{thing.Name}[/]
+            [silver]GUID[/]        : '{thing.Guid}'
+            [silver]Created On[/]  : {thing.CreatedOn.ToLocalTime().ToLongDateString()} at {thing.CreatedOn.ToLocalTime().ToLongTimeString()}
+            [silver]Modified On[/] : {thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}
             {schemaBuilder}
-            [chartreuse4]Properties[/] : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
+            [chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
             {propBuilder}
             {unsetPropBuilder}
             {linksBuilder}

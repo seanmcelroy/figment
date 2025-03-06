@@ -229,7 +229,12 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             return null;
         }
 
-        var thingLoaded = new Thing("", "");
+        var thingLoaded = new Thing("", ""){
+            CreatedOn = fileInfo.CreationTimeUtc,
+            LastModified = fileInfo.LastWriteTimeUtc,
+            LastAccessed = fileInfo.LastAccessTimeUtc
+        };
+
         using var fs = new FileStream(filePath, FileMode.Open);
         try
         {
@@ -399,10 +404,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 
     public async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
     {
-        var thingGuid = System.Guid.NewGuid().ToString();
+        var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
         {
-            SchemaGuids = [schemaGuid]
+            SchemaGuids = [schemaGuid],
+            CreatedOn = DateTime.UtcNow,
+            LastModified = DateTime.UtcNow,
+            LastAccessed = DateTime.UtcNow,
         };
 
         var thingFileName = $"{thingGuid}.thing.json";

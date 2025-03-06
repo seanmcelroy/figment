@@ -89,7 +89,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new SetThingPropertyCommand();
-                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Values[0] }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Values?[0] }, cancellationToken);
                 }
             default:
                 {

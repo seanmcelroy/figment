@@ -44,6 +44,11 @@ public class Schema(string Guid, string Name)
 
     public Dictionary<string, SchemaFieldBase> Properties { get; init; } = [];
 
+    public DateTime CreatedOn { get; init; }
+    public DateTime LastModified { get; set; }
+    public DateTime LastAccessed { get; set; }
+
+
     public static async Task<Schema?> Create(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
@@ -67,6 +72,7 @@ public class Schema(string Guid, string Name)
             return false;
 
         var success = await provider.DeleteAsync(Guid, cancellationToken);
+        MarkModified();
         return success;
     }
 
@@ -75,13 +81,16 @@ public class Schema(string Guid, string Name)
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
             return false;
-    
+
         var success = await provider.SaveAsync(this, cancellationToken);
+        MarkModified();
         return success;
     }
 
     public SchemaTextField AddTextField(string name, ushort? minLength = null, ushort? maxLength = null, string? pattern = null)
     {
+        MarkAccessed();
+        
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         if (minLength.HasValue && maxLength.HasValue)
@@ -106,7 +115,7 @@ public class Schema(string Guid, string Name)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
-            yield break;;
+            yield break; ;
 
         // Shortcut - See if it's a guid first of all.
         if (await provider.GuidExists(guidOrNamePart, cancellationToken))
@@ -127,6 +136,13 @@ public class Schema(string Guid, string Name)
             yield return possible;
         }
     }
+
+    public void MarkModified()
+    {
+        LastModified = DateTime.UtcNow;
+        LastAccessed = LastModified;
+    }
+    public void MarkAccessed() => LastAccessed = DateTime.UtcNow;
 
     public override string ToString() => Name;
 }
