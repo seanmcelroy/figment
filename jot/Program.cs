@@ -100,6 +100,8 @@ internal class Program
                         .WithDescription("Permanently deletes a thing");
                     thing.AddCommand<PromoteThingPropertyCommand>("promote")
                         .WithDescription("Promotes a property on one thing to become a property defined on a schema");
+                    thing.AddCommand<ThingRenameCommand>("rename")
+                        .WithDescription("Changes the name of a thing");
                     thing.AddCommand<SetThingPropertyCommand>("set")
                         .WithDescription("Sets the value of a property on a thing");
                     thing.AddCommand<ValidateThingCommand>("validate")

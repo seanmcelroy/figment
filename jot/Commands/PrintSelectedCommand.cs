@@ -21,7 +21,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
         {
             if (string.IsNullOrWhiteSpace(settings.EntityName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a thing, you must first 'select' a thing.");
+                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on an entity, you must first 'select' one.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 

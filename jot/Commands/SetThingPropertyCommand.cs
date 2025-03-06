@@ -28,7 +28,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         {
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To modify a thing, you must first 'select' one.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -62,15 +62,15 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
-        if (thingProvider == null)
+        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        if (tsp == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thingLoaded = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
-        if (thingLoaded == null)
+        var thing = await tsp.LoadAsync(selected.Guid, cancellationToken);
+        if (thing == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
@@ -89,7 +89,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return which;
         }
 
-        var saved = await thingLoaded.Set(propName, propValue, cancellationToken,
+        var saved = await thing.Set(propName, propValue, cancellationToken,
             AnsiConsole.Profile.Capabilities.Interactive ? chooserHandler : null);
 
         if (!saved.Success)
@@ -98,7 +98,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
         
-        AmbientErrorContext.Provider.LogDone($"{thingLoaded.Name} saved.");
+        AmbientErrorContext.Provider.LogDone($"{thing.Name} saved.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }
