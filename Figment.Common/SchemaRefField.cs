@@ -79,7 +79,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
         return true;
     }
 
-    public override async Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
+    public override async Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
@@ -92,6 +92,8 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
         if (schemaLoaded == null)
             return "???";
 
-        return $"{schemaLoaded.Name} ({schemaLoaded.Guid})";
+        if (verbose)
+            return $"{schemaLoaded.Name} ({schemaLoaded.Guid})";
+        return schemaLoaded.Name;
     }
 }

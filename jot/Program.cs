@@ -36,6 +36,7 @@ internal class Program
     /// </summary>
     internal static Reference SelectedEntity = Reference.EMPTY;
     internal static string SelectedEntityName = string.Empty;
+    internal static bool Verbose = false;
 
     private static async Task<int> Main(string[] args)
     {
@@ -158,6 +159,9 @@ internal class Program
 
                 config.AddCommand<ValidateSelectedCommand>("validate")
                     .WithAlias("val");
+
+                config.AddCommand<VerboseCommand>("verbose")
+                    .IsHidden();
             }
         });
 

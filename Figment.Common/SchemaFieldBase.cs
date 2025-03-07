@@ -36,12 +36,22 @@ namespace Figment.Common;
 [JsonDerivedType(typeof(SchemaUriField), typeDiscriminator: SchemaUriField.SCHEMA_FIELD_TYPE)]
 public abstract class SchemaFieldBase(string Name)
 {
+    /// <summary>
+    /// The type of the field
+    /// </summary>
+    /// <seealso cref="Schema"/>
     [JsonPropertyName("type")]
     public abstract string Type { get; }
 
+    /// <summary>
+    /// The name of the field
+    /// </summary>
     [JsonIgnore]
     public string Name { get; init; } = Name;
 
+    /// <summary>
+    /// Whether this field is required
+    /// </summary>
     [JsonIgnore]
     public bool Required { get; set; }
 
@@ -55,7 +65,12 @@ public abstract class SchemaFieldBase(string Name)
     /// <returns></returns>
     public abstract Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken);
 
-    public abstract Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken);
+    /// <summary>
+    /// Gets a human-readable version of the field type, with no formatting markup
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token for asynchronous methods</param>
+    /// <returns>Text to display describing the field type of this schema field</returns>
+    public abstract Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken);
 
     /// <summary>
     /// Allows the field to modify the input to match its underlying requirement

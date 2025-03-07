@@ -98,5 +98,5 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
         return f;
     }
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("text");
+    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult("text");
 }

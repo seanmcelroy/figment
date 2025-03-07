@@ -108,7 +108,7 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
         return f;
     }
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
+    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken)
     {
         if (Values == null || Values.Length == 0)
             return Task.FromResult("enum []");

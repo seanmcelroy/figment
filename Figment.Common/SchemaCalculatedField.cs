@@ -32,7 +32,7 @@ public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Formula { get; set; }
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
+    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {

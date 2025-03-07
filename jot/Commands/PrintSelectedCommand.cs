@@ -50,12 +50,21 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
             case Reference.ReferenceType.Schema:
                 {
                     var cmd = new PrintSchemaCommand();
-                    return await cmd.ExecuteAsync(context, new SchemaCommandSettings { SchemaName = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new SchemaCommandSettings
+                    {
+                        SchemaName = selected.Guid,
+                        Verbose = settings.Verbose ?? Program.Verbose
+                    }, cancellationToken);
                 }
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new PrintThingCommand();
-                    return await cmd.ExecuteAsync(context, new ThingCommandSettings { ThingName = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new PrintThingCommandSettings
+                    {
+                        ThingName = selected.Guid,
+                        NoPrettyDisplayNames = settings.NoPrettyDisplayNames,
+                        Verbose = settings.Verbose ?? Program.Verbose
+                    }, cancellationToken);
                 }
             default:
                 {

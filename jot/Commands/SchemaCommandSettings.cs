@@ -7,11 +7,15 @@ namespace jot.Commands;
 
 public class SchemaCommandSettings : CommandSettings
 {
-    public const int ARG_POSITION_NAME = 0;
+    public const int ARG_POSITION_SCHEMA_NAME = 0;
 
     [Description("Name of the schema to target")]
-    [CommandArgument(ARG_POSITION_NAME, "<SCHEMA>")]
+    [CommandArgument(ARG_POSITION_SCHEMA_NAME, "<SCHEMA>")]
     public string? SchemaName { get; init; }
+
+    [Description("Provides verbose detail, if available, for any outputs")]
+    [CommandOption("-v")]
+    public bool? Verbose { get; init; } = Program.Verbose;
 
     public override ValidationResult Validate()
     {

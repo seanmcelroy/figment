@@ -27,7 +27,7 @@ public class SchemaNumberField(string Name) : SchemaFieldBase(Name)
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {

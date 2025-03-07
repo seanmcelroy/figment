@@ -28,7 +28,7 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {
@@ -59,6 +59,24 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
         if (string.Compare("no", input, StringComparison.CurrentCultureIgnoreCase) == 0)
         {
             output = false;
+            return true;
+        }
+
+        if (string.Compare("on", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        {
+            output = true;
+            return true;
+        }
+
+        if (string.Compare("off", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        {
+            output = false;
+            return true;
+        }
+
+        if (int.TryParse(input, out int provInt))
+        {
+            output = provInt != 0;
             return true;
         }
 

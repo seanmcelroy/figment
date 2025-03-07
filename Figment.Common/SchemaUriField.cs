@@ -33,7 +33,7 @@ public class SchemaUriField(string Name) : SchemaTextField(Name)
     [JsonPropertyName("pattern")]
     public override string? Pattern { get; set; } = @"[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)";
 
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {

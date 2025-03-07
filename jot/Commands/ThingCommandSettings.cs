@@ -13,6 +13,10 @@ public class ThingCommandSettings : CommandSettings
     [CommandArgument(ARG_POSITION_NAME, "<NAME>")]
     public string? ThingName { get; init; }
 
+    [Description("Provides verbose detail, if available, for any outputs")]
+    [CommandOption("-v")]
+    public bool? Verbose { get; init; } = Program.Verbose;
+
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(ThingName)

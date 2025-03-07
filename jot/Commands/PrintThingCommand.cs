@@ -9,7 +9,7 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
-public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, ICommand
+public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettings>, ICommand
 {
     private enum ERROR_CODES : int
     {
@@ -21,7 +21,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, ThingCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, PrintThingCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
@@ -104,7 +104,10 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         var schemaBuilder = new StringBuilder();
         foreach (var schema in schemas)
         {
-            schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name} [silver]({schema.Value.Guid})[/]");
+            if (settings.Verbose ?? Program.Verbose)
+                schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name} [silver]({schema.Value.Guid})[/]");
+            else
+                schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name}");
         }
         if (schemaBuilder.Length == 0)
             schemaBuilder.AppendLine();
@@ -125,7 +128,8 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch)
                 && sch.Properties.TryGetValue(prop.Key[(prop.Key.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
             {
-                if (schprop.DisplayNames != null
+                if (!(settings.NoPrettyDisplayNames ?? false)
+                    && schprop.DisplayNames != null
                     && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
                     propDisplayName = prettyDisplayName;
                 var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
@@ -139,17 +143,24 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
         }
 
         var unsetPropBuilder = new StringBuilder();
-        var anyUnset = await thing.GetUnsetProperties(cancellationToken);
-        if (anyUnset.Count > 0)
+        if (settings.Verbose ?? Program.Verbose)
         {
-            unsetPropBuilder.AppendLine("[red]Unset Properties[/]");
-            maxPropNameLen = 0;
-            foreach (var grp in anyUnset.GroupBy(p => (p.SchemaGuid, p.SchemaName)))
+            var anyUnset = await thing.GetUnsetProperties(cancellationToken);
+            if (anyUnset.Count > 0)
             {
-                maxPropNameLen = grp.Max(g => g.SimpleDisplayName.Length);
-                unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver]({grp.Key.SchemaGuid})[/]");
-                foreach (var prop in grp)
-                    unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
+                unsetPropBuilder.AppendLine("[red]Unset Properties[/]");
+                maxPropNameLen = 0;
+                foreach (var grp in anyUnset.GroupBy(p => (p.SchemaGuid, p.SchemaName)))
+                {
+                    maxPropNameLen = grp.Max(g => g.SimpleDisplayName.Length);
+                    if (settings.Verbose ?? Program.Verbose)
+                        unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver]({grp.Key.SchemaGuid})[/]");
+                    else
+                        unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver][/]");
+
+                    foreach (var prop in grp)
+                        unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(settings.Verbose ?? Program.Verbose, cancellationToken))}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
+                }
             }
         }
 
@@ -172,12 +183,18 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             }
         }
 
+        AnsiConsole.MarkupLine($"[silver]Instance[/]    : [bold white]{thing.Name}[/]");
+        if (settings.Verbose ?? Program.Verbose)
+            AnsiConsole.MarkupLine($"[silver]GUID[/]        : {thing.Guid}");
+
+        if (settings.Verbose ?? Program.Verbose)
+        {
+            AnsiConsole.MarkupLine($"[silver]Created On[/]  : {thing.CreatedOn.ToLocalTime().ToLongDateString()} at {thing.CreatedOn.ToLocalTime().ToLongTimeString()}");
+            AnsiConsole.MarkupLine($"[silver]Modified On[/] : {thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}");
+        }
+
         AnsiConsole.MarkupLine(
             $"""
-            [silver]Instance[/]    : [bold white]{thing.Name}[/]
-            [silver]GUID[/]        : '{thing.Guid}'
-            [silver]Created On[/]  : {thing.CreatedOn.ToLocalTime().ToLongDateString()} at {thing.CreatedOn.ToLocalTime().ToLongTimeString()}
-            [silver]Modified On[/] : {thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}
             {schemaBuilder}
             [chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
             {propBuilder}

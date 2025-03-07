@@ -75,13 +75,15 @@ public class DeleteSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings
         }
 
         Thing? anyRandomThing = null;
-        await foreach (var any in tsp.GetBySchemaAsync(selected.Guid, cancellationToken)) {
+        await foreach (var any in tsp.GetBySchemaAsync(selected.Guid, cancellationToken))
+        {
             anyRandomThing = await tsp.LoadAsync(any.Guid, cancellationToken);
             if (anyRandomThing != null)
                 break;
         }
 
-        if (anyRandomThing != null) {
+        if (anyRandomThing != null)
+        {
             AmbientErrorContext.Provider.LogWarning($"Unable to delete a schema because things exist that use it, such as '{anyRandomThing.Name}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
@@ -89,7 +91,10 @@ public class DeleteSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings
         var deleted = await schema.DeleteAsync(cancellationToken);
         if (deleted)
         {
-            AmbientErrorContext.Provider.LogDone($"{schema.Name} ({schema.Guid}) deleted.");
+            if (settings.Verbose ?? Program.Verbose)
+                AmbientErrorContext.Provider.LogDone($"{schema.Name} ({schema.Guid}) deleted.");
+            else
+                AmbientErrorContext.Provider.LogDone($"{schema.Name} deleted.");
             Program.SelectedEntity = Reference.EMPTY;
             Program.SelectedEntityName = string.Empty;
             return (int)ERROR_CODES.SUCCESS;

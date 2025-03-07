@@ -17,6 +17,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
     {
         AmbientErrorContext.Provider.LogError("Subcommand and argument not provided.\r\n");
         AnsiConsole.MarkupLine("[gold3_1]SUBCOMMANDS:[/]");
+        AnsiConsole.WriteLine("    display <PRETTY_NAME> [CULTURE]");
         AnsiConsole.WriteLine("    type <FIELD_NAME>");
         AnsiConsole.WriteLine("    require <REQUIRED>");
         AnsiConsole.WriteLine("    formula <FORMULA>");
@@ -34,10 +35,23 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
         {
             case Reference.ReferenceType.Schema:
                 {
-                    if (context.Arguments.Count < 4)
+                    if (context.Arguments.Count < 3)
                     {
                         PrintSubcommandHelp();
                         return (int)ERROR_CODES.ARGUMENT_ERROR;
+                    }
+
+                    if (string.Compare("display", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
+                    {
+                        var subset = new SetSchemaPropertyDisplayCommandSettings
+                        {
+                            SchemaName = Program.SelectedEntity.Guid,
+                            PropertyName = settings.PropertyName,
+                            DisplayName = context.Arguments.Count < 4 ? null : context.Arguments[3],
+                            Culture = context.Arguments.Count < 5 ? null : context.Arguments[4],
+                        };
+                        var cmd = new SetSchemaPropertyDisplayCommand();
+                        return await cmd.ExecuteAsync(context, subset, cancellationToken);
                     }
 
                     if (string.Compare("type", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
@@ -46,7 +60,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                         {
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
-                            FieldType = context.Arguments[3],
+                            FieldType = context.Arguments.Count < 4 ? null : context.Arguments[3],
                         };
                         var cmd = new SetSchemaPropertyTypeCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -54,7 +68,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
 
                     if (string.Compare("require", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
                     {
-                        var parsable = SchemaBooleanField.TryParseBoolean(context.Arguments[3], out bool required);
+                        var parsable = SchemaBooleanField.TryParseBoolean(context.Arguments.Count < 4 ? null : context.Arguments[3], out bool required);
                         if (!parsable)
                         {
                             AmbientErrorContext.Provider.LogError($"Unable to parse '{context.Arguments[3]}' as a true/false boolean variable.");
@@ -76,7 +90,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                         {
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
-                            Formula = context.Arguments[3],
+                            Formula = context.Arguments.Count < 4 ? null : context.Arguments[3],
                         };
                         var cmd = new SetSchemaPropertyFormulaCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
