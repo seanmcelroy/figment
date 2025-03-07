@@ -45,9 +45,9 @@ public abstract class SchemaFieldBase(string Name)
     [JsonIgnore]
     public bool Required { get; set; }
 
-    [JsonPropertyName("displayName")]
+    [JsonPropertyName("displayNames")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? DisplayName { get; set; }
+    public Dictionary<string, string>? DisplayNames { get; set; }
 
     /// <summary>
     /// Validates a parsed field meets all applicable optionally-defined constraints

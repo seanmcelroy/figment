@@ -1,4 +1,5 @@
 using Figment.Common;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -25,7 +26,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = 
+            var possibilities =
                 Schema.ResolveAsync(settings.EntityName, cancellationToken)
                     .ToBlockingEnumerable(cancellationToken)
                     .Concat([.. Thing.ResolveAsync(settings.EntityName, cancellationToken).ToBlockingEnumerable(cancellationToken)]
@@ -34,8 +35,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name"); return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;

@@ -40,7 +40,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
@@ -111,7 +111,10 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
                 thingLoaded.Properties.Add($"{schemaLoaded.Guid}.{schemaProperty.Name}", property.Value);
                 var schemaSaved = await schemaLoaded.SaveAsync(cancellationToken);
                 if (!schemaSaved)
+                {
+                    AmbientErrorContext.Provider.LogError($"Unable to save schema with Guid '{schemaLoaded.Guid}'.");
                     return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
+                }
             }
         }
 

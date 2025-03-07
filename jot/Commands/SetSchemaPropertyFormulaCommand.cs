@@ -25,7 +25,7 @@ public class SetSchemaPropertyFormulaCommand : CancellableAsyncCommand<SetSchema
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AmbientErrorContext.Provider.LogError("To modify a thing, you must first 'select' one.");
+                AmbientErrorContext.Provider.LogError("To update the formula for a field, you must first 'select' a schema.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 

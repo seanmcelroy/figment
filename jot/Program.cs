@@ -24,6 +24,8 @@ using jot.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.Diagnostics;
+using System.Globalization;
+using System.Net.Sockets;
 
 namespace jot;
 
@@ -79,6 +81,8 @@ internal class Program
                     schema.AddBranch<SchemaPropertyCommandSettings>("set", set =>
                     {
                         // Note, adding one here requires a manual edit to SetSelectedPropertyCommand
+                        set.AddCommand<SetSchemaPropertyDisplayCommand>("display")
+                            .WithDescription("Sets a 'pretty' display name for the column");
                         set.AddCommand<SetSchemaPropertyTypeCommand>("type")
                             .WithDescription("Sets the data type of a property");
                         set.AddCommand<SetSchemaPropertyRequiredCommand>("require")
@@ -285,8 +289,25 @@ internal class Program
                                 .ToArray();
                             foreach (var vc in viewColumns.Cast<object?>().Select(v => v?.ToString()))
                             {
-                                if (!string.IsNullOrWhiteSpace(vc) && viewableColumns.Contains(vc, StringComparer.InvariantCultureIgnoreCase))
-                                    columns.Add(vc);
+                                // If there are variances in capitalization between the property name
+                                //    and the name as specified in the viewColumns, the viewColumns
+                                //    will win.  This is a 'cheap' way to allow fields to be lowercased
+                                //    and the user to specify title-casing or space-separated words
+                                //    without defining localized display names on schema.
+                                //    However, if there is a schema display name, that will always
+                                //    take the higher precedence.
+                                if (!string.IsNullOrWhiteSpace(vc)
+                                    && viewableColumns.Contains(vc, StringComparer.InvariantCultureIgnoreCase))
+                                {
+                                    var columnName = vc;
+
+                                    if (schema.Properties.TryGetValue(vc[(vc.IndexOf('.') + 1)..], out SchemaFieldBase? schprop)
+                                        && schprop.DisplayNames != null
+                                        && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
+                                        columnName = prettyDisplayName;
+
+                                    columns.Add(columnName);
+                                }
                             }
 
                             Table t = new();

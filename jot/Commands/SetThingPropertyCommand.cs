@@ -38,7 +38,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
@@ -97,7 +97,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to edit thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_SAVE_ERROR;
         }
-        
+
         AmbientErrorContext.Provider.LogDone($"{thing.Name} saved.");
         return (int)ERROR_CODES.SUCCESS;
     }

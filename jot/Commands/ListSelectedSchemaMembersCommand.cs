@@ -1,4 +1,5 @@
 using Figment.Common;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -33,7 +34,7 @@ public class ListSelectedSchemaMembersCommand : CancellableAsyncCommand<ListSele
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];

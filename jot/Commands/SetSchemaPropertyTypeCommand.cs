@@ -27,7 +27,7 @@ public class SetSchemaPropertyTypeCommand : CancellableAsyncCommand<SetSchemaPro
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AmbientErrorContext.Provider.LogError("To modify a thing, you must first 'select' one.");
+                AmbientErrorContext.Provider.LogError("To update the data type for a field, you must first 'select' a schema.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 

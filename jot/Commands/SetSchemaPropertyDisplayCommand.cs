@@ -6,7 +6,7 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
-public class SetSchemaPropertyRequiredCommand : CancellableAsyncCommand<SetSchemaPropertyRequiredCommandSettings>
+public class SetSchemaPropertyDisplayCommand : CancellableAsyncCommand<SetSchemaPropertyDisplayCommandSettings>
 {
     private enum ERROR_CODES : int
     {
@@ -19,17 +19,16 @@ public class SetSchemaPropertyRequiredCommand : CancellableAsyncCommand<SetSchem
         SCHEMA_SAVE_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR,
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, SetSchemaPropertyRequiredCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, SetSchemaPropertyDisplayCommandSettings settings, CancellationToken cancellationToken)
     {
-        // require "work phone" true 
-        // require "work phone"
-        // require "work phone" false 
+        // display Pizza
+        // require pizza it-IT 
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY) || selected.Type != Reference.ReferenceType.Schema)
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AmbientErrorContext.Provider.LogError("To update the required bit for a field, you must first 'select' a schema.");
+                AmbientErrorContext.Provider.LogError("To update the display name for a field, you must first 'select' a schema.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -63,33 +62,54 @@ public class SetSchemaPropertyRequiredCommand : CancellableAsyncCommand<SetSchem
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var schemaLoaded = await provider.LoadAsync(selected.Guid, cancellationToken);
-        if (schemaLoaded == null)
+        var schema = await provider.LoadAsync(selected.Guid, cancellationToken);
+        if (schema == null)
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
         var propName = settings.PropertyName;
-        var required = settings.Required ?? true;
-
-        var sp = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
+        var sp = schema.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
         {
             AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No schema field named '{propName}' was found.");
             return (int)ERROR_CODES.NOT_FOUND;
         }
 
-        sp.Value.Required = required;
+        var prop = sp.Value;
+        var culture = settings.Culture ?? "en-US";
+        var whatChanged = string.Empty;
+        if (string.IsNullOrWhiteSpace(settings.DisplayName))
+        {
+            // Remove display name if present.
+            if (prop.DisplayNames != null
+                && prop.DisplayNames.TryGetValue(culture, out string? disp))
+            {
+                whatChanged = $" Removed display name '{disp}' for culture {culture}";
+                prop.DisplayNames.Remove(culture);
+            }
+            if (prop.DisplayNames?.Count == 0)
+                prop.DisplayNames = null;
+        }
+        else if (prop.DisplayNames == null)
+        {
+            whatChanged = $" Added new display name '{settings.DisplayName}' for culture {culture}";
+            prop.DisplayNames = new Dictionary<string, string>() { { culture, settings.DisplayName } };
+        }
+        else if (prop.DisplayNames.ContainsKey(culture)) {
+            whatChanged = $" Changed display name from '{prop.DisplayNames[culture]}' to '{settings.DisplayName}' for culture {culture}";
+            prop.DisplayNames[culture] = settings.DisplayName;
+        }
 
-        var saved = await schemaLoaded.SaveAsync(cancellationToken);
+        var saved = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
             AmbientErrorContext.Provider.LogError($"Unable to save schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AmbientErrorContext.Provider.LogDone($"{schemaLoaded.Name} saved.");
+        AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.{whatChanged}");
         return (int)ERROR_CODES.SUCCESS;
     }
 }

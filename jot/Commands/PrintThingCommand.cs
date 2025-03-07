@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -36,7 +38,7 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
             switch (possibilities.Length)
             {
                 case 0:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Nothing found with that name");
+                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
                     return (int)ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
@@ -118,15 +120,19 @@ public class PrintThingCommand : CancellableAsyncCommand<ThingCommandSettings>, 
                 continue;
 
             // Coerce value if schema-bound using a field renderer.
+            var propDisplayName = prop.Key;
             if (prop.Value.schemaGuid != null
                 && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch)
                 && sch.Properties.TryGetValue(prop.Key[(prop.Key.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
             {
+                if (schprop.DisplayNames != null
+                    && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
+                    propDisplayName = prettyDisplayName;
                 var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
                 if (prop.Value.valid)
-                    propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : {text}");
+                    propBuilder.AppendLine($"   {Markup.Escape(propDisplayName.PadRight(maxPropNameLen))} : {text}");
                 else
-                    propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : [red bold]{text}[/]");
+                    propBuilder.AppendLine($"   {Markup.Escape(propDisplayName.PadRight(maxPropNameLen))} : [red bold]{text}[/]");
             }
             else
                 propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : {Markup.Escape(prop.Value.fieldValue?.ToString() ?? string.Empty)}");
