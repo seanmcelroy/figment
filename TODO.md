@@ -13,9 +13,12 @@
 - [ ] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
 - [ ] default schema values
 - [ ] Schema inheritence
+- [ ] Multiple schema applications
 - [ ] pretty field names
 - [ ] calculated views
 - [ ] filtered views
+- [ ] merge thing command
+- [ ] diff command
 - [ ] tasks
 - [ ] events
 - [ ] today

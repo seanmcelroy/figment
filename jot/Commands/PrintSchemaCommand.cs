@@ -73,7 +73,7 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
             var maxPropNameLen = schema.Properties.Max(p => p.Key.Length); // In case it will be escaped
             foreach (var prop in schema.Properties)
             {
-                propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {await prop.Value.GetReadableFieldTypeAsync(cancellationToken)}{(prop.Value.Required ? " (REQUIRED)" : string.Empty)}");
+                propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {Markup.Escape(await prop.Value.GetReadableFieldTypeAsync(cancellationToken))}{(prop.Value.Required ? " (REQUIRED)" : string.Empty)}");
             }
         }
 
