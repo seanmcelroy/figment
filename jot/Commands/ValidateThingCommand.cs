@@ -1,7 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;
@@ -26,7 +25,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         {
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To validate a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To validate a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -42,28 +41,28 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one thing matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var thing = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -74,9 +73,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         {
             thingProperties.Add(property);
             if (!property.Valid)
-            {
-                AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Property {property.SimpleDisplayName} ({property.TruePropertyName}) has an invalid value of '{property.Value}'.");
-            }
+                AmbientErrorContext.Provider.LogWarning($"Property {property.SimpleDisplayName} ({property.TruePropertyName}) has an invalid value of '{property.Value}'.");
         }
 
         if (thing.SchemaGuids == null
@@ -91,7 +88,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
             if (provider == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
@@ -103,7 +100,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
                 if (schemaLoaded == null)
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
+                    AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
                     return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
                 }
 
@@ -113,7 +110,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                             tp => tp.SchemaGuid == schemaLoaded.Guid
                             && string.CompareOrdinal(tp.SimpleDisplayName, sp.Key) == 0)))
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Schema property {sp.Key} is required but is not set!");
+                    AmbientErrorContext.Provider.LogWarning($"Schema property {sp.Key} is required but is not set!");
                 }
             }
         }

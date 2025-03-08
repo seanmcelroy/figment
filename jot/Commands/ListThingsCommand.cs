@@ -1,4 +1,5 @@
 using Figment.Common.Data;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -11,7 +12,7 @@ public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettin
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

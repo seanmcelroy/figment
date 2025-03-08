@@ -25,7 +25,7 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a schema, you must first 'select' a schema.");
+                AmbientErrorContext.Provider.LogError("To view properties on a schema, you must first 'select' a schema.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -41,28 +41,28 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
                     Program.SelectedEntity = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var schema = await provider.LoadAsync(Program.SelectedEntity.Guid, cancellationToken);
         if (schema == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{Program.SelectedEntity.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{Program.SelectedEntity.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 

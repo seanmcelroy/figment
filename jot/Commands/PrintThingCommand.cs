@@ -28,7 +28,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         {
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To view properties on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -44,28 +44,28 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var thing = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -78,7 +78,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         {
             if (schemaProvider == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
@@ -88,7 +88,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 if (schema != null)
                     schemas.Add(schema.Guid, schema);
                 else
-                    AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Unable to load associated schema with Guid '{schemaGuid}'.");
+                    AmbientErrorContext.Provider.LogWarning($"Unable to load associated schema with Guid '{schemaGuid}'.");
             }
         }
 

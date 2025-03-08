@@ -45,28 +45,28 @@ public class SetSchemaPropertyRequiredCommand : CancellableAsyncCommand<SetSchem
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var schemaLoaded = await provider.LoadAsync(selected.Guid, cancellationToken);
         if (schemaLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -76,7 +76,7 @@ public class SetSchemaPropertyRequiredCommand : CancellableAsyncCommand<SetSchem
         var sp = schemaLoaded.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No schema field named '{propName}' was found.");
+            AmbientErrorContext.Provider.LogError($"No schema field named '{propName}' was found.");
             return (int)ERROR_CODES.NOT_FOUND;
         }
 

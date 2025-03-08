@@ -30,7 +30,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         {
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To promote a property on a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To promote a property on a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -46,7 +46,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
@@ -54,14 +54,14 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var thingLoaded = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thingLoaded == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 
@@ -75,7 +75,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         var property = thingLoaded.Properties.FirstOrDefault(p => string.CompareOrdinal(p.Key, settings.PropertyName) == 0);
         if (property.Equals(default(KeyValuePair<string, object>)))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: No property named '{settings.PropertyName}' on thing.");
+            AmbientErrorContext.Provider.LogError($"No property named '{settings.PropertyName}' on thing.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -84,7 +84,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
             if (provider == null)
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
@@ -96,7 +96,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
 
                 if (schemaLoaded == null)
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{schemaGuid}' from {thingLoaded.Name}.  Must be able to load schema to promote a property to it.");
+                    AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}' from {thingLoaded.Name}.  Must be able to load schema to promote a property to it.");
                     return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
                 }
 

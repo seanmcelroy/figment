@@ -34,7 +34,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 return (int)ERROR_CODES.SUCCESS;
             }
 
-            AnsiConsole.MarkupLine("[yellow]ERROR[/]: You must first 'select' one by specifying a [[NAME]] argument.");
+            AmbientErrorContext.Provider.LogError("You must first 'select' one by specifying a [[NAME]] argument.");
             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
             Program.SelectedEntityName = string.Empty;
             return (int)ERROR_CODES.ARGUMENT_ERROR;
@@ -60,14 +60,14 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                             var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                             if (provider == null)
                             {
-                                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+                                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
                                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
                             }
 
                             var schemaLoaded = await provider.LoadAsync(possibilities[0].Guid, cancellationToken);
                             if (schemaLoaded == null)
                             {
-                                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema with Guid '{possibilities[0].Guid}'.");
+                                AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{possibilities[0].Guid}'.");
                                 Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                                 Program.SelectedEntityName = string.Empty;
                                 return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
@@ -82,14 +82,14 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
                         if (thingProvider == null)
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+                            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
                             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
                         }
 
                         var thingLoaded = await thingProvider.LoadAsync(possibilities[0].Guid, cancellationToken);
                         if (thingLoaded == null)
                         {
-                            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{possibilities[0].Guid}'.");
+                            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{possibilities[0].Guid}'.");
                             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                             Program.SelectedEntityName = string.Empty;
                             return (int)ERROR_CODES.THING_LOAD_ERROR;
@@ -101,7 +101,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                         return (int)ERROR_CODES.SUCCESS;
 
                     default:
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(possibilities[0].Type)}'.");
+                        AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(possibilities[0].Type)}'.");
                         Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                         Program.SelectedEntityName = string.Empty;
                         return (int)ERROR_CODES.UNKNOWN_TYPE;
@@ -132,7 +132,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 if (!AnsiConsole.Profile.Capabilities.Interactive)
                 {
                     // Cannot show selection prompt, so just error message.
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                     Program.SelectedEntityName = string.Empty;
                     return (int)ERROR_CODES.AMBIGUOUS_MATCH;

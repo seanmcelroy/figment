@@ -14,7 +14,7 @@ public class ThingCommandSettings : CommandSettings
     public string? ThingName { get; init; }
 
     [Description("Provides verbose detail, if available, for any outputs")]
-    [CommandOption("-v")]
+    [CommandOption("-v|--verbose")]
     public required bool? Verbose { get; init; } = Program.Verbose;
 
     public override ValidationResult Validate()

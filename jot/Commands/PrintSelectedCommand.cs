@@ -1,4 +1,5 @@
 using Figment.Common;
+using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -19,7 +20,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on an entity, you must first 'select' one.");
+            AmbientErrorContext.Provider.LogError("To view properties on an entity, you must first 'select' one.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -46,7 +47,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+                    AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

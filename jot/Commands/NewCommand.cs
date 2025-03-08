@@ -1,7 +1,6 @@
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;
@@ -18,14 +17,14 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         // Make thing.  Syntax 'new type [name]'
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
-            AnsiConsole.MarkupLine("[yellow]ERROR[/]: To create a new thing, specify the type of thing and its name, like: new todo \"Call Jake\"");
+            AmbientErrorContext.Provider.LogError("To create a new thing, specify the type of thing and its name, like: new todo \"Call Jake\"");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -41,13 +40,13 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                 schema = await Schema.Create(settings.SchemaName, cancellationToken);
                 if (schema == null)
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}'.");
+                    AmbientErrorContext.Provider.LogError($"Unable to create schema '{settings.SchemaName}'.");
                     return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
                 }
             }
             else
             {
-                AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: A schema with that name already exists!");
+                AmbientErrorContext.Provider.LogError($"A schema with that name already exists!");
                 return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
             }
 
@@ -66,7 +65,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                     schema = await Schema.Create(settings.SchemaName, cancellationToken);
                     if (schema == null)
                     {
-                        AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}'.");
+                        AmbientErrorContext.Provider.LogError($"Unable to create schema '{settings.SchemaName}'.");
                         return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
                     }
                     else
@@ -74,7 +73,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                 }
                 else
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to create schema '{settings.SchemaName}' because automatic generation was not enabled.");
+                    AmbientErrorContext.Provider.LogError($"Unable to create schema '{settings.SchemaName}' because automatic generation was not enabled.");
                     return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
                 }
             }
@@ -82,7 +81,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                 schema = await ssp.LoadAsync(schemaRef.Guid, cancellationToken);
                 if (schema == null)
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema '{settings.SchemaName}'.");
+                    AmbientErrorContext.Provider.LogError($"Unable to load schema '{settings.SchemaName}'.");
                     return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                 }
             }
@@ -93,7 +92,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

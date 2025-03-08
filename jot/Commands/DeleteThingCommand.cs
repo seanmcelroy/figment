@@ -27,7 +27,7 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         {
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To delete a thing, you must first 'select' a thing.");
+                AmbientErrorContext.Provider.LogError("To delete a thing, you must first 'select' a thing.");
                 return (int)ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -57,14 +57,14 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var thing = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
             return (int)ERROR_CODES.THING_LOAD_ERROR;
         }
 

@@ -33,7 +33,7 @@ public class ListSelectedSchemaMembersCommand : CancellableAsyncCommand<ListSele
                 }
             default:
                 {
-                    AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+                    AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
                     return (int)ERROR_CODES.UNKNOWN_TYPE;
                 }
         }

@@ -72,6 +72,8 @@ internal class Program
                         .WithDescription("Permanently deletes a schema");
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
+                    schema.AddCommand<ImportSchemaThingsCommand>("import")
+                        .WithDescription("Imports things as entities of this schema type");
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated to a schema");
                     schema.AddCommand<SetSchemaPluralCommand>("plural")

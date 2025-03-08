@@ -15,7 +15,7 @@ public class ListSchemaMembersCommand : CancellableAsyncCommand<ListSchemaMember
         {
             if (string.IsNullOrWhiteSpace(settings.SchemaName))
             {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To enumerabe the members of a schema, you must first 'select' a schema.");
+                AmbientErrorContext.Provider.LogError("To enumerabe the members of a schema, you must first 'select' a schema.");
                 return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
             }
 
@@ -31,21 +31,21 @@ public class ListSchemaMembersCommand : CancellableAsyncCommand<ListSchemaMember
                     selected = possibilities[0];
                     break;
                 default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one schema matches this name.");
+                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one schema matches this name.");
                     return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Schema)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: This command does not support type '{Enum.GetName(selected.Type)}'.");
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

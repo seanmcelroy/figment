@@ -13,10 +13,10 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
         UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
     }
 
-    private static void PrintSubcommandHelp()
+    private static void PrintSchemaSubcommandHelp()
     {
         AmbientErrorContext.Provider.LogError("Subcommand and argument not provided.\r\n");
-        AnsiConsole.MarkupLine("[gold3_1]SUBCOMMANDS:[/]");
+        AnsiConsole.MarkupLine("[gold3_1]SCHEMA SET SUBCOMMANDS:[/]");
         AnsiConsole.WriteLine("    display <PRETTY_NAME> [CULTURE]");
         AnsiConsole.WriteLine("    type <FIELD_NAME>");
         AnsiConsole.WriteLine("    require <REQUIRED>");
@@ -37,7 +37,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                 {
                     if (context.Arguments.Count < 3)
                     {
-                        PrintSubcommandHelp();
+                        PrintSchemaSubcommandHelp();
                         return (int)ERROR_CODES.ARGUMENT_ERROR;
                     }
 
@@ -101,7 +101,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                     }
 
                     AmbientErrorContext.Provider.LogError($"Unsupported subcommand '{context.Arguments[2]}' in interactive mode.");
-                    PrintSubcommandHelp();
+                    PrintSchemaSubcommandHelp();
                     return (int)ERROR_CODES.ARGUMENT_ERROR;
                 }
             case Reference.ReferenceType.Thing:
