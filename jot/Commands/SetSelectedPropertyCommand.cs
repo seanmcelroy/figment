@@ -49,6 +49,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             PropertyName = settings.PropertyName,
                             DisplayName = context.Arguments.Count < 4 ? null : context.Arguments[3],
                             Culture = context.Arguments.Count < 5 ? null : context.Arguments[4],
+                            Verbose = settings.Verbose
                         };
                         var cmd = new SetSchemaPropertyDisplayCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -61,6 +62,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
                             FieldType = context.Arguments.Count < 4 ? null : context.Arguments[3],
+                            Verbose = settings.Verbose
                         };
                         var cmd = new SetSchemaPropertyTypeCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -79,6 +81,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
                             Required = required,
+                            Verbose = settings.Verbose
                         };
                         var cmd = new SetSchemaPropertyRequiredCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -91,6 +94,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
                             Formula = context.Arguments.Count < 4 ? null : context.Arguments[3],
+                            Verbose = settings.Verbose
                         };
                         var cmd = new SetSchemaPropertyFormulaCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -103,7 +107,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new SetThingPropertyCommand();
-                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Values?[0] }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Values?[0], Verbose = settings.Verbose }, cancellationToken);
                 }
             default:
                 {

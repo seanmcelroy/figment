@@ -12,6 +12,10 @@ public class PromoteSelectedPropertyCommandSettings : CommandSettings
     [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<PROPERTY>")]
     public string? PropertyName { get; init; }
 
+    [Description("Provides verbose detail, if available, for any outputs")]
+    [CommandOption("-v")]
+    public required bool? Verbose { get; init; } = Program.Verbose;
+
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(PropertyName)

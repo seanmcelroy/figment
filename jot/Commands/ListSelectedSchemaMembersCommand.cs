@@ -20,29 +20,8 @@ public class ListSelectedSchemaMembersCommand : CancellableAsyncCommand<ListSele
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.SchemaName))
-            {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To list the members of a schema, you must first 'select' a schema.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibilities = 
-                Schema.ResolveAsync(settings.SchemaName, cancellationToken)
-                    .ToBlockingEnumerable(cancellationToken)
-                    .ToArray();
-
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibilities[0];
-                    break;
-                default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one schema matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
-            }
+            AmbientErrorContext.Provider.LogError("To list the members of a schema, you must first 'select' a schema.");
+            return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
         switch (selected.Type)
@@ -50,7 +29,7 @@ public class ListSelectedSchemaMembersCommand : CancellableAsyncCommand<ListSele
             case Reference.ReferenceType.Schema:
                 {
                     var cmd = new ListSchemaMembersCommand();
-                    return await cmd.ExecuteAsync(context, new ListSchemaMembersCommandSettings { SchemaName = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new ListSchemaMembersCommandSettings { SchemaName = selected.Guid, Verbose = settings.Verbose }, cancellationToken);
                 }
             default:
                 {

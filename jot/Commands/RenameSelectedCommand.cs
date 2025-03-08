@@ -1,66 +1,29 @@
 using Figment.Common;
 using Figment.Common.Errors;
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
 public class RenameSelectedCommand : CancellableAsyncCommand<RenameSelectedCommandSettings>, ICommand
 {
-    private enum ERROR_CODES : int
-    {
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-    }
-
     public override async Task<int> ExecuteAsync(CommandContext context, RenameSelectedCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.EntityName))
-            {
-                AmbientErrorContext.Provider.LogError("To rename an entity, you must first 'select' one.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibilities =
-                Schema.ResolveAsync(settings.EntityName, cancellationToken)
-                    .ToBlockingEnumerable(cancellationToken)
-                    .Concat([.. Thing.ResolveAsync(settings.EntityName, cancellationToken).ToBlockingEnumerable(cancellationToken)]
-                    ).ToArray();
-
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibilities[0];
-                    break;
-                default:
-                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
-            }
+            AmbientErrorContext.Provider.LogError("To rename an entity, you must first 'select' one.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         switch (selected.Type)
         {
             case Reference.ReferenceType.Schema:
-                {
-                    var cmd = new SchemaRenameCommand();
-                    return await cmd.ExecuteAsync(context, new SchemaRenameCommandSettings { SchemaName = selected.Guid, NewName = settings.NewName ?? settings.EntityName }, cancellationToken);
-                }
+                    return await new SchemaRenameCommand().ExecuteAsync(context, new SchemaRenameCommandSettings { SchemaName = selected.Guid, NewName = settings.NewName, Verbose = settings.Verbose    }, cancellationToken);
             case Reference.ReferenceType.Thing:
-                {
-                    var cmd = new ThingRenameCommand();
-                    return await cmd.ExecuteAsync(context, new ThingRenameCommandSettings { ThingName = selected.Guid, NewName = settings.NewName ?? settings.EntityName }, cancellationToken);
-                }
+                    return await new ThingRenameCommand().ExecuteAsync(context, new ThingRenameCommandSettings { ThingName = selected.Guid, NewName = settings.NewName, Verbose = settings.Verbose }, cancellationToken);
             default:
                 AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-                return (int)ERROR_CODES.UNKNOWN_TYPE;
+                return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
     }
 }

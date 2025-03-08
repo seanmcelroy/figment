@@ -15,7 +15,7 @@ public class SchemaCommandSettings : CommandSettings
 
     [Description("Provides verbose detail, if available, for any outputs")]
     [CommandOption("-v")]
-    public bool? Verbose { get; init; } = Program.Verbose;
+    public required bool? Verbose { get; init; } = Program.Verbose;
 
     public override ValidationResult Validate()
     {

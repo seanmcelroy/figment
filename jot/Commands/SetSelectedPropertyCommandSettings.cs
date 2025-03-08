@@ -17,6 +17,10 @@ public class SetSelectedPropertyCommandSettings : CommandSettings
     [CommandArgument(ARG_POSITION_VALUE, "[VALUES]")]
     public string[]? Values { get; init; }
 
+    [Description("Provides verbose detail, if available, for any outputs")]
+    [CommandOption("-v")]
+    public required bool? Verbose { get; init; } = Program.Verbose;
+
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(PropertyName)

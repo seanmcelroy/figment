@@ -1,5 +1,4 @@
 using Figment.Common;
-using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -20,29 +19,8 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.EntityName))
-            {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on an entity, you must first 'select' one.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibilities =
-                Schema.ResolveAsync(settings.EntityName, cancellationToken)
-                    .ToBlockingEnumerable(cancellationToken)
-                    .Concat([.. Thing.ResolveAsync(settings.EntityName, cancellationToken).ToBlockingEnumerable(cancellationToken)]
-                    ).ToArray();
-
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name"); return (int)ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibilities[0];
-                    break;
-                default:
-                    AnsiConsole.MarkupLine("[red]ERROR[/]: Ambiguous match; more than one entity matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
-            }
+            AnsiConsole.MarkupLine("[yellow]ERROR[/]: To view properties on an entity, you must first 'select' one.");
+            return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
         switch (selected.Type)

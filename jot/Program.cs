@@ -125,6 +125,10 @@ internal class Program
                     .WithDescription("Interactive mode command.  Associates the currently selected thing with the specified schema.")
                     .IsHidden();
 
+                config.AddCommand<DescribeSelectedSchemaCommand>("describe")
+                    .WithDescription("Interactive mode command.  Sets the description for the currently selected schema.")
+                    .IsHidden();
+
                 config.AddCommand<DeleteSelectedCommand>("delete")
                     .WithAlias("del")
                     .WithDescription("Interactive mode command.  Deletes the currently selected entity.")

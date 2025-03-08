@@ -22,27 +22,8 @@ public class AssociateSchemaWithSelectedThingCommand : CancellableAsyncCommand<A
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.ThingName))
-            {
-                AnsiConsole.MarkupLine("[yellow]ERROR[/]: To associate a schema to a thing, you must first 'select' a thing.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibilities[0];
-                    break;
-                default:
-                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
-            }
+            AmbientErrorContext.Provider.LogError("To associate a schema to a thing, you must first 'select' a thing.");
+            return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
@@ -95,7 +76,7 @@ public class AssociateSchemaWithSelectedThingCommand : CancellableAsyncCommand<A
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new AssociateSchemaWithThingCommand();
-                    return await cmd.ExecuteAsync(context, new AssociateSchemaWithThingCommandSettings { SchemaName = settings.SchemaName, ThingName = selected.Guid }, cancellationToken);
+                    return await cmd.ExecuteAsync(context, new AssociateSchemaWithThingCommandSettings { SchemaName = settings.SchemaName, ThingName = selected.Guid, Verbose = settings.Verbose }, cancellationToken);
                 }
             default:
                 AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
