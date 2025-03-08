@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Figment.Common\Figment.Common.csproj" />
+    <ProjectReference Include="..\Figment.Data.Local\Figment.Data.Local.csproj" />
   </ItemGroup>
 
 </Project>

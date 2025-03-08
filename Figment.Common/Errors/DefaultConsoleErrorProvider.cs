@@ -47,4 +47,8 @@ public class DefaultConsoleErrorProvider : IErrorProvider
     public void LogWarning(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
     public void LogWarning(string message) => Console.Error.WriteLine(message);
+
+    public void LogProgress(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
+
+    public void LogProgress(string message) => Console.Error.WriteLine(message);
 }

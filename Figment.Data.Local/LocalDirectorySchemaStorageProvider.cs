@@ -4,7 +4,6 @@ using System.Text.Json;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
-using Spectre.Console;
 
 namespace Figment.Data.Local;
 
@@ -55,7 +54,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         var indexFilePath = Path.Combine(SchemaDirectoryPath, NameIndexFileName);
         var indexAdded = await IndexManager.AddAsync(indexFilePath, schemaName, schemaFileName, cancellationToken);
         if (!indexAdded)
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Unable to update index at: {indexFilePath}");
+            AmbientErrorContext.Provider.LogWarning($"Unable to update index at: {indexFilePath}");
 
         return new CreateSchemaResult { Success = true, NewGuid = schemaGuid };
     }
@@ -96,7 +95,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             if (File.Exists(indexFilePath))
             {
                 await IndexManager.RemoveByValueAsync(indexFilePath, schemaFileName, cancellationToken);
-                AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Path.GetFileName(indexFilePath)}");
+                AmbientErrorContext.Provider.LogProgress($"Deleted from name index {Path.GetFileName(indexFilePath)}");
             }
         }
 
@@ -106,7 +105,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             if (File.Exists(indexFilePath))
             {
                 await IndexManager.RemoveByValueAsync(indexFilePath, schemaFileName, cancellationToken);
-                AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from plural index {Path.GetFileName(indexFilePath)}");
+                AmbientErrorContext.Provider.LogProgress($"Deleted from plural index {Path.GetFileName(indexFilePath)}");
             }
         }
 
@@ -204,14 +203,14 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
         if (!File.Exists(filePath))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema. No file found at {filePath}");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema. No file found at {filePath}");
             return null;
         }
 
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length == 0)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load schema. Empty schema file found at {filePath}");
+            AmbientErrorContext.Provider.LogError($"Unable to load schema. Empty schema file found at {filePath}");
             fileInfo.Delete();
             return null;
         }

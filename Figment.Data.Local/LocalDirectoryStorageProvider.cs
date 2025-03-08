@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using Figment.Common.Data;
 using Figment.Common.Errors;
-using Spectre.Console;
 
 namespace Figment.Data.Local;
 
@@ -52,7 +51,7 @@ public class LocalDirectoryStorageProvider : IStorageProvider
         if (Directory.Exists(path))
             return true;
 
-        AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Local directory does not exist at {path}");
+        AmbientErrorContext.Provider.LogWarning($"Local directory does not exist at {path}");
         try
         {
             Directory.CreateDirectory(path);

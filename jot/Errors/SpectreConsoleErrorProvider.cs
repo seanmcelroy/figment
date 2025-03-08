@@ -32,4 +32,8 @@ public class SpectreConsoleErrorProvider : IErrorProvider
     public void LogDone(FormattableString formattableString) => AnsiConsole.MarkupLine($"[green]DONE[/]: {formattableString}\r\n");
 
     public void LogDone(string message) => AnsiConsole.MarkupInterpolated($"[green]DONE[/]: {message}\r\n");
+
+    public void LogProgress(FormattableString formattableString) => AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] {formattableString}");
+
+    public void LogProgress(string message) => AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] {message}");
 }

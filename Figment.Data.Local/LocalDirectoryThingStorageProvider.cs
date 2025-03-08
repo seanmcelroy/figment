@@ -1,10 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using Spectre.Console;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
-using System.Net.Sockets;
 
 namespace Figment.Data.Local;
 
@@ -164,7 +162,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
 
         // No index, so go the expensive route
-        AnsiConsole.MarkupLineInterpolated($"[yellow]WARN[/]: Missing index at: {indexFilePath}");
+        AmbientErrorContext.Provider.LogWarning($"Missing index at: {indexFilePath}");
         await foreach (var thingRef in GetAll(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
@@ -217,14 +215,14 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 
         if (!File.Exists(filePath))
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing. No file found at {filePath}");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing. No file found at {filePath}");
             return null;
         }
 
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length == 0)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]ERROR[/]: Unable to load thing. Empty thing file found at {filePath}");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing. Empty thing file found at {filePath}");
             fileInfo.Delete();
             return null;
         }
@@ -624,7 +622,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 
         if (!File.Exists(thingFilePath))
         {
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: File for thing {thingGuid} does not exist at {thingFilePath}. Nothing to do.");
+            AmbientErrorContext.Provider.LogWarning($"File for thing {thingGuid} does not exist at {thingFilePath}. Nothing to do.");
             return false;
         }
 
@@ -647,13 +645,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             if (File.Exists(indexFilePath))
             {
                 await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-                AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name index {Path.GetFileName(indexFilePath)}");
+                AmbientErrorContext.Provider.LogProgress($"Deleted from name index {Path.GetFileName(indexFilePath)}");
             }
         }
 
         if (thing == null)
         {
-            AnsiConsole.MarkupLineInterpolated($"[yellow]WARNING[/]: Unable to load thing {thingGuid}, so it may still exist in schema indexes.  Rebuild thing indexes to be sure.");
+            AmbientErrorContext.Provider.LogWarning($"Unable to load thing {thingGuid}, so it may still exist in schema indexes.  Rebuild thing indexes to be sure.");
             return true;
         }
 
@@ -667,7 +665,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                     if (File.Exists(indexFilePath))
                     {
                         await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-                        AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from name schema index {Path.GetFileName(indexFilePath)}");
+                        AmbientErrorContext.Provider.LogProgress($"Deleted from name schema index {Path.GetFileName(indexFilePath)}");
                     }
                 }
             }
@@ -682,7 +680,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                     if (File.Exists(indexFilePath))
                     {
                         await IndexManager.RemoveByKeyAsync(indexFilePath, thing.Guid, cancellationToken);
-                        AnsiConsole.MarkupLineInterpolated($"[blue]Working...[/] Deleted from schema index {Path.GetFileName(indexFilePath)}");
+                        AmbientErrorContext.Provider.LogProgress($"Deleted from schema index {Path.GetFileName(indexFilePath)}");
                     }
                 }
             }

@@ -4,7 +4,6 @@ using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Figment.Common.Errors;
-using Spectre.Console;
 
 namespace Figment.Data.Local;
 
