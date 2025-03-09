@@ -117,6 +117,8 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
             schema.Properties.Add(prop.Key, prop.Value);
         }
 
+        schema.ImportMaps.AddRange(ImportMaps);
+
         return schema;
     }
 }

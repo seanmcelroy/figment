@@ -1,3 +1,4 @@
+using Figment.Common;
 using Figment.Common.Data;
 using Figment.Data.Memory;
 
@@ -31,9 +32,18 @@ public sealed class Thing
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         Assert.IsNotNull(tsp);
+
+        var allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
+        Assert.IsNotNull(allThings);
+        Assert.AreEqual(0, allThings.Count());
+
         var thing = await tsp.CreateAsync(csr.NewGuid, nameof(ThingCrud), CancellationToken.None);
         Assert.IsNotNull(thing);
         Assert.IsTrue(await tsp.GuidExists(thing.Guid, CancellationToken.None));
+
+        allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
+        Assert.IsNotNull(allThings);
+        Assert.AreEqual(1, allThings.Count());
 
         // Set
         var tsr = await thing.Set("random", "value", CancellationToken.None);
@@ -45,7 +55,7 @@ public sealed class Thing
         // Clear
         await thing.Set("random", null, CancellationToken.None);
         Assert.AreEqual(0, thing.GetPropertyByName("random", CancellationToken.None).ToBlockingEnumerable().Count());
-        props = thing.GetProperties(CancellationToken.None).ToBlockingEnumerable().ToArray();
+        props = [.. thing.GetProperties(CancellationToken.None).ToBlockingEnumerable()];
         Assert.IsFalse(props.Any(p => string.CompareOrdinal("random", p.SimpleDisplayName) == 0));
 
         // Still clear after reload
@@ -53,5 +63,30 @@ public sealed class Thing
         Assert.IsNotNull(thing);
         Assert.IsFalse(props.Any(p => string.CompareOrdinal("random", p.SimpleDisplayName) == 0));
 
+        var thing2 = await tsp.FindByNameAsync(nameof(ThingCrud), CancellationToken.None);
+        Assert.AreNotEqual(Reference.EMPTY, thing2);
+        Assert.AreEqual(thing.Guid, thing2.Guid);
+        Assert.AreEqual(Reference.ReferenceType.Thing, thing2.Type);
+
+        var partialThings = tsp.FindByPartialNameAsync(csr.NewGuid, nameof(ThingCrud), CancellationToken.None).ToBlockingEnumerable();
+        Assert.IsNotNull(partialThings);
+        Assert.AreEqual(1, partialThings.Count());
+        Assert.AreEqual(thing.Name, partialThings.First().name);
+        Assert.AreEqual(thing.Guid, partialThings.First().reference.Guid);
+        Assert.AreEqual(Reference.ReferenceType.Thing, partialThings.First().reference.Type);
+
+        var deleted = await thing.DeleteAsync(CancellationToken.None);
+        Assert.IsTrue(deleted);
+
+        allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
+        Assert.IsNotNull(allThings);
+        Assert.AreEqual(0, allThings.Count());
+
+        thing2 = await tsp.FindByNameAsync(nameof(ThingCrud), CancellationToken.None);
+        Assert.AreEqual(Reference.EMPTY, thing2);
+
+        partialThings = tsp.FindByPartialNameAsync(csr.NewGuid, nameof(ThingCrud), CancellationToken.None).ToBlockingEnumerable();
+        Assert.IsNotNull(partialThings);
+        Assert.AreEqual(0, partialThings.Count());
     }
 }

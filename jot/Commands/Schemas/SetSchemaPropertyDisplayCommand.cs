@@ -51,7 +51,10 @@ public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<Set
         var saved = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to save schema with Guid '{schema.Guid}'.");
+            if (settings.Verbose ?? false)
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            else
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

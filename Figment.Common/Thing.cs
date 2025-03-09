@@ -578,9 +578,9 @@ public class Thing(string Guid, string Name)
         if (provider == null)
             return false;
 
-        var success = await provider.SaveAsync(this, cancellationToken);
+        var saved = await provider.SaveAsync(this, cancellationToken);
         MarkModified();
-        return success;
+        return saved;
     }
 
     public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string schemaGuid, CancellationToken cancellationToken)

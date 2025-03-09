@@ -9,12 +9,6 @@ namespace jot.Commands;
 
 public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPropertyCommandSettings>, ICommand
 {
-    private enum ERROR_CODES : int
-    {
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-    }
-
     private static void PrintSchemaSubcommandHelp()
     {
         AmbientErrorContext.Provider.LogError("Subcommand and argument not provided.\r\n");
@@ -34,7 +28,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
         if (Program.SelectedEntity.Equals(Reference.EMPTY))
         {
             AmbientErrorContext.Provider.LogError("To set properties on an entity in interactive mode, you must first 'select' it.");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         switch (Program.SelectedEntity.Type)
@@ -44,7 +38,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                     if (context.Arguments.Count < 3)
                     {
                         PrintSchemaSubcommandHelp();
-                        return (int)ERROR_CODES.ARGUMENT_ERROR;
+                        return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                     }
 
                     if (string.Compare("display", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
@@ -80,7 +74,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                         if (!parsable)
                         {
                             AmbientErrorContext.Provider.LogError($"Unable to parse '{context.Arguments[3]}' as a true/false boolean variable.");
-                            return (int)ERROR_CODES.ARGUMENT_ERROR;
+                            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                         }
                         var subset = new SetSchemaPropertyRequiredCommandSettings
                         {
@@ -108,7 +102,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
 
                     AmbientErrorContext.Provider.LogError($"Unsupported subcommand '{context.Arguments[2]}' in interactive mode.");
                     PrintSchemaSubcommandHelp();
-                    return (int)ERROR_CODES.ARGUMENT_ERROR;
+                    return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                 }
             case Reference.ReferenceType.Thing:
                 {
@@ -118,7 +112,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
             default:
                 {
                     AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
-                    return (int)ERROR_CODES.UNKNOWN_TYPE;
+                    return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
                 }
         }
     }

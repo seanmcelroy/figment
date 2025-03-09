@@ -3,7 +3,7 @@ using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace jot.Commands.Schemas;
+namespace jot.Commands.Schemas.ImportMaps;
 
 public class NewImportMapCommandSettings : SchemaCommandSettings
 {

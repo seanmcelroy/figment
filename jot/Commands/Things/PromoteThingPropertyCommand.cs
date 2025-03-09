@@ -97,11 +97,11 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
 
             foreach (var schemaGuid in thingLoaded.SchemaGuids)
             {
-                var schemaLoaded = string.IsNullOrWhiteSpace(schemaGuid)
+                var schema = string.IsNullOrWhiteSpace(schemaGuid)
                     ? null
                     : await provider.LoadAsync(schemaGuid, cancellationToken);
 
-                if (schemaLoaded == null)
+                if (schema == null)
                 {
                     AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}' from {thingLoaded.Name}.  Must be able to load schema to promote a property to it.");
                     return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
@@ -111,16 +111,19 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
                 // Should there be a schema chooser?
 
                 // Put the field on the schema.
-                var schemaProperty = schemaLoaded.AddTextField(property.TruePropertyName);
+                var schemaProperty = schema.AddTextField(property.TruePropertyName);
                 // Update my version of the file to point to the schema version
                 thingLoaded.TryRemoveProperty(property.TruePropertyName);
                 //var truePropertyName = $"{schemaLoaded.Guid}.{schemaProperty.Name}";
                 if (property.Value != null)
-                    thingLoaded.TryAddProperty($"{schemaLoaded.Guid}.{schemaProperty.Name}", property.Value);
-                var schemaSaved = await schemaLoaded.SaveAsync(cancellationToken);
+                    thingLoaded.TryAddProperty($"{schema.Guid}.{schemaProperty.Name}", property.Value);
+                var schemaSaved = await schema.SaveAsync(cancellationToken);
                 if (!schemaSaved)
                 {
-                    AmbientErrorContext.Provider.LogError($"Unable to save schema with Guid '{schemaLoaded.Guid}'.");
+            if (settings.Verbose ?? false)
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            else
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
                     return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
                 }
             }

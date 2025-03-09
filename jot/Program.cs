@@ -21,6 +21,7 @@ using Figment.Common.Data;
 using Figment.Common.Errors;
 using jot.Commands;
 using jot.Commands.Schemas;
+using jot.Commands.Schemas.ImportMaps;
 using jot.Commands.Things;
 using jot.Errors;
 using Spectre.Console;
@@ -75,6 +76,10 @@ internal class Program
                     {
                         map.AddCommand<NewImportMapCommand>("new")
                             .WithDescription("Creates a new import map to link file fields to schema properties");
+                        map.AddCommand<ListImportMapsCommand>("list")
+                            .WithDescription("Lists all import maps defined on the schema");
+                        map.AddCommand<DeleteImportMapCommand>("delete")
+                            .WithDescription("Deletes an import map from the schema configuration");
                     });
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated to a schema");
