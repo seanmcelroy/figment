@@ -7,7 +7,7 @@ public class RenameSelectedCommandSettings : CommandSettings
 {
     public const int ARG_POSITION_NEW_NAME = 0;
 
-    [Description("The new name for the entity.")]
+    [Description("New name for the entity")]
     [CommandArgument(ARG_POSITION_NEW_NAME, "[NEW_NAME]")]
     public string? NewName { get; init; }
 

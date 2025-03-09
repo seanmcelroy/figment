@@ -2,19 +2,15 @@ using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace jot.Commands;
+namespace jot.Commands.Things;
 
-public class PromoteSelectedPropertyCommandSettings : CommandSettings
+public class PromoteThingPropertyCommandSettings : ThingCommandSettings
 {
     public const int ARG_POSITION_PROPERTY_NAME = 0;
 
     [Description("Name of the property to promote")]
     [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<PROPERTY>")]
     public string? PropertyName { get; init; }
-
-    [Description("Provides verbose detail, if available, for any outputs")]
-    [CommandOption("-v|--verbose")]
-    public required bool? Verbose { get; init; } = Program.Verbose;
 
     public override ValidationResult Validate()
     {

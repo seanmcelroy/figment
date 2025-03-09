@@ -1,5 +1,7 @@
 using Figment.Common;
 using Figment.Common.Errors;
+using jot.Commands.Schemas;
+using jot.Commands.Things;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;

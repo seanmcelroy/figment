@@ -1,5 +1,7 @@
 using Figment.Common;
 using Figment.Common.Errors;
+using jot.Commands.Schemas;
+using jot.Commands.Things;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;
@@ -19,7 +21,7 @@ public class ValidateSelectedCommand : CancellableAsyncCommand<ValidateSelectedC
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            AmbientErrorContext.Provider.LogError("To validate a thing, you must first 'select' a thing.");
+            AmbientErrorContext.Provider.LogError("To validate an entity, you must first 'select' one.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 

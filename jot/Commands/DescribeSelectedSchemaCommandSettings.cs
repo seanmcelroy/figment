@@ -7,7 +7,7 @@ public class DescribeSelectedSchemaCommandSettings : CommandSettings
 {
     public const int ARG_POSITION_DESCRIPTION = 0;
 
-    [Description("The description of this schema.")]
+    [Description("Description of this schema")]
     [CommandArgument(ARG_POSITION_DESCRIPTION, "[DESCRIPTION]")]
     public string? Description { get; init; }
 

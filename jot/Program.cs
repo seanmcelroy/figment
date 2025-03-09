@@ -20,6 +20,8 @@ using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using jot.Commands;
+using jot.Commands.Schemas;
+using jot.Commands.Things;
 using jot.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -53,15 +55,10 @@ internal class Program
         {
             config.AddCommand<NewCommand>("new")
                 .WithDescription("Creates new types (schemas) or instances of things");
-            config.AddBranch("reindex", schema =>
-                {
-                    schema.AddCommand<ReindexSchemasCommand>("schemas")
-                        .WithDescription("Rebuilds the index files for schemas for consistency");
-                    schema.AddCommand<ReindexThingsCommand>("things")
-                        .WithDescription("Rebuilds the index files for things for consistency");
-                });
             config.AddCommand<ListSchemasCommand>("schemas")
                 .WithDescription("Lists all the schemas in the database");
+            config.AddCommand<ListThingsCommand>("things")
+                .WithDescription("Lists all the things in the database");
             config.AddBranch<SchemaCommandSettings>("schema", schema =>
                 {
                     schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
@@ -74,6 +71,11 @@ internal class Program
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ImportSchemaThingsCommand>("import")
                         .WithDescription("Imports things as entities of this schema type");
+                    schema.AddBranch("import-map", map =>
+                    {
+                        map.AddCommand<NewImportMapCommand>("new")
+                            .WithDescription("Creates a new import map to link file fields to schema properties");
+                    });
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated to a schema");
                     schema.AddCommand<SetSchemaPluralCommand>("plural")
@@ -98,8 +100,6 @@ internal class Program
                         .WithAlias("print")
                         .WithDescription("Views all fields on a schema");
                 });
-            config.AddCommand<ListThingsCommand>("things")
-                .WithDescription("Lists all the things in the database");
             config.AddBranch<ThingCommandSettings>("thing", thing =>
                 {
                     thing.AddCommand<DeleteThingCommand>("delete")
@@ -116,27 +116,35 @@ internal class Program
                         .WithAlias("print")
                         .WithDescription("Views the values of all properties on a thing");
                 });
+            config.AddBranch("reindex", reindex =>
+                {
+                    reindex.AddCommand<ReindexSchemasCommand>("schemas")
+                        .WithDescription("Rebuilds the index files for schemas for consistency");
+                    reindex.AddCommand<ReindexThingsCommand>("things")
+                        .WithDescription("Rebuilds the index files for things for consistency");
+                });
 
             // Interactive commands
             if (interactive)
             {
-                config.AddCommand<HelpCommand>("ihelp");
+                config.AddCommand<HelpCommand>("ihelp")
+                    .WithDescription("Shows additional commands only for this interactive mode");
 
                 config.AddCommand<AssociateSchemaWithSelectedThingCommand>("associate")
-                    .WithDescription("Interactive mode command.  Associates the currently selected thing with the specified schema.")
+                    .WithDescription("Interactive mode command.  Associates the currently selected thing with the specified schema")
                     .IsHidden();
 
                 config.AddCommand<DescribeSelectedSchemaCommand>("describe")
-                    .WithDescription("Interactive mode command.  Sets the description for the currently selected schema.")
+                    .WithDescription("Interactive mode command.  Sets the description for the currently selected schema")
                     .IsHidden();
 
                 config.AddCommand<DeleteSelectedCommand>("delete")
                     .WithAlias("del")
-                    .WithDescription("Interactive mode command.  Deletes the currently selected entity.")
+                    .WithDescription("Interactive mode command.  Deletes the currently selected entity")
                     .IsHidden();
 
                 config.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
-                    .WithDescription("Interactive mode command.  Dissociates the currently selected thing from the specified schema.")
+                    .WithDescription("Interactive mode command.  Dissociates the currently selected thing from the specified schema")
                     .IsHidden();
 
                 config.AddCommand<ListSelectedSchemaMembersCommand>("members")
@@ -162,16 +170,17 @@ internal class Program
                 config.AddCommand<SelectCommand>("select")
                     .WithAlias("sel")
                     .WithAlias("s")
-                    .IsHidden();
+                    .WithDescription("Selects an entity by name or ID");
 
                 config.AddCommand<SetSelectedPropertyCommand>("set")
                     .IsHidden(); // TODO this is probably busted with the 'set' refactor
 
                 config.AddCommand<ValidateSelectedCommand>("validate")
-                    .WithAlias("val");
+                    .WithAlias("val")
+                    .IsHidden();
 
                 config.AddCommand<VerboseCommand>("verbose")
-                    .IsHidden();
+                    .WithDescription("Toggles verbosity.  When verbosity is on, '-v' is specified automatically with every supported command");
             }
         });
 

@@ -8,7 +8,7 @@ public class SelectCommandSettings : CommandSettings
 {
     public const int ARG_POSITION_NAME = 0;
 
-    [Description("The entity to select")]
-    [CommandArgument(ARG_POSITION_NAME, "<NAME>")]
+    [Description("Name of the entity to select. If nothing is specified, selection is cleared")]
+    [CommandArgument(ARG_POSITION_NAME, "[NAME]")]
     public string? Name { get; init; }
 }
