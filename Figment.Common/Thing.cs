@@ -33,6 +33,8 @@ public class Thing(string Guid, string Name)
     public string Name { get; set; } = Name;
     //    public string? SchemaGuid { get; set; }
     public List<string> SchemaGuids { get; set; } = [];
+
+    //[Obsolete("Do not use outside of Things")]
     public Dictionary<string, object> Properties { get; init; } = [];
 
     [JsonIgnore]
@@ -138,6 +140,18 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    public bool TryAddProperty(string propertyyName, object value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
+        return Properties.TryAdd(propertyyName, value);
+    }
+
+    public bool TryRemoveProperty(string propertyyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
+        return Properties.Remove(propertyyName);
+    }
+
     public async IAsyncEnumerable<ThingProperty> GetProperties(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -236,7 +250,11 @@ public class Thing(string Guid, string Name)
 
             var result = Parser.Calculate(calcField.Formula, this);
             if (result.IsError)
-                AmbientErrorContext.Provider.LogWarning($"Unable to calculate field {calcField.Name}: {result.Message}");
+            {
+                var carved = CarvePropertyName(thingProp.Key, schema);
+                AmbientErrorContext.Provider.LogWarning($"Unable to calculate field {carved.fullDisplayName}: {result.Message}");
+
+            }
             else if ((thingProp.Value == null && result.Result != null)
                 || (thingProp.Value != null && !thingProp.Value.Equals(result.Result)))
                 changedProperties.Add(thingProp.Key, result.Result);
@@ -600,7 +618,8 @@ public class Thing(string Guid, string Name)
         return success;
     }
 
-    public void MarkModified() {
+    public void MarkModified()
+    {
         LastModified = DateTime.UtcNow;
         LastAccessed = LastModified;
     }

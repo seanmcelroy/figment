@@ -42,6 +42,7 @@ public class Schema(string Guid, string Name)
 
     public string? Description { get; set; }
 
+    [Obsolete("Do not use outside of Schema")]
     public Dictionary<string, SchemaFieldBase> Properties { get; init; } = [];
 
     public DateTime CreatedOn { get; init; }

@@ -42,7 +42,9 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         yield break;
     }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public async IAsyncEnumerable<(Reference reference, string name)> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
         ArgumentException.ThrowIfNullOrWhiteSpace(thingNamePart);

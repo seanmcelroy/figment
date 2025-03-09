@@ -51,6 +51,12 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             }
         }
 
+        if (string.IsNullOrWhiteSpace(settings.PropertyName))
+        {
+            AmbientErrorContext.Provider.LogError("To promote a property on a thing, you must first specify the property name.");
+            return (int)ERROR_CODES.ARGUMENT_ERROR;
+        }
+
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (thingProvider == null)
         {
@@ -72,7 +78,9 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
-        var property = thingLoaded.Properties.FirstOrDefault(p => string.CompareOrdinal(p.Key, settings.PropertyName) == 0);
+        var property = thingLoaded.GetPropertyByName(settings.PropertyName, cancellationToken)
+            .ToBlockingEnumerable(cancellationToken)
+            .FirstOrDefault();
         if (property.Equals(default(KeyValuePair<string, object>)))
         {
             AmbientErrorContext.Provider.LogError($"No property named '{settings.PropertyName}' on thing.");
@@ -104,11 +112,12 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
                 // Should there be a schema chooser?
 
                 // Put the field on the schema.
-                var schemaProperty = schemaLoaded.AddTextField(property.Key);
+                var schemaProperty = schemaLoaded.AddTextField(property.TruePropertyName);
                 // Update my version of the file to point to the schema version
-                thingLoaded.Properties.Remove(property.Key);
-                var truePropertyName = $"{schemaLoaded.Guid}.{schemaProperty.Name}";
-                thingLoaded.Properties.Add($"{schemaLoaded.Guid}.{schemaProperty.Name}", property.Value);
+                thingLoaded.TryRemoveProperty(property.TruePropertyName);
+                //var truePropertyName = $"{schemaLoaded.Guid}.{schemaProperty.Name}";
+                if (property.Value != null)
+                    thingLoaded.TryAddProperty($"{schemaLoaded.Guid}.{schemaProperty.Name}", property.Value);
                 var schemaSaved = await schemaLoaded.SaveAsync(cancellationToken);
                 if (!schemaSaved)
                 {
@@ -124,7 +133,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         if (!thingSaved)
             return (int)ERROR_CODES.THING_SAVE_ERROR;
 
-        AmbientErrorContext.Provider.LogDone($"'{property.Key}' is now promoted from a one-off property on {thingLoaded.Name} to a property on associated schema(s).");
+        AmbientErrorContext.Provider.LogDone($"'{property.FullDisplayName}' is now promoted from a one-off property on {thingLoaded.Name} to a property on associated schema(s).");
         return (int)ERROR_CODES.SUCCESS;
 
         // Is there a conflicting name?

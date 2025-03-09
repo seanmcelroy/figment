@@ -266,6 +266,7 @@ internal class Program
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(commonSchema);
+        ArgumentNullException.ThrowIfNull(thingsToDisplay);
 
         // Is there a view for this schema?
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
@@ -278,21 +279,37 @@ internal class Program
                 await foreach (var viewRef in tsp.GetBySchemaAsync(viewSchemaRef.Guid, cancellationToken))
                 {
                     var viewInstance = await tsp.LoadAsync(viewRef.Guid, cancellationToken);
-                    if (viewInstance != null
-                        && viewInstance.Properties.TryGetValue($"{viewSchemaRef.Guid}.for", out object? forSchemaGuidObject)
-                        && forSchemaGuidObject != null
+                    if (viewInstance == null)
+                    {
+                        AmbientErrorContext.Provider.LogError($"Unable to load view {viewRef.Guid}.");
+                        return;
+                    }
+
+                    var viewProps = viewInstance.GetProperties(cancellationToken).ToBlockingEnumerable(cancellationToken).ToArray();
+
+                    var forSchemaGuidObject = viewProps
+                        .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.for") == 0)
+                        .Select(p => p.Value)
+                        .FirstOrDefault();
+
+                    if (forSchemaGuidObject != default
                         && forSchemaGuidObject is string forSchemaGuid
                         && !string.IsNullOrWhiteSpace(forSchemaGuid)
                         && string.CompareOrdinal(forSchemaGuid, commonSchema.Guid) == 0
                         && await ssp.GuidExists(forSchemaGuid, cancellationToken))
                     {
                         // Found a matching view!
-                        var anyDisplayColumns = viewInstance.Properties.TryGetValue($"{viewSchemaRef.Guid}.displayColumns", out object? viewColumnsObject);
+
+                        var viewColumnsObject = viewProps
+                            .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns") == 0)
+                            .Select(p => p.Value)
+                            .FirstOrDefault();
+
                         var schema = await ssp.LoadAsync(forSchemaGuid, cancellationToken);
 
                         //Console.Error.WriteLine($"DEBUG: Using view '{viewInstance.Name}'");
 
-                        if (anyDisplayColumns
+                        if (viewColumnsObject != default
                             && viewColumnsObject is System.Collections.IEnumerable viewColumns
                             && schema != null)
                         {

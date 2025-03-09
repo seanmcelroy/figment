@@ -287,13 +287,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                     case JsonValueKind.String:
                         var s = prop.Value.GetString();
                         if (s != null) // We don't load nulls
-                            thingLoaded.Properties.TryAdd(prop.Name, s);
+                            thingLoaded.TryAddProperty(prop.Name, s);
                         continue;
                     case JsonValueKind.True:
-                        thingLoaded.Properties.TryAdd(prop.Name, true);
+                        thingLoaded.TryAddProperty(prop.Name, true);
                         continue;
                     case JsonValueKind.False:
-                        thingLoaded.Properties.TryAdd(prop.Name, false);
+                        thingLoaded.TryAddProperty(prop.Name, false);
                         continue;
                     case JsonValueKind.Null:
                         continue; // We don't load nulls
@@ -308,21 +308,21 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                         case JsonValueKind.String:
                                             var s2 = sub.Value.GetString();
                                             if (s2 != null) // We don't load nulls
-                                                thingLoaded.Properties.TryAdd(sub.Name, s2);
+                                                thingLoaded.TryAddProperty(sub.Name, s2);
                                             continue;
                                         case JsonValueKind.Number:
                                             if (sub.Value.TryGetUInt64(out ulong u64))
-                                                thingLoaded.Properties.TryAdd(sub.Name, u64);
+                                                thingLoaded.TryAddProperty(sub.Name, u64);
                                             else if (sub.Value.TryGetDouble(out double dbl))
-                                                thingLoaded.Properties.TryAdd(sub.Name, dbl);
+                                                thingLoaded.TryAddProperty(sub.Name, dbl);
                                             else
                                                 AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} value '{sub.Value}' as number from: {filePath}");
                                             continue;
                                         case JsonValueKind.True:
-                                            thingLoaded.Properties.TryAdd(sub.Name, true);
+                                            thingLoaded.TryAddProperty(sub.Name, true);
                                             continue;
                                         case JsonValueKind.False:
-                                            thingLoaded.Properties.TryAdd(sub.Name, false);
+                                            thingLoaded.TryAddProperty(sub.Name, false);
                                             continue;
                                         case JsonValueKind.Null:
                                             AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' from: {filePath}");
@@ -350,7 +350,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                                                     ai++;
                                                 }
 
-                                                thingLoaded.Properties.TryAdd(sub.Name, array);
+                                                thingLoaded.TryAddProperty(sub.Name, array);
                                                 continue;
                                             }
                                         default:
