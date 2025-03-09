@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using System.Text.Json.Serialization;
 using Figment.Common;
 
@@ -56,6 +74,9 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
     [JsonPropertyName("properties")]
     public Dictionary<string, SchemaFieldBase> Properties { get; set; } = [];
 
+    [JsonPropertyName("importMaps")]
+    public List<SchemaImportMap> ImportMaps { get; set; } = [];
+
     [JsonIgnore]
     public string Guid { get; set; } = Guid;
 
@@ -69,6 +90,8 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
         {
             Properties.Add(prop.Key, prop.Value);
         }
+
+        ImportMaps = schema.ImportMaps;
     }
 
     public Schema ToSchema(FileInfo schemaFileInfo)

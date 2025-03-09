@@ -42,8 +42,10 @@ public class Schema(string Guid, string Name)
 
     public string? Description { get; set; }
 
-    [Obsolete("Do not use outside of Schema")]
+    //[Obsolete("Do not use outside of Schema")]
     public Dictionary<string, SchemaFieldBase> Properties { get; init; } = [];
+
+    public List<SchemaImportMap> ImportMaps { get; init; } = [];
 
     public DateTime CreatedOn { get; init; }
     public DateTime LastModified { get; set; }
@@ -91,7 +93,7 @@ public class Schema(string Guid, string Name)
     public SchemaTextField AddTextField(string name, ushort? minLength = null, ushort? maxLength = null, string? pattern = null)
     {
         MarkAccessed();
-        
+
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         if (minLength.HasValue && maxLength.HasValue)

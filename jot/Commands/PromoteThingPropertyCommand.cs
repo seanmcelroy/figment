@@ -74,7 +74,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         if (thingLoaded.SchemaGuids == null
             || thingLoaded.SchemaGuids.Count == 0)
         {
-            AnsiConsole.MarkupInterpolated($"[red]ERROR[/]: Unable to load any schema from {thingLoaded.Name}.  Must be able to load an associated schema to promote a property to it.");
+            AmbientErrorContext.Provider.LogError($"Unable to load any schema from {thingLoaded.Name}.  Must be able to load an associated schema to promote a property to it.");
             return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 

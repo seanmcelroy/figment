@@ -51,4 +51,8 @@ public class DefaultConsoleErrorProvider : IErrorProvider
     public void LogProgress(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
     public void LogProgress(string message) => Console.Error.WriteLine(message);
+
+    public void LogDebug(FormattableString formattableString)=> Console.Error.WriteLine(formattableString);
+
+    public void LogDebug(string message) => Console.Error.WriteLine(message);
 }

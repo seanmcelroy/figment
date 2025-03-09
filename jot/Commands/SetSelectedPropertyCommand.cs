@@ -16,11 +16,15 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
     private static void PrintSchemaSubcommandHelp()
     {
         AmbientErrorContext.Provider.LogError("Subcommand and argument not provided.\r\n");
-        AnsiConsole.MarkupLine("[gold3_1]SCHEMA SET SUBCOMMANDS:[/]");
-        AnsiConsole.WriteLine("    display <PRETTY_NAME> [CULTURE]");
-        AnsiConsole.WriteLine("    type <FIELD_NAME>");
-        AnsiConsole.WriteLine("    require <REQUIRED>");
-        AnsiConsole.WriteLine("    formula <FORMULA>");
+
+        AnsiConsole.MarkupLine("[gold3_1]USAGE:[/]");
+        AnsiConsole.MarkupLine("    set [aqua]<PROPERTY>[/] [lime]<SUBCOMMAND>[/] <SUBCOMMAND VALUES>\r\n");
+
+        AnsiConsole.MarkupLine("[gold3_1]SCHEMA SET SUBCOMMANDS AND VALUES:[/]");
+        AnsiConsole.MarkupLine("    [lime]display[/] <PRETTY_NAME> [[CULTURE]]");
+        AnsiConsole.MarkupLine("    [lime]type[/] [[FIELD_TYPE]] (Leave blank to delete the field)");
+        AnsiConsole.MarkupLine("    [lime]require[/] <REQUIRED>");
+        AnsiConsole.MarkupLine("    [lime]formula[/] <FORMULA>");
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, SetSelectedPropertyCommandSettings settings, CancellationToken cancellationToken)

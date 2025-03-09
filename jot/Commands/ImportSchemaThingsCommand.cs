@@ -1,3 +1,5 @@
+using System.Globalization;
+using CsvHelper;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -28,7 +30,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             AmbientErrorContext.Provider.LogError($"File path '{settings.FilePath}' was not found.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
-        
+
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
             AmbientErrorContext.Provider.LogError("Schema name must be specified.");
@@ -77,7 +79,8 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        await foreach (var thing in things) {
+        await foreach (var thing in things)
+        {
 
         }
 
@@ -90,6 +93,29 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(schema);
+
+        if (!File.Exists(filePath))
+            yield break;
+
+        using var reader = new StreamReader(filePath);
+        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+        if (!await csv.ReadAsync())
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to read CSV file {filePath}");
+            yield break;
+        }
+
+        if (!csv.ReadHeader())
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to read CSV file headers from {filePath}");
+            yield break;
+        }
+
+        // Dump headers
+        AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c,n) => $"{c},{n}")}");
+
+        // Is this a CSV?
 
         yield break;
 
