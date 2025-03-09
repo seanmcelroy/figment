@@ -106,6 +106,7 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
             return true;
         }
 
-        return base.TryMassageInput(input, out output);
+        output = false;
+        return false;
     }
 }

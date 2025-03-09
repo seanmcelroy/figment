@@ -22,10 +22,16 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
     public override async Task<int> ExecuteAsync(CommandContext context, ImportSchemaThingsCommandSettings settings, CancellationToken cancellationToken)
     {
-        // Schema first
+        if (string.IsNullOrWhiteSpace(settings.FilePath)
+            || !File.Exists(settings.FilePath))
+        {
+            AmbientErrorContext.Provider.LogError($"File path '{settings.FilePath}' was not found.");
+            return (int)ERROR_CODES.ARGUMENT_ERROR;
+        }
+        
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
-            AmbientErrorContext.Provider.LogWarning("Schema name must be specified.");
+            AmbientErrorContext.Provider.LogError("Schema name must be specified.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -60,6 +66,32 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                 AmbientErrorContext.Provider.LogError("Ambiguous match; more than one schema matches this name.");
                 return (int)ERROR_CODES.AMBIGUOUS_MATCH;
         }
+
+        IAsyncEnumerable<Thing> things;
+
+        if (string.Compare(settings.Format, "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+            things = ImportCsv(settings.FilePath, schema);
+        else
+        {
+            AmbientErrorContext.Provider.LogError($"Unsupported format '{settings.Format}'.");
+            return (int)ERROR_CODES.ARGUMENT_ERROR;
+        }
+
+        await foreach (var thing in things) {
+
+        }
+
+
+
         return (int)ERROR_CODES.SUCCESS;
+    }
+
+    private static async IAsyncEnumerable<Thing> ImportCsv(string filePath, Schema schema)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentNullException.ThrowIfNull(schema);
+
+        yield break;
+
     }
 }

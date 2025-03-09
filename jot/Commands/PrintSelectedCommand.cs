@@ -1,6 +1,5 @@
 using Figment.Common;
 using Figment.Common.Errors;
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands;
@@ -24,6 +23,11 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 
+        bool? extraVerbose = null;
+        if (context.Arguments.Count > 0 
+            && string.CompareOrdinal(context.Arguments[0], "??") == 0) 
+            extraVerbose = true;
+
         switch (selected.Type)
         {
             case Reference.ReferenceType.Schema:
@@ -32,7 +36,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
                     return await cmd.ExecuteAsync(context, new SchemaCommandSettings
                     {
                         SchemaName = selected.Guid,
-                        Verbose = settings.Verbose ?? Program.Verbose
+                        Verbose = extraVerbose ?? settings.Verbose ?? Program.Verbose
                     }, cancellationToken);
                 }
             case Reference.ReferenceType.Thing:
@@ -42,7 +46,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
                     {
                         ThingName = selected.Guid,
                         NoPrettyDisplayNames = settings.NoPrettyDisplayNames,
-                        Verbose = settings.Verbose ?? Program.Verbose
+                        Verbose = extraVerbose ?? settings.Verbose ?? Program.Verbose
                     }, cancellationToken);
                 }
             default:

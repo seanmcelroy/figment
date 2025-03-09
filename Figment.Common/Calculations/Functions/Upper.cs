@@ -25,11 +25,9 @@ public class Upper : FunctionBase
         if (parameters.Length != 1)
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "UPPER() takes one parameter");
 
-        var v = parameters[0].Result;
-        if (v == null)
+        if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? text))
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "UPPER() takes one non-null parameter");
 
-        var x = v.ToString();
-        return CalculationResult.Success(v.ToString()?.ToUpperInvariant() ?? string.Empty, CalculationResultType.FunctionResult);
+        return CalculationResult.Success(text?.ToUpperInvariant() ?? string.Empty, CalculationResultType.FunctionResult);
     }
 }

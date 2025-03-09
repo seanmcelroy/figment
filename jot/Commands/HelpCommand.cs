@@ -43,6 +43,12 @@ public class HelpCommand : CancellableAsyncCommand
             sb.AppendLine("    delete                [white]Deletes the selected entity[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
+            || Program.SelectedEntity.Type != Reference.ReferenceType.Thing)
+            sb.AppendLine("[grey62]    dissociate <SCHEMA>   Dissociates the currently selected thing from the specified schema.[/]");
+        else
+            sb.AppendLine("    dissociate <SCHEMA>   [white]Dissociates the currently selected thing from the specified schema.[/]");
+
+        if (Program.SelectedEntity == Reference.EMPTY
             || Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
             sb.AppendLine("[grey62]    members               Enumerates things associated with the selected schema.[/]");
         else

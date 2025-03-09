@@ -5,9 +5,9 @@ using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
-public class LocalDirectoryStorageProvider : IStorageProvider
+public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageProvider
 {
-    private string DB_PATH { get; set; } = "/home/sean/src/figment/jot/db";
+    private string DB_PATH { get; init; } = LocalDatabasePath;
 
     public ISchemaStorageProvider? GetSchemaStorageProvider()
     {

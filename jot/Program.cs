@@ -46,7 +46,7 @@ internal class Program
 
         // Setup the providers. TODO: Allow CLI config
         AmbientErrorContext.Provider = new SpectreConsoleErrorProvider();
-        AmbientStorageContext.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider();
+        AmbientStorageContext.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider("/home/sean/src/figment/jot/db");
 
         var app = new CommandApp();
         app.Configure(config =>
@@ -135,6 +135,10 @@ internal class Program
                     .WithDescription("Interactive mode command.  Deletes the currently selected entity.")
                     .IsHidden();
 
+                config.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
+                    .WithDescription("Interactive mode command.  Dissociates the currently selected thing from the specified schema.")
+                    .IsHidden();
+
                 config.AddCommand<ListSelectedSchemaMembersCommand>("members")
                     .IsHidden();
 
@@ -142,6 +146,7 @@ internal class Program
                     .WithAlias("details")
                     .WithAlias("view")
                     .WithAlias("?")
+                    .WithAlias("??")
                     .IsHidden();
 
                 config.AddCommand<PromoteSelectedPropertyCommand>("promote")
