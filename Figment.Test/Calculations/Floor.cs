@@ -107,4 +107,48 @@ public sealed class Floor
         Assert.IsInstanceOfType<double>(result);
         Assert.AreEqual(-568D, result);
     }
+
+    /// <summary>
+    /// Tests on null, which is not valid
+    /// </summary>
+    [TestMethod]
+    public void CalculateFloorNull()
+    {
+        var calcResult = Parser.Calculate("=FLOOR(NULL())");
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+    }
+
+    /// <summary>
+    /// Tests on invalid number 1.2.3, which is not valid
+    /// </summary>
+    [TestMethod]
+    public void CalculateFloorSemanticVersion()
+    {
+        var calcResult = Parser.Calculate("=FLOOR(1.2.3)");
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+    }
+
+    /// <summary>
+    /// Tests on invalid number 1.2., which is not valid
+    /// </summary>
+    [TestMethod]
+    public void CalculateFloorExtraEndingDecimal()
+    {
+        var calcResult = Parser.Calculate("=FLOOR(1.2.)");
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+    }
+
+    /// <summary>
+    /// Tests on invalid number 1..2, which is not valid
+    /// </summary>
+    [TestMethod]
+    public void CalculateFloorDoubleDecimal()
+    {
+        var calcResult = Parser.Calculate("=FLOOR(1..2)");
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+    }
 }

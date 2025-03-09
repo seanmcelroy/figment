@@ -71,13 +71,34 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
         IAsyncEnumerable<Thing> things;
 
-        if (string.Compare(settings.Format, "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+        // Try to determine file format
+        var fileFormat = settings.Format;
+        if (string.IsNullOrWhiteSpace(settings.Format))
+        {
+            // Extension
+            if (string.Compare(Path.GetExtension(settings.FilePath), "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+                fileFormat = "csv";
+        }
+
+        var possibleImportMaps = schema.ImportMaps
+            .Where(s => string.Compare(s.Format, settings.Format, StringComparison.InvariantCultureIgnoreCase) == 0)
+            .ToArray();
+
+        if (possibleImportMaps.Length == 0)
+        {
+            AmbientErrorContext.Provider.LogError($"No import configuration are defined on {schema.Name} for {fileFormat ?? "this"} file");
+            return (int)ERROR_CODES.UNKNOWN_TYPE;
+        }
+
+
+        if (string.Compare(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
             things = ImportCsv(settings.FilePath, schema);
         else
         {
             AmbientErrorContext.Provider.LogError($"Unsupported format '{settings.Format}'.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
+
 
         await foreach (var thing in things)
         {
@@ -89,7 +110,9 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         return (int)ERROR_CODES.SUCCESS;
     }
 
-    private static async IAsyncEnumerable<Thing> ImportCsv(string filePath, Schema schema)
+    private static async IAsyncEnumerable<Thing> ImportCsv(
+        string filePath,
+        Schema schema)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(schema);
@@ -113,7 +136,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         }
 
         // Dump headers
-        AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c,n) => $"{c},{n}")}");
+        AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c, n) => $"{c},{n}")}");
 
         // Is this a CSV?
 

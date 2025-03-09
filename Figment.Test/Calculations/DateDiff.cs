@@ -22,7 +22,7 @@ namespace Figment.Test.Calculations;
 public sealed class DateDiff
 {
     /// <summary>
-    /// Tests one function with no parameters
+    /// Tests valid yyyy
     /// </summary>
     [TestMethod]
     public void DateDiffYYYY()
@@ -38,5 +38,41 @@ public sealed class DateDiff
         Assert.IsInstanceOfType<double>(result);
         Assert.IsTrue((double)result >= 44);
         Console.Out.WriteLine(calcResult.Result);
+    }
+
+    /// <summary>
+    /// Tests with missing parameters
+    /// </summary>
+    [TestMethod]
+    public void DateDiffNoParameters()
+    {
+        var calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF()");
+        Assert.IsTrue(calcResult.IsError);
+    }
+
+     /// <summary>
+    /// Tests with wrong parameters
+    /// </summary>
+    [TestMethod]
+    public void DateDiffWrongParameters()
+    {
+        var calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"aaa\", '1981-01-26', '2025-01-26')");
+        Assert.IsTrue(calcResult.IsError);
+
+        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(1.2, '1981-01-26', '2025-01-26')");
+        Assert.IsTrue(calcResult.IsError);
+
+        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 'aaaa-01-26', '2025-01-26')");
+        Assert.IsTrue(calcResult.IsError);
+
+        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", '1981-01-26', 'aaaa-01-26')");
+        Assert.IsTrue(calcResult.IsError);
+
+        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 'aaaa-01-26', 1)");
+        Assert.IsTrue(calcResult.IsError);
+
+        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 1, 'aaaa-01-26')");
+        Assert.IsTrue(calcResult.IsError);
+
     }
 }

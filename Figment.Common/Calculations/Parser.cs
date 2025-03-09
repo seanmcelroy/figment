@@ -181,11 +181,17 @@ public static class Parser
                         case "floor(":
                             nextFunction = (t, p) => new Floor().Evaluate(p, t);
                             break;
+                        case "len(":
+                            nextFunction = (t, p) => new Len().Evaluate(p, t);
+                            break;
                         case "lower(":
                             nextFunction = (t, p) => new Lower().Evaluate(p, t);
                             break;
                         case "now(":
                             nextFunction = (t, p) => new Now().Evaluate(p, t);
+                            break;
+                        case "null(":
+                            nextFunction = (t, p) => new Null().Evaluate(p, t);
                             break;
                         case "today(":
                             nextFunction = (t, p) => new Today().Evaluate(p, t);
@@ -243,7 +249,7 @@ public static class Parser
             pos++;
         }
 
-        throw new InvalidOperationException($"Ran out of groupings at position {pos}!");
+        return (false, $"Ran out of groupings at position {pos}", null);
     }
 
     public static CalculationResult Calculate(string formula, params Thing[] targets)

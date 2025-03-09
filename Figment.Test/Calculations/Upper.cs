@@ -62,4 +62,15 @@ public sealed class Upper
         Assert.IsInstanceOfType<string>(result);
         Assert.AreEqual(nameof(CalculateUpperThingProperty).ToUpperInvariant(), result);
     }
+
+    /// <summary>
+    /// Tests on null, which is not valid
+    /// </summary>
+    [TestMethod]
+    public void CalculateUpperNull()
+    {
+        var calcResult = Parser.Calculate("=UPPER(NULL())");
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+    }
 }
