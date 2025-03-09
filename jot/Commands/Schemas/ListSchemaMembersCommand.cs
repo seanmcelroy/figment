@@ -1,4 +1,3 @@
-using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
@@ -6,41 +5,13 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
-public class ListSchemaMembersCommand : CancellableAsyncCommand<ListSchemaMembersCommandSettings>
+public class ListSchemaMembersCommand : SchemaCancellableAsyncCommand<ListSchemaMembersCommandSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, ListSchemaMembersCommandSettings settings, CancellationToken cancellationToken)
     {
-        var selected = Program.SelectedEntity;
-        if (selected.Equals(Reference.EMPTY))
-        {
-            if (string.IsNullOrWhiteSpace(settings.SchemaName))
-            {
-                AmbientErrorContext.Provider.LogError("To enumerabe the members of a schema, you must first 'select' a schema.");
-                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibilities = Schema.ResolveAsync(settings.SchemaName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name"); 
-                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibilities[0];
-                    break;
-                default:
-                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one schema matches this name.");
-                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
-            }
-        }
-
-        if (selected.Type != Reference.ReferenceType.Schema)
-        {
-            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
-        }
+        var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
+        if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+            return (int)tgs;
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
@@ -55,7 +26,7 @@ public class ListSchemaMembersCommand : CancellableAsyncCommand<ListSchemaMember
             t.AddColumn("Name");
             t.AddColumn("GUID");
 
-            await foreach (var reference in tsp.GetBySchemaAsync(selected.Guid, cancellationToken))
+            await foreach (var reference in tsp.GetBySchemaAsync(schema!.Guid, cancellationToken))
             {
                 var thing = await tsp.LoadAsync(reference.Guid, cancellationToken);
                 if (thing != null)
@@ -65,7 +36,7 @@ public class ListSchemaMembersCommand : CancellableAsyncCommand<ListSchemaMember
         }
         else
         {
-            await foreach (var reference in tsp.GetBySchemaAsync(selected.Guid, cancellationToken))
+            await foreach (var reference in tsp.GetBySchemaAsync(schema!.Guid, cancellationToken))
             {
                 var thing = await tsp.LoadAsync(reference.Guid, cancellationToken);
                 if (thing != null)

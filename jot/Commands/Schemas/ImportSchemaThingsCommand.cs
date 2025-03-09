@@ -9,32 +9,19 @@ namespace jot.Commands.Schemas;
 
 public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThingsCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        SCHEMA_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR,
-        SCHEMA_SAVE_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR,
-        THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
-        THING_SAVE_ERROR = Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR,
-    }
-
     public override async Task<int> ExecuteAsync(CommandContext context, ImportSchemaThingsCommandSettings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.FilePath)
             || !File.Exists(settings.FilePath))
         {
             AmbientErrorContext.Provider.LogError($"File path '{settings.FilePath}' was not found.");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         if (string.IsNullOrWhiteSpace(settings.SchemaName))
         {
             AmbientErrorContext.Provider.LogError("Schema name must be specified.");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         var schemaPossibilities = Schema.ResolveAsync(settings.SchemaName, cancellationToken)
@@ -46,7 +33,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         {
             case 0:
                 AmbientErrorContext.Provider.LogError($"No schema found named '{settings.SchemaName}'");
-                return (int)ERROR_CODES.NOT_FOUND;
+                return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
             case 1:
                 {
                     var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
@@ -60,13 +47,13 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                     if (schema == null)
                     {
                         AmbientErrorContext.Provider.LogError($"Unable to load schema '{settings.SchemaName}'.");
-                        return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+                        return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                     }
                     break;
                 }
             default:
                 AmbientErrorContext.Provider.LogError("Ambiguous match; more than one schema matches this name.");
-                return (int)ERROR_CODES.AMBIGUOUS_MATCH;
+                return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
         }
 
         IAsyncEnumerable<Thing> things;
@@ -87,7 +74,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         if (possibleImportMaps.Length == 0)
         {
             AmbientErrorContext.Provider.LogError($"No import configuration are defined on {schema.Name} for {fileFormat ?? "this"} file");
-            return (int)ERROR_CODES.UNKNOWN_TYPE;
+            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
 
@@ -96,7 +83,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         else
         {
             AmbientErrorContext.Provider.LogError($"Unsupported format '{settings.Format}'.");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
 
@@ -107,7 +94,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
 
 
-        return (int)ERROR_CODES.SUCCESS;
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 
     private static async IAsyncEnumerable<Thing> ImportCsv(

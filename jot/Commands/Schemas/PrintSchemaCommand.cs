@@ -1,75 +1,19 @@
 using System.Text;
-using Figment.Common;
-using Figment.Common.Data;
-using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
-public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
+public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        SCHEMA_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR,
-    }
-
     public override async Task<int> ExecuteAsync(CommandContext context, SchemaCommandSettings settings, CancellationToken cancellationToken)
     {
-        if (Program.SelectedEntity.Equals(Reference.EMPTY) || Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
-        {
-            if (string.IsNullOrWhiteSpace(settings.SchemaName))
-            {
-                AmbientErrorContext.Provider.LogError("To view properties on a schema, you must first 'select' a schema.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibilities = Schema.ResolveAsync(settings.SchemaName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
-                case 1:
-                    Program.SelectedEntity = possibilities[0];
-                    break;
-                default:
-                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
-            }
-        }
-
-        if (Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
-        {
-            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
-            return (int)ERROR_CODES.UNKNOWN_TYPE;
-        }
-
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
-        if (provider == null)
-        {
-            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
-            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
-        }
-
-        var schema = await provider.LoadAsync(Program.SelectedEntity.Guid, cancellationToken);
-        if (schema == null)
-        {
-            AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{Program.SelectedEntity.Guid}'.");
-            return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
-        }
-
-        Program.SelectedEntityName = schema.Name;
+        var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
+        if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+            return (int)tgs;
 
         var propBuilder = new StringBuilder();
-        if (schema.Properties != null && schema.Properties.Count > 0)
+        if (schema!.Properties != null && schema.Properties.Count > 0)
         {
             var maxPropNameLen = schema.Properties.Max(p => p.Key.Length); // In case it will be escaped
             foreach (var prop in schema.Properties)
@@ -96,6 +40,6 @@ public class PrintSchemaCommand : CancellableAsyncCommand<SchemaCommandSettings>
             [chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
             {propBuilder}
             """);
-        return (int)ERROR_CODES.SUCCESS;
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

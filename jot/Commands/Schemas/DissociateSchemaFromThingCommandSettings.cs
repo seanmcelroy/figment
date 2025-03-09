@@ -6,10 +6,10 @@ namespace jot.Commands.Schemas;
 
 public class DissociateSchemaFromThingCommandSettings : SchemaCommandSettings
 {
-    public const int ARG_POSITION_PROPERTY_NAME = 0;
+    public const int ARG_POSITION_THING_NAME = 0;
 
     [Description("Name of the thing to dissociate from the schema")]
-    [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<THING_NAME>")]
+    [CommandArgument(ARG_POSITION_THING_NAME, "<THING_NAME>")]
     public string? ThingName { get; init; }
 
     public override ValidationResult Validate()
