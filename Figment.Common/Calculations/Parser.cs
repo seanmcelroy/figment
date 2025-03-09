@@ -196,6 +196,9 @@ public static class Parser
                         case "today(":
                             nextFunction = (t, p) => new Today().Evaluate(p, t);
                             break;
+                        case "trim(":
+                            nextFunction = (t, p) => new Trim().Evaluate(p, t);
+                            break;
                         case "upper(":
                             nextFunction = (t, p) => new Upper().Evaluate(p, t);
                             break;
