@@ -34,7 +34,7 @@ public interface ISchemaStorageProvider
 
     public Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken);
 
-    public IAsyncEnumerable<Reference> FindByPartialNameAsync(string thingNamePart, CancellationToken cancellationToken);
+    public IAsyncEnumerable<Reference> FindByPartialNameAsync(string schemaNamePart, CancellationToken cancellationToken);
 
     public IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, CancellationToken cancellationToken);
 

@@ -7,9 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "jot", "jot\jot.csproj", "{A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Common", "Figment.Common\Figment.Common.csproj", "{23C67654-3E0A-4749-B6E5-94A15F9733B8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Common.Test", "Figment.Common.Test\Figment.Common.Test.csproj", "{B6C43E31-2F1A-427A-8B58-3280F209F674}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Test", "Figment.Test\Figment.Test.csproj", "{B6C43E31-2F1A-427A-8B58-3280F209F674}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Data.Local", "Figment.Data.Local\Figment.Data.Local.csproj", "{42943423-F156-414E-A328-CC5D78C42148}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Data.Memory", "Figment.Data.Memory\Figment.Data.Memory.csproj", "{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,5 +38,9 @@ Global
 		{42943423-F156-414E-A328-CC5D78C42148}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42943423-F156-414E-A328-CC5D78C42148}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{42943423-F156-414E-A328-CC5D78C42148}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

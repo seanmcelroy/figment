@@ -164,7 +164,7 @@ public static class IndexManager
         if (!File.Exists(indexFile))
             yield break; // Happens on new install if no items, nothing in index, and so no file
 
-        await foreach (var entry in IndexManager.LookupAsync(
+        await foreach (var entry in LookupAsync(
             indexFile
             , e => e.Key.StartsWith(namePart, StringComparison.CurrentCultureIgnoreCase)
             , cancellationToken

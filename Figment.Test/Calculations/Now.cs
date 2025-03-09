@@ -16,20 +16,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common;
 using Figment.Common.Calculations;
 
-namespace Figment.Common.Test.Calculations;
+namespace Figment.Test.Calculations;
 
 [TestClass]
-public sealed class Today
+public sealed class Now
 {
     /// <summary>
     /// Tests one function with no parameters
     /// </summary>
     [TestMethod]
-    public void ParseToday()
+    public void ParseNow()
     {
-        var (success, message, root) = Parser.ParseFormula("=TODAY()");
+        var (success, message, root) = Parser.ParseFormula("=NOW()");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
         var calcResult = root.Invoke([]);
@@ -41,7 +42,7 @@ public sealed class Today
 
         var dr = (double)result;
         Assert.IsTrue(dr >= 45718);
-        Assert.AreEqual(Math.Truncate(dr), dr);
+        Assert.AreNotEqual(Math.Truncate(dr), dr);
 
         Console.Out.WriteLine(calcResult.Result);
     }
@@ -50,13 +51,14 @@ public sealed class Today
     /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void TodayWithParameters()
+    public void NowWithParameters()
     {
-        var sampleThing = new Thing(nameof(TodayWithParameters), nameof(TodayWithParameters));
-        var calcResult = Parser.Calculate("=TODAY([Name])", sampleThing);
+        var sampleThing = new Thing(nameof(NowWithParameters), nameof(NowWithParameters));
+        var calcResult = Parser.Calculate("=Now([Name])", sampleThing);
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
+
 
     /// <summary>
     /// Tests one function with no parameters
@@ -64,7 +66,7 @@ public sealed class Today
     [TestMethod]
     public void ParseTodayExtraParenthesis()
     {
-        var (success, message, root) = Parser.ParseFormula("=(TODAY())");
+        var (success, message, root) = Parser.ParseFormula("=(NOW())");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
         var calcResult = root.Invoke([]);
@@ -78,7 +80,7 @@ public sealed class Today
     [TestMethod]
     public void ParseLowerToday()
     {
-        var (success, message, root) = Parser.ParseFormula("=LOWER(TODAY())");
+        var (success, message, root) = Parser.ParseFormula("=LOWER(NOW())");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
         var calcResult = root.Invoke([]);
@@ -92,7 +94,7 @@ public sealed class Today
     [TestMethod]
     public void ParseLowerTodayExtraParenthesis()
     {
-        var (success, message, root) = Parser.ParseFormula("=LOWER((TODAY()))");
+        var (success, message, root) = Parser.ParseFormula("=LOWER((NOW()))");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
         var calcResult = root.Invoke([]);
@@ -100,13 +102,13 @@ public sealed class Today
         Console.Out.WriteLine(calcResult.Result);
     }
 
-    /// <summary>
+        /// <summary>
     /// Tests two different functions with nesting and no parameters
     /// </summary>
     [TestMethod]
     public void ParseLowerTodayExtraParenthesis2()
     {
-        var (success, message, root) = Parser.ParseFormula("=LOWER((LOWER((TODAY()))))");
+        var (success, message, root) = Parser.ParseFormula("=LOWER((LOWER((NOW()))))");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
         var calcResult = root.Invoke([]);

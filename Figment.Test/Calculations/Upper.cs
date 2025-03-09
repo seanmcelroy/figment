@@ -16,52 +16,50 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common;
 using Figment.Common.Calculations;
 
-namespace Figment.Common.Test.Calculations;
+namespace Figment.Test.Calculations;
 
 [TestClass]
-public sealed class Lower
+public sealed class Upper
 {
     /// <summary>
     /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void LowerWithoutParameters()
+    public void UpperWithoutParameters()
     {
-        var sampleThing = new Thing(nameof(LowerWithoutParameters), nameof(LowerWithoutParameters));
-        var calcResult = Parser.Calculate("=LOWER()", sampleThing);
+        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
+        var calcResult = Parser.Calculate("=UPPER()", sampleThing);
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
 
     /// <summary>
-    /// Not enough parameters
+    /// Too many parameters
     /// </summary>
     [TestMethod]
-    public void LowerWithBadParameterTypeRecoverable()
+    public void UpperWithTwoParameters()
     {
-        var sampleThing = new Thing(nameof(LowerWithBadParameterTypeRecoverable), nameof(LowerWithBadParameterTypeRecoverable));
-        var calcResult = Parser.Calculate("=LOWER(1.4)", sampleThing);
-        Assert.IsFalse(calcResult.IsError);
-
-        var result = calcResult.Result;
-        Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual("1.4", result);
+        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
+        var calcResult = Parser.Calculate("=UPPER([Name],[Name])", sampleThing);
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
 
     /// <summary>
     /// Tests one function with no parameters
     /// </summary>
     [TestMethod]
-    public void CalculateLowerThingProperty()
+    public void CalculateUpperThingProperty()
     {
-        var sampleThing = new Thing(nameof(CalculateLowerThingProperty), nameof(CalculateLowerThingProperty));
-        var calcResult = Parser.Calculate("=LOWER([Name])", sampleThing);
+        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
+        var calcResult = Parser.Calculate("=UPPER([Name])", sampleThing);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
         Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual(nameof(CalculateLowerThingProperty).ToLowerInvariant(), result);
+        Assert.AreEqual(nameof(CalculateUpperThingProperty).ToUpperInvariant(), result);
     }
 }
