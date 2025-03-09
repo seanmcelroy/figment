@@ -46,7 +46,7 @@ public sealed class Now
         Console.Out.WriteLine(calcResult.Result);
     }
 
-        /// <summary>
+    /// <summary>
     /// Not enough parameters
     /// </summary>
     [TestMethod]

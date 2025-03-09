@@ -62,6 +62,7 @@ public static class Parser
             var nextDoubleQuotation = formula.IndexOf('"', pos);
             var nextSingleQuotation = formula.IndexOf('\'', pos);
             var nextBracket = formula.IndexOf('[', pos);
+            var nextValidNumber = formula.IndexOfAny(['-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']);
 
             if (formula[pos] == ',' || formula[pos] == ' ')
             {
@@ -90,7 +91,7 @@ public static class Parser
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
                     depth--;
-                return (true, "static value", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
+                return (true, "static string", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
             }
             else if (nextSingleQuotation == pos) // Ending a capture with a spurious right parenthesis
             {
@@ -109,17 +110,17 @@ public static class Parser
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
                     depth--;
-                return (true, "static value", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
+                return (true, "static string", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
             }
             else if (nextBracket == pos)
             {
                 // Same as before
                 nextToken = "]";
-                var closingBracketStartPos = pos;
+                var openingBracketStartPos = pos;
                 pos++;
                 nextBracket = formula.IndexOf(']', pos);
                 if (nextBracket == -1)
-                    return (false, $"Unterminated bracketed expression starts at position {closingBracketStartPos}", null);
+                    return (false, $"Unterminated bracketed expression starts at position {openingBracketStartPos}", null);
                 var bracketed = formula[pos..nextBracket];
                 pos = nextBracket + 1;
 
@@ -129,6 +130,44 @@ public static class Parser
                 if (formula.Length > pos && formula[pos] == ')')
                     depth--;
                 return (true, "property value", t => CalculationResult.Success(bracketed, CalculationResultType.PropertyValue));
+            }
+            else if (nextValidNumber == pos)
+            {
+                var numberStartPos = pos;
+                pos++;
+
+                // '-' is not included here since it cannot be the SECOND entry after the first.
+                char[] validNextNumberCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ','];
+                while (pos < formula.Length
+                    && validNextNumberCharacters.Contains(formula[pos]))
+                {
+                    // A decimal can only appear once.
+                    if (formula[pos] == '.')
+                        validNextNumberCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ','];
+                    pos++;
+                }
+                var nextNonNumber = pos;
+
+                var numberString = formula[numberStartPos..nextNonNumber];
+
+                object val;
+                if (numberString.IndexOf('.') > -1)
+                {
+                    if (double.TryParse(numberString, out double d))
+                        val = d;
+                    else
+                        return (false, $"Unable to parse potential number '{numberString}' as a double at position {numberStartPos}", null);
+                }
+                else {
+                    if (ulong.TryParse(numberString, out ulong u))
+                        val = u;
+                    else
+                        return (false, $"Unable to parse potential number '{numberString}' as a u64 at position {numberStartPos}", null);
+                }
+
+                if (formula.Length > pos && formula[pos] == ')')
+                    depth--;
+                return (true, "static number", t => CalculationResult.Success(val, CalculationResultType.StaticValue));
             }
             else
             {

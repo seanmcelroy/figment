@@ -59,7 +59,6 @@ public sealed class Upper
 
         var result = calcResult.Result;
         Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual(result, nameof(CalculateUpperThingProperty).ToUpperInvariant());
-        Console.Out.WriteLine(result);
+        Assert.AreEqual(nameof(CalculateUpperThingProperty).ToUpperInvariant(), result);
     }
 }

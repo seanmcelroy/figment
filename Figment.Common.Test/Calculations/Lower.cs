@@ -16,11 +16,40 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Calculations;
+
 namespace Figment.Common.Test.Calculations;
 
 [TestClass]
 public sealed class Lower
 {
+    /// <summary>
+    /// Not enough parameters
+    /// </summary>
+    [TestMethod]
+    public void LowerWithoutParameters()
+    {
+        var sampleThing = new Thing(nameof(LowerWithoutParameters), nameof(LowerWithoutParameters));
+        var calcResult = Parser.Calculate("=LOWER()", sampleThing);
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+    }
+
+    /// <summary>
+    /// Not enough parameters
+    /// </summary>
+    [TestMethod]
+    public void LowerWithBadParameterTypeRecoverable()
+    {
+        var sampleThing = new Thing(nameof(LowerWithBadParameterTypeRecoverable), nameof(LowerWithBadParameterTypeRecoverable));
+        var calcResult = Parser.Calculate("=LOWER(1.4)", sampleThing);
+        Assert.IsFalse(calcResult.IsError);
+
+        var result = calcResult.Result;
+        Assert.IsInstanceOfType<string>(result);
+        Assert.AreEqual("1.4", result);
+    }
+
     /// <summary>
     /// Tests one function with no parameters
     /// </summary>
@@ -28,12 +57,11 @@ public sealed class Lower
     public void CalculateLowerThingProperty()
     {
         var sampleThing = new Thing(nameof(CalculateLowerThingProperty), nameof(CalculateLowerThingProperty));
-        var calcResult = Common.Calculations.Parser.Calculate("=LOWER([Name])", sampleThing);
+        var calcResult = Parser.Calculate("=LOWER([Name])", sampleThing);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
         Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual(result, nameof(CalculateLowerThingProperty).ToLowerInvariant());
-        Console.Out.WriteLine(result);
+        Assert.AreEqual(nameof(CalculateLowerThingProperty).ToLowerInvariant(), result);
     }
 }

@@ -22,14 +22,11 @@ public class NoOp : FunctionBase
 {
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
     {
-        switch (parameters.Length)
+        return parameters.Length switch
         {
-            case 0:
-                return CalculationResult.Success(null, CalculationResultType.FunctionResult);
-            case 1:
-                return CalculationResult.Success(parameters[0], CalculationResultType.FunctionResult);
-            default:
-                throw new InvalidOperationException("Cannot pass-thru multiple arguments");
-        }
+            0 => CalculationResult.Success(null, CalculationResultType.FunctionResult),
+            1 => CalculationResult.Success(parameters[0], CalculationResultType.FunctionResult),
+            _ => throw new InvalidOperationException("Cannot pass-thru multiple arguments"),
+        };
     }
 }
