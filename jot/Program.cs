@@ -148,7 +148,7 @@ internal class Program
                     .WithDescription("Interactive mode command.  Deletes the currently selected entity")
                     .IsHidden();
 
-                config.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
+                config.AddCommand<DissociateSchemaFromSelectedThingCommand>("dissociate")
                     .WithDescription("Interactive mode command.  Dissociates the currently selected thing from the specified schema")
                     .IsHidden();
 
