@@ -34,7 +34,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 return (int)ERROR_CODES.SUCCESS;
             }
 
-            AmbientErrorContext.Provider.LogError("You must first 'select' one by specifying a [[NAME]] argument.");
+            AmbientErrorContext.Provider.LogError("You must first 'select' one by specifying a [NAME] argument.");
             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
             Program.SelectedEntityName = string.Empty;
             return (int)ERROR_CODES.ARGUMENT_ERROR;

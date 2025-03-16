@@ -44,47 +44,53 @@ public class HelpCommand : CancellableAsyncCommand
 
         if (Program.SelectedEntity == Reference.EMPTY
             || Program.SelectedEntity.Type != Reference.ReferenceType.Thing)
-            sb.AppendLine("[grey62]    dissociate <SCHEMA>   Dissociates the currently selected thing from the specified schema.[/]");
+            sb.AppendLine("[grey62]    dissociate <SCHEMA>   Dissociates the currently selected thing from the specified schema[/]");
         else
-            sb.AppendLine("    dissociate <SCHEMA>   [white]Dissociates the currently selected thing from the specified schema.[/]");
+            sb.AppendLine("    dissociate <SCHEMA>   [white]Dissociates the currently selected thing from the specified schema[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
             || Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
-            sb.AppendLine("[grey62]    members               Enumerates things associated with the selected schema.[/]");
+            sb.AppendLine("[grey62]    members               Enumerates things associated with the selected schema[/]");
         else
-            sb.AppendLine("    members               [white]Enumerates things associated with the selected schema.[/]");
+            sb.AppendLine("    members               [white]Enumerates things associated with the selected schema[/]");
+
+        if (Program.SelectedEntity == Reference.EMPTY
+            || Program.SelectedEntity.Type != Reference.ReferenceType.Schema)
+            sb.AppendLine("[grey62]    plural                Sets the plural name for the schema[/]");
+        else
+            sb.AppendLine("    plural                [white]Sets the plural name for the schema[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY)
-            sb.AppendLine("[grey62]    print                 Prints the details about the entity. '?' is also an alias for 'print'.[/]");
+            sb.AppendLine("[grey62]    print                 Prints the details about the entity. '?' is also an alias for 'print'[/]");
         else
-            sb.AppendLine("    print                 [white]Prints the details about the entity. '?' is also an alias for 'print'.[/]");
+            sb.AppendLine("    print                 [white]Prints the details about the entity. '?' is also an alias for 'print'[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
             || Program.SelectedEntity.Type != Reference.ReferenceType.Thing)
-            sb.AppendLine("[grey62]    promote <PROP>        Promotes a property on a thing to become a schema property.[/]");
+            sb.AppendLine("[grey62]    promote <PROP>        Promotes a property on a thing to become a schema property[/]");
         else
-            sb.AppendLine("    promote <PROP>        [white]Promotes a property on a thing to become a schema property.[/]");
+            sb.AppendLine("    promote <PROP>        [white]Promotes a property on a thing to become a schema property[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
             || (Program.SelectedEntity.Type != Reference.ReferenceType.Schema
                 && Program.SelectedEntity.Type != Reference.ReferenceType.Thing))
-            sb.AppendLine("[grey62]    rename <NEW_NAME>     Renames the selected entity to the new name.[/]");
+            sb.AppendLine("[grey62]    rename <NEW_NAME>     Renames the selected entity to the new name[/]");
         else
-            sb.AppendLine("    rename <NEW_NAME>     [white]Renames the selected entity to the new name.[/]");
+            sb.AppendLine("    rename <NEW_NAME>     [white]Renames the selected entity to the new name[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
             || (Program.SelectedEntity.Type != Reference.ReferenceType.Schema
                 && Program.SelectedEntity.Type != Reference.ReferenceType.Thing))
-            sb.AppendLine("[grey62]    set <PROP> [[VALUE]]    Same as the 'set' CLI command, just against the selected entity.[/]");
+            sb.AppendLine("[grey62]    set <PROP> [[VALUE]]    Same as the 'set' CLI command, just against the selected entity[/]");
         else
-            sb.AppendLine("    set <PROP> [[VALUE]]    [white]Same as the 'set' CLI command, just against the selected entity.[/]");
+            sb.AppendLine("    set <PROP> [[VALUE]]    [white]Same as the 'set' CLI command, just against the selected entity[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
             || (Program.SelectedEntity.Type != Reference.ReferenceType.Schema
                 && Program.SelectedEntity.Type != Reference.ReferenceType.Thing))
-            sb.AppendLine("[grey62]    validate              Validates the selected entity's correctness against its schema.[/]");
+            sb.AppendLine("[grey62]    validate              Validates the selected entity's correctness against its schema[/]");
         else
-            sb.AppendLine("    validate              [white]Validates the selected entity's correctness against its schema.[/]");
+            sb.AppendLine("    validate              [white]Validates the selected entity's correctness against its schema[/]");
 
 
         AnsiConsole.MarkupLine(sb.ToString());

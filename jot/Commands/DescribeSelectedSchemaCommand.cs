@@ -20,7 +20,7 @@ public class DescribeSelectedSchemaCommand : CancellableAsyncCommand<DescribeSel
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            AmbientErrorContext.Provider.LogError("To delete an entity, you must first 'select' one.");
+            AmbientErrorContext.Provider.LogError("To describe an entity, you must first 'select' one.");
             return (int)ERROR_CODES.ARGUMENT_ERROR;
         }
 

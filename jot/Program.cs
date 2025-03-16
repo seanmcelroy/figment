@@ -49,7 +49,11 @@ internal class Program
 
         // Setup the providers. TODO: Allow CLI config
         AmbientErrorContext.Provider = new SpectreConsoleErrorProvider();
-        AmbientStorageContext.StorageProvider = new Figment.Data.Local.LocalDirectoryStorageProvider("/home/sean/src/figment/jot/db");
+        {
+            var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider("/home/sean/src/figment/jot/db");
+            await ldsp.InitializeAsync(cts.Token);
+            AmbientStorageContext.StorageProvider = ldsp;
+        }
 
         var app = new CommandApp();
         app.Configure(config =>
@@ -82,9 +86,9 @@ internal class Program
                             .WithDescription("Deletes an import map from the schema configuration");
                     });
                     schema.AddCommand<ListSchemaMembersCommand>("members")
-                        .WithDescription("Lists all the things associated to a schema");
+                        .WithDescription("Lists all the things associated with a schema");
                     schema.AddCommand<SetSchemaPluralCommand>("plural")
-                        .WithDescription("Sets the data type of a property");
+                        .WithDescription("Sets the plural name for the schema");
                     schema.AddCommand<SchemaRenameCommand>("rename")
                         .WithDescription("Changes the name of a schema");
                     schema.AddBranch<SchemaPropertyCommandSettings>("set", set =>
@@ -153,6 +157,10 @@ internal class Program
                     .IsHidden();
 
                 config.AddCommand<ListSelectedSchemaMembersCommand>("members")
+                    .IsHidden();
+
+                config.AddCommand<SetSelectedSchemaPluralCommand>("plural")
+                    .WithDescription("Interactive mode command.  Sets the plural name for the schema")
                     .IsHidden();
 
                 config.AddCommand<PrintSelectedCommand>("print")

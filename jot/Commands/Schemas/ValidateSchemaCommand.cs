@@ -28,10 +28,10 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
             AnsiConsole.WriteLine($"Validating schema {schema!.Name} ...");
 
         if (string.IsNullOrWhiteSpace(schema.Description))
-            AmbientErrorContext.Provider.LogWarning("Description is not set, leading to an invalid JSON schema on disk.  Resolve with: [bold]set Description \"Sample description\"[/]");
+            AmbientErrorContext.Provider.LogWarning("Description is not set, leading to an invalid JSON schema on disk.  Resolve with: set Description \"Sample description\"");
 
         if (string.IsNullOrWhiteSpace(schema.Plural))
-            AmbientErrorContext.Provider.LogWarning($"Plural is not set, rendering listing of all things with this schema on the REPL inaccessible.  Resolve with: [bold]set Plural {schema.Name.ToLowerInvariant()}s[/]");
+            AmbientErrorContext.Provider.LogWarning($"Plural is not set, rendering listing of all things with this schema on the REPL inaccessible.  Resolve with: set plural {schema.Name.ToLowerInvariant()}s");
 
         AmbientErrorContext.Provider.LogDone($"Validation has finished.");
         return (int)ERROR_CODES.SUCCESS;

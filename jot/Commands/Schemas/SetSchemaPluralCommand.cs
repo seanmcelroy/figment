@@ -24,7 +24,18 @@ public class SetSchemaPluralCommand : SchemaCancellableAsyncCommand<SetSchemaPlu
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
             return (int)tgs;
 
-        schema!.Plural = settings.Plural;
+        var oldPlural = schema!.Plural;
+
+        schema.Plural = string.IsNullOrWhiteSpace(settings.Plural)
+            ? null
+            : settings.Plural;
+
+        if (string.Compare(oldPlural, schema.Plural, StringComparison.InvariantCultureIgnoreCase) == 0)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Plural for {schema.Name} is already '{schema.Plural}'. Nothing to do.");
+            return (int)ERROR_CODES.SUCCESS;
+        }
+
         var saved = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
@@ -37,7 +48,11 @@ public class SetSchemaPluralCommand : SchemaCancellableAsyncCommand<SetSchemaPlu
 
         // For 'plural', we know we should rebuild indexes.
         await ssp!.RebuildIndexes(cancellationToken);
-        AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Plural keyword is now '{settings.Plural}'.");
+
+        if (schema.Plural == null)
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Plural keyword was '{oldPlural}' but is now removed.");
+        else
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Plural keyword was '{oldPlural}' but is now  '{settings.Plural}'.");
         return (int)ERROR_CODES.SUCCESS;
     }
 }
