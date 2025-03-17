@@ -28,6 +28,7 @@ namespace Figment.Common;
 [JsonDerivedType(typeof(SchemaEmailField), typeDiscriminator: SchemaEmailField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaEnumField), typeDiscriminator: "enum")]
 [JsonDerivedType(typeof(SchemaIntegerField), typeDiscriminator: SchemaIntegerField.SCHEMA_FIELD_TYPE)]
+[JsonDerivedType(typeof(SchemaMonthDayField), typeDiscriminator: SchemaMonthDayField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaNumberField), typeDiscriminator: SchemaNumberField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaPhoneField), typeDiscriminator: SchemaPhoneField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaRefField), typeDiscriminator: SchemaRefField.SCHEMA_FIELD_TYPE)]

@@ -57,10 +57,8 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
 
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
-        if (!Required && value == null)
-            return true;
-        if (Required && value == null)
-            return false;
+        if (value == null)
+            return !Required;
 
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)

@@ -78,7 +78,13 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var sif = new SchemaIntegerField(propName);
             schema!.Properties[propName] = sif;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaPhoneField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.CompareOrdinal(settings.FieldType, SchemaMonthDayField.SCHEMA_FIELD_TYPE) == 0)
+        {
+            // Month+day
+            var ssf = new SchemaMonthDayField(propName);
+            schema!.Properties[propName] = ssf;
+        }
+        else if (string.CompareOrdinal(settings.FieldType, SchemaNumberField.SCHEMA_FIELD_TYPE) == 0)
         {
             // Number (double)
             var snf = new SchemaNumberField(propName);
@@ -92,7 +98,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
         }
         else if (string.CompareOrdinal(settings.FieldType, SchemaSchemaField.SCHEMA_FIELD_TYPE) == 0)
         {
-            // Email
+            // Schema
             var ssf = new SchemaSchemaField(propName);
             schema!.Properties[propName] = ssf;
         }

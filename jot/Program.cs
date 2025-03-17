@@ -230,9 +230,9 @@ internal class Program
             if (AnsiConsole.Profile.Capabilities.Interactive)
             {
                 if (string.IsNullOrWhiteSpace(SelectedEntityName))
-                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]>[/]") { History = history });
+                    input = AnsiConsole.Prompt(new TextPrompt<string>("[green]>[/]")/* { History = history }*/);
                 else
-                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]") { History = history });
+                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]")/* { History = history }*/);
             }
             else
             {

@@ -13,10 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Data.Local", "Figme
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Figment.Data.Memory", "Figment.Data.Memory\Figment.Data.Memory.csproj", "{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spectre.Console", "..\spectre.console\src\Spectre.Console\Spectre.Console.csproj", "{8534F292-3194-42DB-B255-2592137879A5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spectre.Console.Cli", "..\spectre.console\src\Spectre.Console.Cli\Spectre.Console.Cli.csproj", "{8B6B8AB4-D5AF-4C86-BC1F-B24420F1058B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,13 +42,5 @@ Global
 		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8BBF5F13-08F4-4347-A9A4-A832A37FDA03}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8534F292-3194-42DB-B255-2592137879A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8534F292-3194-42DB-B255-2592137879A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8534F292-3194-42DB-B255-2592137879A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8534F292-3194-42DB-B255-2592137879A5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8B6B8AB4-D5AF-4C86-BC1F-B24420F1058B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8B6B8AB4-D5AF-4C86-BC1F-B24420F1058B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8B6B8AB4-D5AF-4C86-BC1F-B24420F1058B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8B6B8AB4-D5AF-4C86-BC1F-B24420F1058B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

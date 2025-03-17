@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace Figment.Test.Calculations;
+namespace Figment.Test.Common.Calculations;
 
 [TestClass]
 public sealed class DateDiff
@@ -27,7 +27,7 @@ public sealed class DateDiff
     [TestMethod]
     public void DateDiffYYYY()
     {
-        var (success, message, root) = Common.Calculations.Parser.ParseFormula("=DATEDIFF(\"yyyy\", '1981-01-26', '2025-01-26')");
+        var (success, message, root) = Figment.Common.Calculations.Parser.ParseFormula("=DATEDIFF(\"yyyy\", '1981-01-26', '2025-01-26')");
         Assert.IsTrue(success);
         Assert.IsNotNull(root);
         var calcResult = root.Invoke([]);
@@ -46,7 +46,7 @@ public sealed class DateDiff
     [TestMethod]
     public void DateDiffNoParameters()
     {
-        var calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF()");
+        var calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF()");
         Assert.IsTrue(calcResult.IsError);
     }
 
@@ -56,22 +56,22 @@ public sealed class DateDiff
     [TestMethod]
     public void DateDiffWrongParameters()
     {
-        var calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"aaa\", '1981-01-26', '2025-01-26')");
+        var calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF(\"aaa\", '1981-01-26', '2025-01-26')");
         Assert.IsTrue(calcResult.IsError);
 
-        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(1.2, '1981-01-26', '2025-01-26')");
+        calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF(1.2, '1981-01-26', '2025-01-26')");
         Assert.IsTrue(calcResult.IsError);
 
-        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 'aaaa-01-26', '2025-01-26')");
+        calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 'aaaa-01-26', '2025-01-26')");
         Assert.IsTrue(calcResult.IsError);
 
-        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", '1981-01-26', 'aaaa-01-26')");
+        calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", '1981-01-26', 'aaaa-01-26')");
         Assert.IsTrue(calcResult.IsError);
 
-        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 'aaaa-01-26', 1)");
+        calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 'aaaa-01-26', 1)");
         Assert.IsTrue(calcResult.IsError);
 
-        calcResult = Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 1, 'aaaa-01-26')");
+        calcResult = Figment.Common.Calculations.Parser.Calculate("=DATEDIFF(\"yyyy\", 1, 'aaaa-01-26')");
         Assert.IsTrue(calcResult.IsError);
 
     }

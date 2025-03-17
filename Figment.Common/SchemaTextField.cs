@@ -41,12 +41,10 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {
-        if (!Required && value == null)
-            return Task.FromResult(true);
-        if (Required && value == null)
-            return Task.FromResult(false);
+        if (value == null)
+            return Task.FromResult(!Required);
 
-        var str = value as string;
+        var str = value.ToString();
 
         if (MinLength.HasValue && (str == null || str.Length < MinLength.Value))
             return Task.FromResult(false);

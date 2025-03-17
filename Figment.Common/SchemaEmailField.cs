@@ -35,11 +35,9 @@ public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {
-        if (!Required && value == null)
-            return Task.FromResult(true);
-        if (Required && value == null)
-            return Task.FromResult(false);
+        if (value == null)
+            return Task.FromResult(!Required);
 
-        return Task.FromResult(MailAddress.TryCreate(value as string, out MailAddress? _));
+        return Task.FromResult(MailAddress.TryCreate(value.ToString(), out MailAddress? _));
     }
 }

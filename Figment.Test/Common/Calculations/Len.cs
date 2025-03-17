@@ -19,19 +19,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using Figment.Common;
 using Figment.Common.Calculations;
 
-namespace Figment.Test.Calculations;
+namespace Figment.Test.Common.Calculations;
 
 [TestClass]
-public sealed class Lower
+public sealed class Len
 {
     /// <summary>
     /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void LowerWithoutParameters()
+    public void LenWithoutParameters()
     {
-        var sampleThing = new Thing(nameof(LowerWithoutParameters), nameof(LowerWithoutParameters));
-        var calcResult = Parser.Calculate("=LOWER()", sampleThing);
+        var sampleThing = new Thing(nameof(LenWithoutParameters), nameof(LenWithoutParameters));
+        var calcResult = Parser.Calculate("=LEN()", sampleThing);
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
@@ -40,39 +40,39 @@ public sealed class Lower
     /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void LowerWithBadParameterTypeRecoverable()
+    public void LenWithBadParameterTypeRecoverable()
     {
-        var sampleThing = new Thing(nameof(LowerWithBadParameterTypeRecoverable), nameof(LowerWithBadParameterTypeRecoverable));
-        var calcResult = Parser.Calculate("=LOWER(1.4)", sampleThing);
+        var sampleThing = new Thing(nameof(LenWithBadParameterTypeRecoverable), nameof(LenWithBadParameterTypeRecoverable));
+        var calcResult = Parser.Calculate("=LEN(1.4)", sampleThing);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
-        Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual("1.4", result);
+        Assert.IsInstanceOfType<int>(result);
+        Assert.AreEqual(3, result);
     }
 
     /// <summary>
     /// Tests one function with no parameters
     /// </summary>
     [TestMethod]
-    public void CalculateLowerThingProperty()
+    public void CalculateLenThingProperty()
     {
-        var sampleThing = new Thing(nameof(CalculateLowerThingProperty), nameof(CalculateLowerThingProperty));
-        var calcResult = Parser.Calculate("=LOWER([Name])", sampleThing);
+        var sampleThing = new Thing(nameof(CalculateLenThingProperty), nameof(CalculateLenThingProperty));
+        var calcResult = Parser.Calculate("=LEN([Name])", sampleThing);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
-        Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual(nameof(CalculateLowerThingProperty).ToLowerInvariant(), result);
+        Assert.IsInstanceOfType<int>(result);
+        Assert.AreEqual(nameof(CalculateLenThingProperty).Length, result);
     }
 
     /// <summary>
     /// Tests on null, which is not valid
     /// </summary>
     [TestMethod]
-    public void CalculateLowerNull()
+    public void CalculateLenNull()
     {
-        var calcResult = Parser.Calculate("=LOWER(NULL())");
+        var calcResult = Parser.Calculate("=LEN(NULL())");
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }

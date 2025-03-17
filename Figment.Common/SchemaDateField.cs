@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -32,7 +33,21 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
         "yyyy-MM-ddTHH:mm:ssZ",
         "yyyy-MM-ddTHH:mm:ss.ffZ",
         // Fallbacks
+        "yyyy-MM-dd H:mm tt",
+        "yyyy-MM-dd HH:mm",
         "yyyy-MM-dd",
+        "MM/dd/yyyy H:mm tt",
+        "MM/dd/yyyy HH:mm",
+        "MM/dd/yyyy",
+        "MM/dd/yy H:mm tt",
+        "MM/dd/yy HH:mm",
+        "MM/dd/yy",
+        "M/d/yy H:mm tt",
+        "M/d/yy HH:mm",
+        "M/d/yy",
+        "M/d/yyyy H:mm tt",
+        "M/d/yyyy HH:mm",
+        "M/d/yyyy",
         DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern,
         DateTimeFormatInfo.InvariantInfo.SortableDateTimePattern,
         // Weird fallbacks
@@ -52,11 +67,52 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
 
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
+        if (value == null)
+            return !Required;
+
+        // If native DateTime or DateTimeOffset, go with it.
+        if (value is DateTimeOffset)
+            return true;
+        if (value is DateTime)
+            return true;
+
+        // Handle it like text
         if (!await base.IsValidAsync(value, cancellationToken))
             return false;
 
-        var str = value as string;
+        // We parse here from a string because JSON doesn't support native dates.
+        return TryParseDate(value.ToString(), out DateTimeOffset _);
+    }
 
-        return DateTimeOffset.TryParseExact(str, _formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out _);
-    }    
+    public override bool TryMassageInput(object? input, out object? output)
+    {
+        if (input == null || input.GetType() == typeof(DateTimeOffset))
+        {
+            output = input;
+            return true;
+        }
+
+        var prov = input.ToString();
+
+        if (TryParseDate(prov, out DateTimeOffset provDto))
+        {
+            output = provDto;
+            return true;
+        }
+
+        output = null;
+        return false;
+    }
+
+    public static bool TryParseDate([NotNullWhen(true)] string? input, out DateTimeOffset output)
+    {
+        if (DateTimeOffset.TryParseExact(input, _formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset dte))
+        {
+            output = dte;
+            return true;
+        }
+
+        output = DateTimeOffset.MinValue;
+        return false;
+    }
 }

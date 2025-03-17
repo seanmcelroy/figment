@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using Figment.Common;
 using Figment.Common.Calculations;
 
-namespace Figment.Test.Calculations;
+namespace Figment.Test.Common.Calculations;
 
 [TestClass]
 public sealed class Floor

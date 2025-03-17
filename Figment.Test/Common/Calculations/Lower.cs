@@ -19,57 +19,60 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using Figment.Common;
 using Figment.Common.Calculations;
 
-namespace Figment.Test.Calculations;
+namespace Figment.Test.Common.Calculations;
 
 [TestClass]
-public sealed class Upper
+public sealed class Lower
 {
     /// <summary>
     /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void UpperWithoutParameters()
+    public void LowerWithoutParameters()
     {
-        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
-        var calcResult = Parser.Calculate("=UPPER()", sampleThing);
+        var sampleThing = new Thing(nameof(LowerWithoutParameters), nameof(LowerWithoutParameters));
+        var calcResult = Parser.Calculate("=LOWER()", sampleThing);
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
 
     /// <summary>
-    /// Too many parameters
+    /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void UpperWithTwoParameters()
+    public void LowerWithBadParameterTypeRecoverable()
     {
-        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
-        var calcResult = Parser.Calculate("=UPPER([Name],[Name])", sampleThing);
-        Assert.IsTrue(calcResult.IsError);
-        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+        var sampleThing = new Thing(nameof(LowerWithBadParameterTypeRecoverable), nameof(LowerWithBadParameterTypeRecoverable));
+        var calcResult = Parser.Calculate("=LOWER(1.4)", sampleThing);
+        Assert.IsFalse(calcResult.IsError);
+
+        var result = calcResult.Result;
+        Assert.IsInstanceOfType<string>(result);
+        Assert.AreEqual("1.4", result);
     }
 
     /// <summary>
     /// Tests one function with no parameters
     /// </summary>
     [TestMethod]
-    public void CalculateUpperThingProperty()
+    public void CalculateLowerThingProperty()
     {
-        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
-        var calcResult = Parser.Calculate("=UPPER([Name])", sampleThing);
+        var sampleThing = new Thing(nameof(CalculateLowerThingProperty), nameof(CalculateLowerThingProperty));
+        var calcResult = Parser.Calculate("=LOWER([Name])", sampleThing);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
         Assert.IsInstanceOfType<string>(result);
-        Assert.AreEqual(nameof(CalculateUpperThingProperty).ToUpperInvariant(), result);
+        Assert.AreEqual(nameof(CalculateLowerThingProperty).ToLowerInvariant(), result);
     }
 
     /// <summary>
     /// Tests on null, which is not valid
     /// </summary>
     [TestMethod]
-    public void CalculateUpperNull()
+    public void CalculateLowerNull()
     {
-        var calcResult = Parser.Calculate("=UPPER(NULL())");
+        var calcResult = Parser.Calculate("=LOWER(NULL())");
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }

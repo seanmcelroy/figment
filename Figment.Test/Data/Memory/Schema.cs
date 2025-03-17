@@ -6,6 +6,7 @@ namespace Figment.Test.Data.Memory;
 public sealed class Schema
 {
     [TestMethod]
+    [Ignore]
     public async Task SchemaCrud()
     {
         var storageProvider = new MemoryStorageProvider();

@@ -223,7 +223,65 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
             return Markup.Escape($"[{contents}]"); // This needs to be escaped
         }
-        else if (fieldType.Equals(typeof(SchemaPhoneField)))
+
+        if (fieldType.Equals(typeof(SchemaDateField)))
+        {
+            if (value == null)
+                return default;
+
+            if (value is DateTimeOffset dto)
+            {
+                if (dto.TimeOfDay == TimeSpan.Zero)
+                    return dto.Date.ToShortDateString();
+                return $"{dto:s}";
+            }
+
+            if (value is DateTime dt)
+            {
+                if (dt.TimeOfDay == TimeSpan.Zero)
+                    return dt.Date.ToShortDateString();
+                return $"{dt:s}";
+            }
+
+            if (SchemaDateField.TryParseDate(value.ToString(), out DateTimeOffset dto2))
+            {
+                if (dto2.TimeOfDay == TimeSpan.Zero)
+                    return dto2.Date.ToShortDateString();
+                return $"{dto2:s}";
+            }
+
+            return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+        }
+
+        if (fieldType.Equals(typeof(SchemaMonthDayField)))
+        {
+            if (value == null)
+                return default;
+
+            if (value is DateTimeOffset dto)
+            {
+                if (dto.TimeOfDay == TimeSpan.Zero)
+                    return dto.Date.ToShortDateString();
+                return $"{dto:MMMM dd}";
+            }
+
+            if (value is DateTime dt)
+            {
+                if (dt.TimeOfDay == TimeSpan.Zero)
+                    return dt.Date.ToShortDateString();
+                return $"{dt:MMMM dd}";
+            }
+
+            if (SchemaMonthDayField.TryParseMonthDay(value.ToString(), out int md))
+            {
+                var d = new DateTime(new DateOnly(2000, md / 100, md - ((md / 100) * 100)), TimeOnly.FromTimeSpan(TimeSpan.Zero));
+                return $"{d:MMMM dd}";
+            }
+
+            return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+        }
+
+        if (fieldType.Equals(typeof(SchemaPhoneField)))
         {
             if (value == null)
                 return default;
@@ -242,7 +300,8 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
             return (string?)$"[link=tel:{Markup.Escape(str)}]{Markup.Escape(str)}[/]";
         }
-        else if (fieldType.Equals(typeof(SchemaRefField)))
+
+        if (fieldType.Equals(typeof(SchemaRefField)))
         {
             if (value == null)
                 return default;
@@ -262,14 +321,11 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
             return Markup.Escape(thing.Name);
         }
-        else
-        {
-            var val = value?.ToString();
-            if (string.IsNullOrEmpty(val))
-                return val;
 
-            return Markup.Escape(val);
-        }
+        var val = value?.ToString();
+        if (string.IsNullOrEmpty(val))
+            return val;
 
+        return Markup.Escape(val);
     }
 }

@@ -19,60 +19,57 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using Figment.Common;
 using Figment.Common.Calculations;
 
-namespace Figment.Test.Calculations;
+namespace Figment.Test.Common.Calculations;
 
 [TestClass]
-public sealed class Len
+public sealed class Upper
 {
     /// <summary>
     /// Not enough parameters
     /// </summary>
     [TestMethod]
-    public void LenWithoutParameters()
+    public void UpperWithoutParameters()
     {
-        var sampleThing = new Thing(nameof(LenWithoutParameters), nameof(LenWithoutParameters));
-        var calcResult = Parser.Calculate("=LEN()", sampleThing);
+        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
+        var calcResult = Parser.Calculate("=UPPER()", sampleThing);
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
 
     /// <summary>
-    /// Not enough parameters
+    /// Too many parameters
     /// </summary>
     [TestMethod]
-    public void LenWithBadParameterTypeRecoverable()
+    public void UpperWithTwoParameters()
     {
-        var sampleThing = new Thing(nameof(LenWithBadParameterTypeRecoverable), nameof(LenWithBadParameterTypeRecoverable));
-        var calcResult = Parser.Calculate("=LEN(1.4)", sampleThing);
-        Assert.IsFalse(calcResult.IsError);
-
-        var result = calcResult.Result;
-        Assert.IsInstanceOfType<int>(result);
-        Assert.AreEqual(3, result);
+        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
+        var calcResult = Parser.Calculate("=UPPER([Name],[Name])", sampleThing);
+        Assert.IsTrue(calcResult.IsError);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
 
     /// <summary>
     /// Tests one function with no parameters
     /// </summary>
     [TestMethod]
-    public void CalculateLenThingProperty()
+    public void CalculateUpperThingProperty()
     {
-        var sampleThing = new Thing(nameof(CalculateLenThingProperty), nameof(CalculateLenThingProperty));
-        var calcResult = Parser.Calculate("=LEN([Name])", sampleThing);
+        var sampleThing = new Thing(nameof(CalculateUpperThingProperty), nameof(CalculateUpperThingProperty));
+        var calcResult = Parser.Calculate("=UPPER([Name])", sampleThing);
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
-        Assert.IsInstanceOfType<int>(result);
-        Assert.AreEqual(nameof(CalculateLenThingProperty).Length, result);
+        Assert.IsInstanceOfType<string>(result);
+        Assert.AreEqual(nameof(CalculateUpperThingProperty).ToUpperInvariant(), result);
     }
 
     /// <summary>
     /// Tests on null, which is not valid
     /// </summary>
     [TestMethod]
-    public void CalculateLenNull()
+    public void CalculateUpperNull()
     {
-        var calcResult = Parser.Calculate("=LEN(NULL())");
+        var calcResult = Parser.Calculate("=UPPER(NULL())");
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }

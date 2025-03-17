@@ -32,18 +32,17 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
 
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {
-        if (!Required && value == null)
-            return Task.FromResult(true);
-        if (Required && value == null)
-            return Task.FromResult(false);
+        if (value == null)
+            return Task.FromResult(!Required);
 
         if (value is string)
             return Task.FromResult(false); // Should be native boolean.
 
-        return Task.FromResult(bool.TryParse(value!.ToString(), out bool _));
+        return Task.FromResult(bool.TryParse(value.ToString(), out bool _));
     }
 
-    public static bool TryParseBoolean([NotNullWhen(true)] string? input, out bool output) {
+    public static bool TryParseBoolean([NotNullWhen(true)] string? input, out bool output)
+    {
         if (bool.TryParse(input, out bool provBool))
         {
             output = provBool;

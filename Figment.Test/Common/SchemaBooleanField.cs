@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-namespace Figment.Test;
+namespace Figment.Test.Common;
 
 [TestClass]
 public sealed class SchemaBooleanField
@@ -24,7 +24,7 @@ public sealed class SchemaBooleanField
     [TestMethod]
     public async Task IsValidAsync()
     {
-        var f = new Common.SchemaBooleanField(nameof(IsValidAsync));
+        var f = new Figment.Common.SchemaBooleanField(nameof(IsValidAsync));
 
         var s = await f.GetReadableFieldTypeAsync(false, CancellationToken.None);
 
@@ -51,42 +51,42 @@ public sealed class SchemaBooleanField
         Assert.IsTrue(await f.IsValidAsync(false, CancellationToken.None));
 
         f.Required = false;
-        Assert.IsFalse(await f.IsValidAsync(string.Empty, CancellationToken.None));
+        Assert.IsFalse(await f.IsValidAsync(string.Empty, CancellationToken.None), "Empty string cannot be coerced into a boolean value");
         Assert.IsFalse(await f.IsValidAsync("whatever", CancellationToken.None));
-        Assert.IsFalse(await f.IsValidAsync("true", CancellationToken.None));
-        Assert.IsFalse(await f.IsValidAsync("false", CancellationToken.None));
+        Assert.IsFalse(await f.IsValidAsync("true", CancellationToken.None), "Boolean values should be native booleans, not strings");
+        Assert.IsFalse(await f.IsValidAsync("false", CancellationToken.None), "Boolean values should be native booleans, not strings");
     }
 
     [TestMethod]
     public void TryParseBoolean()
     {
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("yes", out bool r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("yes", out bool r));
         Assert.IsTrue(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("no", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("no", out r));
         Assert.IsFalse(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("on", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("on", out r));
         Assert.IsTrue(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("off", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("off", out r));
         Assert.IsFalse(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("1", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("1", out r));
         Assert.IsTrue(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("0", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("0", out r));
         Assert.IsFalse(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("true", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("true", out r));
         Assert.IsTrue(r);
-        Assert.IsTrue(Common.SchemaBooleanField.TryParseBoolean("false", out r));
+        Assert.IsTrue(Figment.Common.SchemaBooleanField.TryParseBoolean("false", out r));
         Assert.IsFalse(r);
 
-        Assert.IsFalse(Common.SchemaBooleanField.TryParseBoolean(null, out r));
+        Assert.IsFalse(Figment.Common.SchemaBooleanField.TryParseBoolean(null, out r));
         Assert.IsFalse(r);
-        Assert.IsFalse(Common.SchemaBooleanField.TryParseBoolean(string.Empty, out r));
+        Assert.IsFalse(Figment.Common.SchemaBooleanField.TryParseBoolean(string.Empty, out r));
         Assert.IsFalse(r);
     }
 
     [TestMethod]
     public void TryMassageInput()
     {
-        var f = new Common.SchemaBooleanField(nameof(TryMassageInput));
+        var f = new Figment.Common.SchemaBooleanField(nameof(TryMassageInput));
 
         Assert.IsTrue(f.TryMassageInput(null, out object? output));
         Assert.IsNull(output);
