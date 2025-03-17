@@ -222,19 +222,21 @@ internal class Program
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
+        List<string> history = [];
+
         do
         {
             string? input;
             if (AnsiConsole.Profile.Capabilities.Interactive)
             {
                 if (string.IsNullOrWhiteSpace(SelectedEntityName))
-                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]>[/]"));
+                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]>[/]") { History = history });
                 else
-                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]"));
+                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]") { History = history });
             }
             else
             {
-                // Handle vscode Debug Console
+                // Handle vscode Debug Console, which is not 'interactive'
                 if (string.IsNullOrWhiteSpace(SelectedEntityName))
                     Console.Write($"> ");
                 else
@@ -265,16 +267,20 @@ internal class Program
                         break;
                     }
                 }
+
                 if (handled)
                 {
                     // Display, then 'continue' to break out of await-for.
                     await RenderView(schema!, thingsToDisplay, cts.Token);
+                    history.Add(input);
                     continue;
                 }
             }
 
             // Proceed as normal in interactive mode
             var result = await app.RunAsync(inputArgs);
+            if (input != null)
+                history.Add(input);
 
         } while (!cts.Token.IsCancellationRequested);
 

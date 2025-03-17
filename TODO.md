@@ -11,7 +11,8 @@
 - [x] BUG: Associating an item to a schema should rebuild that schema's index, or update it (better)
 - [x] C/M/A times on entities from filesystem in local provider
 - [x] pretty field names
-- [ ] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
+- [x] IMPROVEMENT: Arrow key up in interactive mode to insert previous command (pending spectre.console PR)
+- [ ] Built-in system schemas
 - [ ] default schema values
 - [ ] Schema inheritence
 - [ ] Multiple schema applications
