@@ -256,20 +256,32 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
         var fileName = $"{schema.Guid}.schema.json";
         var filePath = Path.Combine(SchemaDirectoryPath, fileName);
+        var backupFileName = $"{schema.Guid}.schema.json.backup";
 
         // Convert schema to definition file for serialization in JSON Schema format
         var schemaDefinition = new JsonSchemaDefinition(schema);
+
+        if (File.Exists(filePath))
+            File.Move(filePath, backupFileName, true);
 
         using var fs = File.Create(filePath);
         try
         {
             await JsonSerializer.SerializeAsync(fs, schemaDefinition, jsonSerializerOptions, cancellationToken);
             await fs.FlushAsync(cancellationToken);
+
+            if (File.Exists(backupFileName))
+                File.Delete(backupFileName);
+
             return true;
         }
         catch (Exception je)
         {
             AmbientErrorContext.Provider.LogException(je, $"Unable to serialize schema {schema.Guid} from {filePath}");
+
+            if (File.Exists(backupFileName))
+                File.Move(backupFileName, fileName);
+
             return false;
         }
     }

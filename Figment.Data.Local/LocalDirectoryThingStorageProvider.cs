@@ -245,7 +245,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             return null;
         }
 
-        var thingLoaded = new Thing("", ""){
+        var thingLoaded = new Thing("", "")
+        {
             CreatedOn = fileInfo.CreationTimeUtc,
             LastModified = fileInfo.LastWriteTimeUtc,
             LastAccessed = fileInfo.LastAccessTimeUtc
@@ -403,17 +404,29 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 
         var fileName = $"{thing.Guid}.thing.json";
         var filePath = Path.Combine(thingDir.FullName, fileName);
+        var backupFileName = $"{thing.Guid}.thing.json.backup";
+
+        if (File.Exists(filePath))
+            File.Move(filePath, backupFileName, true);
 
         using var fs = File.Create(filePath);
         try
         {
             await JsonSerializer.SerializeAsync(fs, thing, jsonSerializerOptions, cancellationToken: cancellationToken);
             await fs.FlushAsync(cancellationToken);
+
+            if (File.Exists(backupFileName))
+                File.Delete(backupFileName);
+
             return true;
         }
         catch (Exception je)
         {
             AmbientErrorContext.Provider.LogException(je, $"Unable to serialize thing {thing.Guid} from {filePath}");
+
+            if (File.Exists(backupFileName))
+                File.Move(backupFileName, fileName);
+
             return false;
         }
     }
