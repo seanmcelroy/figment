@@ -118,6 +118,7 @@ If you wanted to specify restaurants have common attributes, you could select th
 | email      | Email address                                                 |
 | enum       | A single value from a defined list of possible values         |
 | integer    | Whole number with no fractional part                          |
+| month+day  | Date with only a month and day component                      |
 | number     | Floating point number with a decimal point                    |
 | phone      | Phone number                                                  |
 | ref        | A single reference to a thing of a type defined on this field |
