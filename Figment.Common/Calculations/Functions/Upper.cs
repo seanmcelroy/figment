@@ -18,15 +18,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// The UPPER() function capitalizes strings or values coerceable into strings.
+/// </summary>
 public class Upper : FunctionBase
 {
+    /// <inheritdoc/>
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
     {
         if (parameters.Length != 1)
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "UPPER() takes one parameter");
+        }
 
         if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? text))
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "UPPER() takes one non-null parameter");
+        }
 
         return CalculationResult.Success(text?.ToUpperInvariant() ?? string.Empty, CalculationResultType.FunctionResult);
     }

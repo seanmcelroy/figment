@@ -9,18 +9,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Things;
 
+/// <summary>
+/// Renders the values of all properties on a <see cref="Thing"/>.
+/// </summary>
 public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettings>, ICommand
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
-    }
-
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, PrintThingCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
@@ -29,7 +23,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AmbientErrorContext.Provider.LogError("To view properties on a thing, you must first 'select' a thing.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
             }
 
             var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
@@ -39,20 +33,20 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             {
                 case 0:
                     AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
+                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;
                 default:
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
+                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
             AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-            return (int)ERROR_CODES.UNKNOWN_TYPE;
+            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -66,7 +60,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         if (thing == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
-            return (int)ERROR_CODES.THING_LOAD_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
         }
 
         await thing.ComputeCalculatedProperties(cancellationToken);
@@ -86,9 +80,13 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             {
                 var schema = await schemaProvider.LoadAsync(schemaGuid, cancellationToken);
                 if (schema != null)
+                {
                     schemas.Add(schema.Guid, schema);
+                }
                 else
+                {
                     AmbientErrorContext.Provider.LogWarning($"Unable to load associated schema with Guid '{schemaGuid}'.");
+                }
             }
         }
 
@@ -105,12 +103,19 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         foreach (var schema in schemas)
         {
             if (settings.Verbose ?? Program.Verbose)
+            {
                 schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name} [silver]({schema.Value.Guid})[/]");
+            }
             else
+            {
                 schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name}");
+            }
         }
+
         if (schemaBuilder.Length == 0)
+        {
             schemaBuilder.AppendLine();
+        }
 
         var propBuilder = new StringBuilder();
         foreach (var prop in propDict)
@@ -120,7 +125,9 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 || string.CompareOrdinal(prop.Key, nameof(Thing.Guid)) == 0
                 || string.CompareOrdinal(prop.Key, nameof(Thing.SchemaGuids)) == 0
                 )
+            {
                 continue;
+            }
 
             // Coerce value if schema-bound using a field renderer.
             var propDisplayName = prop.Key;
@@ -131,15 +138,24 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 if (!(settings.NoPrettyDisplayNames ?? false)
                     && schprop.DisplayNames != null
                     && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
+                {
                     propDisplayName = prettyDisplayName;
+                }
+
                 var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
                 if (prop.Value.valid)
+                {
                     propBuilder.AppendLine($"   {Markup.Escape(propDisplayName.PadRight(maxPropNameLen))} : {text}");
+                }
                 else
+                {
                     propBuilder.AppendLine($"   {Markup.Escape(propDisplayName.PadRight(maxPropNameLen))} : [red bold]{text}[/]");
+                }
             }
             else
+            {
                 propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : {Markup.Escape(prop.Value.fieldValue?.ToString() ?? string.Empty)}");
+            }
         }
 
         var unsetPropBuilder = new StringBuilder();
@@ -154,12 +170,18 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 {
                     maxPropNameLen = grp.Max(g => g.SimpleDisplayName.Length);
                     if (settings.Verbose ?? Program.Verbose)
+                    {
                         unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver]({grp.Key.SchemaGuid})[/]");
+                    }
                     else
+                    {
                         unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver][/]");
+                    }
 
                     foreach (var prop in grp)
-                        unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(settings.Verbose ?? Program.Verbose, cancellationToken))}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
+                    {
+                        unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
+                    }
                 }
             }
         }
@@ -185,7 +207,9 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
         AnsiConsole.MarkupLine($"[silver]Instance[/]    : [bold white]{thing.Name}[/]");
         if (settings.Verbose ?? Program.Verbose)
+        {
             AnsiConsole.MarkupLine($"[silver]GUID[/]        : {thing.Guid}");
+        }
 
         if (settings.Verbose ?? Program.Verbose)
         {
@@ -201,10 +225,19 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             {unsetPropBuilder}
             {linksBuilder}
             """);
-        return (int)ERROR_CODES.SUCCESS;
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 
-    internal static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, CancellationToken cancellationToken) where T : SchemaFieldBase
+    /// <summary>
+    /// Gets a field value marked up for rich consoles using <see cref="IAnsiConsole"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the schema field to mark up for rendering.</typeparam>
+    /// <param name="field">The schema field to mark up.</param>
+    /// <param name="value">The value in the schema field to mark up.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The marked-up <paramref name="value"/> that can be rendered to a <see cref="IAnsiConsole"/> for a rich display or interaction experience.</returns>
+    internal static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, CancellationToken cancellationToken)
+        where T : SchemaFieldBase
     {
         ArgumentNullException.ThrowIfNull(field);
 
@@ -212,10 +245,14 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         if (fieldType.Equals(typeof(SchemaArrayField)))
         {
             if (value == null)
+            {
                 return default;
+            }
 
             if (value is not System.Collections.IEnumerable ie)
+            {
                 return default;
+            }
 
             var contents = ie.Cast<object?>()
                 .Select(x => x?.ToString() ?? string.Empty)
@@ -227,26 +264,37 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         if (fieldType.Equals(typeof(SchemaDateField)))
         {
             if (value == null)
+            {
                 return default;
+            }
 
             if (value is DateTimeOffset dto)
             {
                 if (dto.TimeOfDay == TimeSpan.Zero)
+                {
                     return dto.Date.ToShortDateString();
+                }
+
                 return $"{dto:s}";
             }
 
             if (value is DateTime dt)
             {
                 if (dt.TimeOfDay == TimeSpan.Zero)
+                {
                     return dt.Date.ToShortDateString();
+                }
+
                 return $"{dt:s}";
             }
 
             if (SchemaDateField.TryParseDate(value.ToString(), out DateTimeOffset dto2))
             {
                 if (dto2.TimeOfDay == TimeSpan.Zero)
+                {
                     return dto2.Date.ToShortDateString();
+                }
+
                 return $"{dto2:s}";
             }
 
@@ -256,19 +304,27 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         if (fieldType.Equals(typeof(SchemaMonthDayField)))
         {
             if (value == null)
+            {
                 return default;
+            }
 
             if (value is DateTimeOffset dto)
             {
                 if (dto.TimeOfDay == TimeSpan.Zero)
+                {
                     return dto.Date.ToShortDateString();
+                }
+
                 return $"{dto:MMMM dd}";
             }
 
             if (value is DateTime dt)
             {
                 if (dt.TimeOfDay == TimeSpan.Zero)
+                {
                     return dt.Date.ToShortDateString();
+                }
+
                 return $"{dt:MMMM dd}";
             }
 
@@ -284,14 +340,18 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         if (fieldType.Equals(typeof(SchemaPhoneField)))
         {
             if (value == null)
+            {
                 return default;
+            }
 
             var str = value as string;
 
             if (Debugger.IsAttached
                 || !AnsiConsole.Profile.Capabilities.Links
                 || str?.IndexOfAny(['[', ']']) > -1)
+            {
                 return str; // No link wrapping.
+            }
 
             if (string.IsNullOrEmpty(str))
             {
@@ -304,27 +364,37 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         if (fieldType.Equals(typeof(SchemaRefField)))
         {
             if (value == null)
+            {
                 return default;
+            }
 
             if (value is not string str)
+            {
                 return default;
+            }
 
             var thingGuid = str[(str.IndexOf('.') + 1)..];
 
             var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
             if (tsp == null)
+            {
                 return str;
+            }
 
             var thing = await tsp.LoadAsync(thingGuid, cancellationToken);
             if (thing == null)
+            {
                 return str;
+            }
 
             return Markup.Escape(thing.Name);
         }
 
         var val = value?.ToString();
         if (string.IsNullOrEmpty(val))
+        {
             return val;
+        }
 
         return Markup.Escape(val);
     }

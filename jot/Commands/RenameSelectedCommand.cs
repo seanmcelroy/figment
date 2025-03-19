@@ -6,8 +6,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Renames the selected entity.
+/// </summary>
 public class RenameSelectedCommand : CancellableAsyncCommand<RenameSelectedCommandSettings>, ICommand
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, RenameSelectedCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
@@ -20,9 +24,19 @@ public class RenameSelectedCommand : CancellableAsyncCommand<RenameSelectedComma
         switch (selected.Type)
         {
             case Reference.ReferenceType.Schema:
-                    return await new SchemaRenameCommand().ExecuteAsync(context, new SchemaRenameCommandSettings { SchemaName = selected.Guid, NewName = settings.NewName, Verbose = settings.Verbose    }, cancellationToken);
+                return await new SchemaRenameCommand().ExecuteAsync(context, new SchemaRenameCommandSettings
+                {
+                    SchemaName = selected.Guid,
+                    NewName = settings.NewName,
+                    Verbose = settings.Verbose,
+                }, cancellationToken);
             case Reference.ReferenceType.Thing:
-                    return await new ThingRenameCommand().ExecuteAsync(context, new ThingRenameCommandSettings { ThingName = selected.Guid, NewName = settings.NewName, Verbose = settings.Verbose }, cancellationToken);
+                return await new ThingRenameCommand().ExecuteAsync(context, new ThingRenameCommandSettings
+                {
+                    ThingName = selected.Guid,
+                    NewName = settings.NewName,
+                    Verbose = settings.Verbose,
+                }, cancellationToken);
             default:
                 AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
                 return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;

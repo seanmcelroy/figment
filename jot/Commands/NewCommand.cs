@@ -5,6 +5,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Creates new types (<see cref="Schema"/>s) or instances of <see cref="Thing"/>s.
+/// </summary>
 public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
 {
     private enum ERROR_CODES : int
@@ -12,6 +15,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         SCHEMA_CREATE_ERROR = -1002,
     }
 
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, NewCommandSettings settings, CancellationToken cancellationToken)
     {
         // Make thing.  Syntax 'new type [name]'
@@ -69,7 +73,9 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                         return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
                     }
                     else
+                    {
                         createdNewSchema = true;
+                    }
                 }
                 else
                 {
@@ -77,7 +83,8 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                     return (int)ERROR_CODES.SCHEMA_CREATE_ERROR;
                 }
             }
-            else {
+            else
+            {
                 schema = await ssp.LoadAsync(schemaRef.Guid, cancellationToken);
                 if (schema == null)
                 {
@@ -86,8 +93,6 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                 }
             }
         }
-
-        //var thingName = inputSplit[2..].Aggregate((c, n) => $"{c} {n}");
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
@@ -102,9 +107,14 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         Program.SelectedEntityName = thing?.Name ?? thing?.Guid ?? string.Empty;
 
         if (createdNewSchema)
+        {
             AmbientErrorContext.Provider.LogDone($"Schema {schema.Name} created, and new instance {thingName} created.");
+        }
         else
+        {
             AmbientErrorContext.Provider.LogDone($"{thingName}, a type of {schema.Name}, created.");
+        }
+
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

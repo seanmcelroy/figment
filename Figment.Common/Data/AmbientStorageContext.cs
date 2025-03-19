@@ -18,11 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Data;
 
+/// <summary>
+/// A thread-safe and async-safe reference to the current <see cref="IStorageProvider"/>.
+/// </summary>
 public static class AmbientStorageContext
 {
     private static readonly AsyncLocal<IStorageProvider> _StorageProvider = new();
 
-    public static IStorageProvider StorageProvider {
+    /// <summary>
+    /// Gets or sets the ambient <see cref="IStorageProvider"/> instance that clients can use to interact with entities.
+    /// </summary>
+    public static IStorageProvider StorageProvider
+    {
         get => _StorageProvider.Value;
         set => _StorageProvider.Value = value;
     }

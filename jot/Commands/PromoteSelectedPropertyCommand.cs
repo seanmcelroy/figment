@@ -7,6 +7,7 @@ namespace jot.Commands;
 
 public class PromoteSelectedPropertyCommand : CancellableAsyncCommand<PromoteSelectedPropertyCommandSettings>, ICommand
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, PromoteSelectedPropertyCommandSettings settings, CancellationToken cancellationToken)
     {
         if (Program.SelectedEntity.Equals(Reference.EMPTY))
@@ -22,6 +23,7 @@ public class PromoteSelectedPropertyCommand : CancellableAsyncCommand<PromoteSel
                     var cmd = new PromoteThingPropertyCommand();
                     return await cmd.ExecuteAsync(context, new PromoteThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Verbose = settings.Verbose }, cancellationToken);
                 }
+
             default:
                 AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");
                 return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;

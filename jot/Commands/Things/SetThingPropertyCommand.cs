@@ -6,19 +6,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Things;
 
+/// <summary>
+/// Sets the value of a property on a <see cref="Thing"/>.
+/// </summary>
 public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
-        THING_SAVE_ERROR = Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR,
-    }
-
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SetThingPropertyCommandSettings settings, CancellationToken cancellationToken)
     {
         // set work phone +12125555555
@@ -29,7 +22,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AmbientErrorContext.Provider.LogError("To modify a thing, you must first 'select' one.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
             }
 
             var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
@@ -39,13 +32,13 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             {
                 case 0:
                     AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
+                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;
                 default:
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
+                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
@@ -53,13 +46,13 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         if (string.IsNullOrWhiteSpace(propName))
         {
             AmbientErrorContext.Provider.LogError("To change a property on a thing, specify the property's name.");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
             AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-            return (int)ERROR_CODES.UNKNOWN_TYPE;
+            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -73,12 +66,12 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         if (thing == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
-            return (int)ERROR_CODES.THING_LOAD_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
         }
 
         var propValue = settings.Value;
 
-        static PossibleNameMatch chooserHandler(string title, IEnumerable<PossibleNameMatch> choices)
+        static PossibleNameMatch ChooserHandler(string title, IEnumerable<PossibleNameMatch> choices)
         {
             var which = AnsiConsole.Prompt(
                 new SelectionPrompt<PossibleNameMatch>()
@@ -90,15 +83,15 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
         }
 
         var saved = await thing.Set(propName, propValue, cancellationToken,
-            AnsiConsole.Profile.Capabilities.Interactive ? chooserHandler : null);
+            AnsiConsole.Profile.Capabilities.Interactive ? ChooserHandler : null);
 
         if (!saved.Success)
         {
             AmbientErrorContext.Provider.LogError($"Unable to edit thing with Guid '{selected.Guid}'.");
-            return (int)ERROR_CODES.THING_SAVE_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
         }
 
         AmbientErrorContext.Provider.LogDone($"{thing.Name} saved.");
-        return (int)ERROR_CODES.SUCCESS;
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

@@ -21,60 +21,113 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// An array field which stores an array of strings.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
 public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "array";
 
+    /// <summary>
+    /// The type of the array items.
+    /// </summary>
     public class SchemaArrayFieldItems
     {
+        /// <summary>
+        /// Gets or sets the type of array items.
+        /// </summary>
         [JsonPropertyName("type")]
-        public required string Type { get; set; }
+        required public string Type { get; set; }
     }
 
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
+    /// <summary>
+    /// Gets or sets the minimum number of items the array must contain.
+    /// </summary>
     [JsonPropertyName("minItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ushort? MinItems { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum number of items the array can contain.
+    /// </summary>
     [JsonPropertyName("maxItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ushort? MaxItems { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the items in the array must be unique.
+    /// </summary>
     [JsonPropertyName("uniqueItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? UniqueItems { get; set; }
 
+    /// <summary>
+    /// Gets or sets the items in the array.
+    /// </summary>
     [JsonPropertyName("items")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SchemaArrayFieldItems? Items { get; set; }
 
+    /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         if (value == null)
+        {
             return Task.FromResult(!Required);
+        }
 
         if (value is not System.Collections.IEnumerable items)
+        {
             return Task.FromResult(false);
+        }
 
         var itemCount = items == null ? 0 : items.Cast<object>().Count();
 
         if (MinItems.HasValue && (itemCount < MinItems.Value))
+        {
             return Task.FromResult(false);
+        }
+
         if (MaxItems.HasValue && itemCount > MaxItems.Value)
+        {
             return Task.FromResult(false);
+        }
 
         if (UniqueItems.HasValue)
         {
             var distinctCount = items == null ? 0 : items.Cast<object>().Distinct().Count();
             if (distinctCount != itemCount)
+            {
                 return Task.FromResult(false);
+            }
         }
 
         return Task.FromResult(true);
     }
 
+    /// <summary>
+    /// Deserializes a <see cref="JsonElement"/> from a <see cref="SchemaDefinition"/>'s representation
+    /// of a <see cref="Schema"/> into a native schema field.
+    /// </summary>
+    /// <param name="name">The name of the schema field.</param>
+    /// <param name="prop">The property to deserialize.</param>
+    /// <param name="required">A value indicating whether the field is required.</param>
+    /// <returns>A native schema field.</returns>
+    /// <exception cref="ArgumentException">A value indicating the <paramref name="prop"/> could not be converted into this schema field type.</exception>
     public static SchemaArrayField FromSchemaDefinitionProperty(
         string name,
         JsonElement prop,
@@ -82,7 +135,9 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (prop.Equals(default(JsonElement)))
+        {
             throw new ArgumentException("Default struct value is invalid", nameof(prop));
+        }
 
         var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
         ushort? minItems = null, maxItems = null;
@@ -96,6 +151,7 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
                 minItems = ml;
             }
         }
+
         if (subs.TryGetValue("maxItems", out JsonElement typeMaxItems))
         {
             maxItemsString = typeMaxItems.ToString();
@@ -104,6 +160,7 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
                 maxItems = ml;
             }
         }
+
         if (subs.TryGetValue("uniqueItems", out JsonElement typeUniqueItems))
         {
             uniqueItemString = typeUniqueItems.ToString();
@@ -113,22 +170,23 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
             }
         }
 
-        var f = new SchemaArrayField(name)
+        return new SchemaArrayField(name)
         {
             MinItems = minItems,
             MaxItems = maxItems,
             UniqueItems = uniqueItems,
-            Required = required
+            Required = required,
         };
-        return f;
     }
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
         var itemType = Items?.Type ?? "???";
         return Task.FromResult($"array of {itemType}");
     }
 
+    /// <inheritdoc/>
     public override bool TryMassageInput(object? input, out object? output)
     {
         if (input != null
@@ -153,11 +211,11 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
                 output = Array.Empty<string>();
                 return true;
             }
+
             prov = prov[1..^1];
         }
 
         // TODO: Better support for mixed-quoted csv
-
         output = prov.Split(',', StringSplitOptions.TrimEntries);
         return true;
     }

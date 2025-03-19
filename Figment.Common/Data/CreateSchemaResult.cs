@@ -18,15 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Data;
 
+/// <summary>
+/// The result of a <see cref="ISchemaStorageProvider.CreateAsync(string, CancellationToken)"/> operation.
+/// </summary>
 public readonly record struct CreateSchemaResult
 {
     /// <summary>
-    /// True if the operation was successful, otherwise false
+    /// Gets a value indicating whether the operation was successful.
     /// </summary>
-    public required bool Success { get; init; }
+    required public bool Success { get; init; }
 
     /// <summary>
-    /// If the operation was succesful, this is the Guid of the new schema
+    /// Gets the Guid of the new schema, which is provided if this operation was successful.
     /// </summary>
     public string? NewGuid { get; init; }
 }

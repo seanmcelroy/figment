@@ -18,8 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// This function is used to encapsulate another inner value or function.  Parenthesis
+/// are represnetd in function parse trees as NoOp functions.
+/// </summary>
 public class NoOp : FunctionBase
 {
+    /// <inheritdoc/>
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
     {
         return parameters.Length switch

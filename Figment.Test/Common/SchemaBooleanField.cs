@@ -26,7 +26,7 @@ public sealed class SchemaBooleanField
     {
         var f = new Figment.Common.SchemaBooleanField(nameof(IsValidAsync));
 
-        var s = await f.GetReadableFieldTypeAsync(false, CancellationToken.None);
+        var s = await f.GetReadableFieldTypeAsync(CancellationToken.None);
 
         Assert.IsNotNull(s);
         Assert.AreEqual("bool", s, StringComparer.Ordinal);

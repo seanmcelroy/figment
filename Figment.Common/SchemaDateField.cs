@@ -24,6 +24,13 @@ namespace Figment.Common;
 
 public class SchemaDateField(string Name) : SchemaTextField(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "date";
 
     // RFC 3339 Formats
@@ -57,33 +64,47 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
         "MMMM d yyyy",
     ];
 
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = "string"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
+    /// <inheritdoc/>
     [JsonPropertyName("format")]
     public string Format { get; } = "date"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult("date");
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("date");
 
+    /// <inheritdoc/>
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
         if (value == null)
+        {
             return !Required;
+        }
 
         // If native DateTime or DateTimeOffset, go with it.
         if (value is DateTimeOffset)
+        {
             return true;
+        }
+
         if (value is DateTime)
+        {
             return true;
+        }
 
         // Handle it like text
         if (!await base.IsValidAsync(value, cancellationToken))
+        {
             return false;
+        }
 
         // We parse here from a string because JSON doesn't support native dates.
         return TryParseDate(value.ToString(), out DateTimeOffset _);
     }
 
+    /// <inheritdoc/>
     public override bool TryMassageInput(object? input, out object? output)
     {
         if (input == null || input.GetType() == typeof(DateTimeOffset))

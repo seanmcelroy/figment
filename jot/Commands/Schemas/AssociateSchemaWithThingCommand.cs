@@ -5,8 +5,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Command that associates a <see cref="Thing"/> with a <see cref="Schema"/>.
+/// </summary>
 public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<AssociateSchemaWithThingCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, AssociateSchemaWithThingCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
@@ -73,8 +77,10 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
                         AmbientErrorContext.Provider.LogError($"Unable to load schema '{settings.SchemaName}'.");
                         return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                     }
+
                     break;
                 }
+
             default:
                 AmbientErrorContext.Provider.LogError("Ambiguous match; more than one schema matches this name.");
                 return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
@@ -111,6 +117,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
                     AmbientErrorContext.Provider.LogError($"Unable to load thing '{settings.ThingName}'.");
                     return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
                 }
+
                 break;
             default:
                 AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
@@ -131,9 +138,13 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
         }
 
         if (modifiedThing.SchemaGuids.Count == 1)
+        {
             AmbientErrorContext.Provider.LogDone($"{modifiedThing.Name} is now a '{schema.Name}'.");
+        }
         else
+        {
             AmbientErrorContext.Provider.LogDone($"{modifiedThing.Name} is now also a '{schema.Name}'.");
+        }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

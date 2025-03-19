@@ -4,14 +4,19 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// The settings supplied to the <see cref="DissociateSchemaFromThingCommand"/>.
+/// </summary>
 public class DissociateSchemaFromThingCommandSettings : SchemaCommandSettings
 {
-    public const int ARG_POSITION_THING_NAME = 0;
-
+    /// <summary>
+    /// Gets the name of the <see cref="Thing"/> to dissociate from the <see cref="Schema"/>.
+    /// </summary>
     [Description("Name of the thing to dissociate from the schema")]
-    [CommandArgument(ARG_POSITION_THING_NAME, "<THING_NAME>")]
-    public string? ThingName { get; init; }
+    [CommandArgument(0, "<THING_NAME>")]
+    required public string ThingName { get; init; }
 
+    /// <inheritdoc/>
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(ThingName)

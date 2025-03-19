@@ -7,8 +7,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Command that imports entities as <see cref="Thing"/>s of a <see cref="Schema"/> type.
+/// </summary>
 public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThingsCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ImportSchemaThingsCommandSettings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.FilePath)
@@ -49,8 +53,10 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                         AmbientErrorContext.Provider.LogError($"Unable to load schema '{settings.SchemaName}'.");
                         return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                     }
+
                     break;
                 }
+
             default:
                 AmbientErrorContext.Provider.LogError("Ambiguous match; more than one schema matches this name.");
                 return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
@@ -86,13 +92,10 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-
         await foreach (var thing in things)
         {
 
         }
-
-
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
@@ -105,7 +108,9 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         ArgumentNullException.ThrowIfNull(schema);
 
         if (!File.Exists(filePath))
+        {
             yield break;
+        }
 
         using var reader = new StreamReader(filePath);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -128,6 +133,5 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         // Is this a CSV?
 
         yield break;
-
     }
 }

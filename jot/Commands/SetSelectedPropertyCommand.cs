@@ -23,6 +23,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
         AnsiConsole.MarkupLine("    [lime]formula[/] <FORMULA>");
     }
 
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SetSelectedPropertyCommandSettings settings, CancellationToken cancellationToken)
     {
         if (Program.SelectedEntity.Equals(Reference.EMPTY))
@@ -41,7 +42,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                         return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                     }
 
-                    if (string.Compare("display", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
+                    if (string.Equals("display", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase))
                     {
                         var subset = new SetSchemaPropertyDisplayCommandSettings
                         {
@@ -49,26 +50,26 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             PropertyName = settings.PropertyName,
                             DisplayName = context.Arguments.Count < 4 ? null : context.Arguments[3],
                             Culture = context.Arguments.Count < 5 ? null : context.Arguments[4],
-                            Verbose = settings.Verbose
+                            Verbose = settings.Verbose,
                         };
                         var cmd = new SetSchemaPropertyDisplayCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
                     }
 
-                    if (string.Compare("type", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
+                    if (string.Equals("type", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase))
                     {
                         var subset = new SetSchemaPropertyTypeCommandSettings
                         {
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
                             FieldType = context.Arguments.Count < 4 ? null : context.Arguments[3],
-                            Verbose = settings.Verbose
+                            Verbose = settings.Verbose,
                         };
                         var cmd = new SetSchemaPropertyTypeCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
                     }
 
-                    if (string.Compare("require", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
+                    if (string.Equals("require", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase))
                     {
                         var parsable = SchemaBooleanField.TryParseBoolean(context.Arguments.Count < 4 ? null : context.Arguments[3], out bool required);
                         if (!parsable)
@@ -76,25 +77,26 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             AmbientErrorContext.Provider.LogError($"Unable to parse '{context.Arguments[3]}' as a true/false boolean variable.");
                             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                         }
+
                         var subset = new SetSchemaPropertyRequiredCommandSettings
                         {
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
                             Required = required,
-                            Verbose = settings.Verbose
+                            Verbose = settings.Verbose,
                         };
                         var cmd = new SetSchemaPropertyRequiredCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
                     }
 
-                    if (string.Compare("formula", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase) == 0)
+                    if (string.Equals("formula", context.Arguments[2], StringComparison.CurrentCultureIgnoreCase))
                     {
                         var subset = new SetSchemaPropertyFormulaCommandSettings
                         {
                             SchemaName = Program.SelectedEntity.Guid,
                             PropertyName = settings.PropertyName,
                             Formula = context.Arguments.Count < 4 ? null : context.Arguments[3],
-                            Verbose = settings.Verbose
+                            Verbose = settings.Verbose,
                         };
                         var cmd = new SetSchemaPropertyFormulaCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -104,11 +106,13 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                     PrintSchemaSubcommandHelp();
                     return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                 }
+
             case Reference.ReferenceType.Thing:
                 {
                     var cmd = new SetThingPropertyCommand();
                     return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Values?[0], Verbose = settings.Verbose }, cancellationToken);
                 }
+
             default:
                 {
                     AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(Program.SelectedEntity.Type)}'.");

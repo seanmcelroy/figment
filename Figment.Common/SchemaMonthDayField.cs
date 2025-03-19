@@ -24,37 +24,57 @@ namespace Figment.Common;
 
 public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public new const string SCHEMA_FIELD_TYPE = "monthday";
 
     // RFC 3339 Formats
-    internal static readonly string[] _formats = [
+    private static readonly string[] _formats = [
         "M-d",
         "M/d",
         "MMM d",
         "MMMM d",
     ];
 
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = SchemaIntegerField.SCHEMA_FIELD_TYPE; // SCHEMA_FIELD_TYPE does not match JSON schema
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult("month+day");
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("month+day");
 
+    /// <inheritdoc/>
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
         if (value is DateTimeOffset)
+        {
             return true;
+        }
+
         if (value is DateTime)
+        {
             return true;
+        }
 
         if (!await base.IsValidAsync(value, cancellationToken))
+        {
             return false;
+        }
 
         if (value == null)
+        {
             return true;
+        }
 
         return value is int i && IsValid(i);
     }
 
+    /// <inheritdoc/>
     public override bool TryMassageInput(object? input, out object? output)
     {
         if (input == null)
@@ -72,7 +92,7 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
 
         if (SchemaDateField.TryParseDate(prov, out DateTimeOffset dto))
         {
-            output = dto.Month * 100 + dto.Day;
+            output = (dto.Month * 100) + dto.Day;
             return true;
         }
 
@@ -90,7 +110,7 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
 
         if (DateTimeOffset.TryParseExact(input, _formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset dte))
         {
-            output = dte.Month * 100 + dte.Day;
+            output = (dte.Month * 100) + dte.Day;
             return true;
         }
 

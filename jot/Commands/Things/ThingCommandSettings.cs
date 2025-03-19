@@ -22,18 +22,29 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Things;
 
+/// <summary>
+/// The settings supplied to commands that only need to target a <see cref="Thing"/>
+/// and have no other arguments.
+/// </summary>
+/// <seealso cref="DeleteThingCommand"/>
+/// <seealso cref="ValidateThingCommand"/>
 public class ThingCommandSettings : CommandSettings
 {
-    public const int ARG_POSITION_NAME = 0;
-
+    /// <summary>
+    /// Gets the name of the thing to select.
+    /// </summary>
     [Description("Name of the thing to select")]
-    [CommandArgument(ARG_POSITION_NAME, "<NAME>")]
-    public string? ThingName { get; init; }
+    [CommandArgument(0, "<NAME>")]
+    required public string ThingName { get; init; }
 
+    /// <summary>
+    /// Gets whether to provide verbose detail, if available, for any outputs.
+    /// </summary>
     [Description("Provides verbose detail, if available, for any outputs")]
     [CommandOption("-v|--verbose")]
-    public required bool? Verbose { get; init; } = Program.Verbose;
+    required public bool? Verbose { get; init; } = Program.Verbose;
 
+    /// <inheritdoc/>
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(ThingName)

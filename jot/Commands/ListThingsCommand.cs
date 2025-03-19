@@ -5,8 +5,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Lists all the things in the database.
+/// </summary>
 public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListThingsCommandSettings settings, CancellationToken cancellationToken)
     {
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -31,7 +35,6 @@ public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettin
             await foreach (var (_, name) in thingProvider.GetAll(cancellationToken))
                 Console.WriteLine(name);
         }
-
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

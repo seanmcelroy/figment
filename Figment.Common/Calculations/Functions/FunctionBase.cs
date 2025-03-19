@@ -22,10 +22,29 @@ using System.Globalization;
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// The abstract base class from which all functions usable in formulas by the <see cref="Parser"/> derive.
+/// </summary>
 public abstract class FunctionBase
 {
+    /// <summary>
+    /// Evaluates the function using the given input <paramref name="parameters"/> over the supplied <paramref name="targets"/>.
+    /// </summary>
+    /// <param name="parameters">The input parameters to provide for the funciton to perform its calculation.</param>
+    /// <param name="targets">The targets over which the calculation should be preformed.</param>
+    /// <returns>The outcome calculation result, whether a success or failure.</returns>
     public abstract CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets);
 
+    /// <summary>
+    /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a date.
+    /// </summary>
+    /// <param name="ordinal">The index of the <paramref name="parameters"/> array from which to attempt to parse the value.</param>
+    /// <param name="required">A value indicating whether or not the parameter is required.</param>
+    /// <param name="parameters">The array of parametes from which to parse a value.</param>
+    /// <param name="targets">The things over which the function parse tree should operate. </param>
+    /// <param name="calculationResult">The output result, which would either be a success if the parameter could be retrieved, or a failure with an error message.</param>
+    /// <param name="dateResult">The date that was retrieved, if successful.</param>
+    /// <returns>Whether or not the parameter could be retrieved.</returns>
     public bool TryGetDateParameter(
         int ordinal,
         bool required,
@@ -71,6 +90,16 @@ public abstract class FunctionBase
         return false;
     }
 
+    /// <summary>
+    /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a double.
+    /// </summary>
+    /// <param name="ordinal">The index of the <paramref name="parameters"/> array from which to attempt to parse the value.</param>
+    /// <param name="required">A value indicating whether or not the parameter is required.</param>
+    /// <param name="parameters">The array of parametes from which to parse a value.</param>
+    /// <param name="targets">The things over which the function parse tree should operate. </param>
+    /// <param name="calculationResult">The output result, which would either be a success if the parameter could be retrieved, or a failure with an error message.</param>
+    /// <param name="doubleResult">The double that was retrieved, if successful.</param>
+    /// <returns>Whether or not the parameter could be retrieved.</returns>
     public bool TryGetDoubleParameter(
         int ordinal,
         bool required,
@@ -94,7 +123,7 @@ public abstract class FunctionBase
             return true;
         }
 
-        // Unparsable and required - try parsing as a date like yyyy-mm-dd, etc.
+        // Unparsable and required - try parsing as a double.
         if (double.TryParse(stringResult, out doubleResult))
         {
             calculationResult = CalculationResult.Success(doubleResult, parameters[ordinal - 1].ResultType);
@@ -105,6 +134,16 @@ public abstract class FunctionBase
         return false;
     }
 
+    /// <summary>
+    /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a string.
+    /// </summary>
+    /// <param name="ordinal">The index of the <paramref name="parameters"/> array from which to attempt to parse the value.</param>
+    /// <param name="required">A value indicating whether or not the parameter is required.</param>
+    /// <param name="parameters">The array of parametes from which to parse a value.</param>
+    /// <param name="targets">The things over which the function parse tree should operate. </param>
+    /// <param name="calculationResult">The output result, which would either be a success if the parameter could be retrieved, or a failure with an error message.</param>
+    /// <param name="stringResult">The string that was retrieved, if successful.</param>
+    /// <returns>Whether or not the parameter could be retrieved.</returns>
     public bool TryGetStringParameter(
         int ordinal,
         bool required,
@@ -131,6 +170,15 @@ public abstract class FunctionBase
         return true;
     }
 
+    /// <summary>
+    /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a generic result.
+    /// </summary>
+    /// <param name="ordinal">The index of the <paramref name="parameters"/> array from which to attempt to parse the value.</param>
+    /// <param name="required">A value indicating whether or not the parameter is required.</param>
+    /// <param name="parameters">The array of parametes from which to parse a value.</param>
+    /// <param name="targets">The things over which the function parse tree should operate. </param>
+    /// <param name="result">The value that was retrieved, if successful.</param>
+    /// <returns>Whether or not the parameter could be retrieved.</returns>
     public bool TryGetParameter(
         int ordinal,
         bool required,
@@ -168,6 +216,7 @@ public abstract class FunctionBase
                     result = CalculationResult.Error(CalculationErrorType.FormulaParse, $"Parameter {ordinal} is required.");
                     return false;
                 }
+
                 result = p;
                 return true;
             case CalculationResultType.PropertyValue:
@@ -186,7 +235,7 @@ public abstract class FunctionBase
                 }
 
                 // Handle special built-ins
-                if (string.Compare(propName, nameof(Thing.Name), StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(propName, nameof(Thing.Name), StringComparison.OrdinalIgnoreCase))
                 {
                     result = CalculationResult.Success(targetsList[0].Name, CalculationResultType.PropertyValue);
                     return true;
@@ -207,8 +256,9 @@ public abstract class FunctionBase
 
                 result = CalculationResult.Error(CalculationErrorType.FormulaParse, $"Property [{propName}] is not found on thing '{targetsList[0].Name}' ({targetsList[0].Guid}).");
                 return false;
+
             default:
-                throw new NotImplementedException("???");
+                throw new InvalidOperationException($"Unsupported result type {p.ResultType}");
         }
     }
 }

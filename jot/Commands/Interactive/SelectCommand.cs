@@ -4,25 +4,17 @@ using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace jot.Commands;
+namespace jot.Commands.Interactive;
 
+/// <summary>
+/// Selects an entity by name or ID.
+/// </summary>
 public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        SCHEMA_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR,
-        THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
-    }
-
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SelectCommandSettings settings, CancellationToken cancellationToken)
     {
         // select microsoft
-
         if (string.IsNullOrWhiteSpace(settings.Name))
         {
             if (Program.SelectedEntity != Reference.EMPTY)
@@ -31,27 +23,27 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 AmbientErrorContext.Provider.LogDone($"Selection cleared.");
                 Program.SelectedEntity = Reference.EMPTY;
                 Program.SelectedEntityName = string.Empty;
-                return (int)ERROR_CODES.SUCCESS;
+                return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
             }
 
             AmbientErrorContext.Provider.LogError("You must first 'select' one by specifying a [NAME] argument.");
             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
             Program.SelectedEntityName = string.Empty;
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         var possibilities =
             Schema.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
-                .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)]
-                ).Distinct()
+                .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)])
+                .Distinct()
                 .ToArray();
 
         switch (possibilities.Length)
         {
             case 0:
                 AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                return (int)ERROR_CODES.NOT_FOUND;
+                return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
             case 1:
                 switch (possibilities[0].Type)
                 {
@@ -70,14 +62,15 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                                 AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{possibilities[0].Guid}'.");
                                 Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                                 Program.SelectedEntityName = string.Empty;
-                                return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+                                return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                             }
 
                             AmbientErrorContext.Provider.LogDone($"Schema {schemaLoaded.Name} selected.");
                             Program.SelectedEntity = possibilities[0];
                             Program.SelectedEntityName = schemaLoaded.Name;
-                            return (int)ERROR_CODES.SUCCESS;
+                            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
                         }
+
                     case Reference.ReferenceType.Thing:
                         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
                         if (thingProvider == null)
@@ -92,20 +85,21 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                             AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{possibilities[0].Guid}'.");
                             Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                             Program.SelectedEntityName = string.Empty;
-                            return (int)ERROR_CODES.THING_LOAD_ERROR;
+                            return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
                         }
 
                         AmbientErrorContext.Provider.LogDone($"Thing {thingLoaded.Name} selected.");
                         Program.SelectedEntity = possibilities[0];
                         Program.SelectedEntityName = thingLoaded.Name;
-                        return (int)ERROR_CODES.SUCCESS;
+                        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
 
                     default:
                         AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(possibilities[0].Type)}'.");
                         Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                         Program.SelectedEntityName = string.Empty;
-                        return (int)ERROR_CODES.UNKNOWN_TYPE;
+                        return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
                 }
+
             default:
                 var loadAnyEntity = new Func<Reference, CancellationToken, Task<object?>>(
                         async (reference, cancellationToken1) =>
@@ -135,7 +129,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
                     Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
                     Program.SelectedEntityName = string.Empty;
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
+                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
                 }
 
                 var which = AnsiConsole.Prompt(
@@ -149,7 +143,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 Program.SelectedEntity = which.Reference;
                 Program.SelectedEntityName = which.Entity.ToString() ?? which.Reference.Guid ?? string.Empty;
                 AmbientErrorContext.Provider.LogDone($"{which.Entity} selected.");
-                return (int)ERROR_CODES.SUCCESS;
+                return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
     }
 }

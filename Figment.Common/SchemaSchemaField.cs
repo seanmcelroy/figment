@@ -22,24 +22,38 @@ namespace Figment.Common;
 
 public class SchemaSchemaField(string Name) : SchemaTextField(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "schema";
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
+    /// <inheritdoc/>
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
         if (!await base.IsValidAsync(value, cancellationToken))
+        {
             return false;
+        }
 
         var str = value as string;
         if (string.IsNullOrWhiteSpace(str))
+        {
             return false;
+        }
 
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
+        {
             return true; // Assume.
+        }
 
-        var exists = await ssp.GuidExists(str, cancellationToken);
-        return exists;
+        return await ssp.GuidExists(str, cancellationToken);
     }
 }

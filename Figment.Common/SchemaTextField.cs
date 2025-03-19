@@ -24,6 +24,7 @@ namespace Figment.Common;
 
 public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 {
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = "string";
 
@@ -39,19 +40,30 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public virtual string? Pattern { get; set; }
 
+    /// <inheritdoc/>
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {
         if (value == null)
+        {
             return Task.FromResult(!Required);
+        }
 
         var str = value.ToString();
 
         if (MinLength.HasValue && (str == null || str.Length < MinLength.Value))
+        {
             return Task.FromResult(false);
+        }
+
         if (MaxLength.HasValue && str?.Length > MaxLength.Value)
+        {
             return Task.FromResult(false);
+        }
+
         if (!string.IsNullOrWhiteSpace(Pattern) && (str == null || !Regex.IsMatch(str, Pattern)))
+        {
             return Task.FromResult(false);
+        }
 
         return Task.FromResult(true);
     }
@@ -60,7 +72,9 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (prop.Equals(default(JsonElement)))
+        {
             throw new ArgumentException("Default struct value is invalid", nameof(prop));
+        }
 
         var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
         ushort? minLength = null, maxLength = null;
@@ -73,6 +87,7 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
                 minLength = ml;
             }
         }
+
         if (subs.TryGetValue("maxLength", out JsonElement typeMaxLength))
         {
             maxLengthString = typeMinLength.ToString();
@@ -81,20 +96,21 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
                 maxLength = ml;
             }
         }
+
         if (subs.TryGetValue("pattern", out JsonElement typePattern))
         {
             pattern = typePattern.ToString();
         }
 
-        var f = new SchemaTextField(name)
+        return new SchemaTextField(name)
         {
             MinLength = minLength,
             MaxLength = maxLength,
             Pattern = pattern,
-            Required = required
+            Required = required,
         };
-        return f;
     }
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult("text");
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("text");
 }

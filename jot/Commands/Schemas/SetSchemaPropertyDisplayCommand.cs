@@ -4,17 +4,22 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Sets a 'pretty' display name for a schema field.
+/// </summary>
 public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<SetSchemaPropertyDisplayCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SetSchemaPropertyDisplayCommandSettings settings, CancellationToken cancellationToken)
     {
         var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
         // display Pizza
-        // require pizza it-IT 
-
+        // require pizza it-IT
         var propName = settings.PropertyName;
         var sp = schema!.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
@@ -35,15 +40,19 @@ public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<Set
                 whatChanged = $" Removed display name '{disp}' for culture {culture}";
                 prop.DisplayNames.Remove(culture);
             }
+
             if (prop.DisplayNames?.Count == 0)
+            {
                 prop.DisplayNames = null;
+            }
         }
         else if (prop.DisplayNames == null)
         {
             whatChanged = $" Added new display name '{settings.DisplayName}' for culture {culture}";
             prop.DisplayNames = new Dictionary<string, string>() { { culture, settings.DisplayName } };
         }
-        else if (prop.DisplayNames.ContainsKey(culture)) {
+        else if (prop.DisplayNames.ContainsKey(culture))
+        {
             whatChanged = $" Changed display name from '{prop.DisplayNames[culture]}' to '{settings.DisplayName}' for culture {culture}";
             prop.DisplayNames[culture] = settings.DisplayName;
         }
@@ -52,9 +61,14 @@ public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<Set
         if (!saved)
         {
             if (settings.Verbose ?? false)
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            }
             else
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

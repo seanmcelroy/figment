@@ -21,22 +21,42 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A boolean field which stores a true or false value.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
 public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "bool";
 
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
+    /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         if (value == null)
+        {
             return Task.FromResult(!Required);
+        }
 
         if (value is string)
+        {
             return Task.FromResult(false); // Should be native boolean.
+        }
 
         return Task.FromResult(bool.TryParse(value.ToString(), out bool _));
     }
@@ -49,25 +69,25 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
             return true;
         }
 
-        if (string.Compare("yes", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        if (string.Equals("yes", input, StringComparison.CurrentCultureIgnoreCase))
         {
             output = true;
             return true;
         }
 
-        if (string.Compare("no", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        if (string.Equals("no", input, StringComparison.CurrentCultureIgnoreCase))
         {
             output = false;
             return true;
         }
 
-        if (string.Compare("on", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        if (string.Equals("on", input, StringComparison.CurrentCultureIgnoreCase))
         {
             output = true;
             return true;
         }
 
-        if (string.Compare("off", input, StringComparison.CurrentCultureIgnoreCase) == 0)
+        if (string.Equals("off", input, StringComparison.CurrentCultureIgnoreCase))
         {
             output = false;
             return true;
@@ -83,6 +103,7 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
         return false;
     }
 
+    /// <inheritdoc/>
     public override bool TryMassageInput(object? input, out object? output)
     {
         if (input == null || input.GetType() == typeof(bool))

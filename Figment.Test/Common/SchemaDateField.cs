@@ -26,7 +26,7 @@ public sealed class SchemaDateField
     {
         var f = new Figment.Common.SchemaDateField(nameof(IsValidAsync));
 
-        var s = await f.GetReadableFieldTypeAsync(false, CancellationToken.None);
+        var s = await f.GetReadableFieldTypeAsync(CancellationToken.None);
 
         Assert.IsNotNull(s);
         Assert.AreEqual("date", s, StringComparer.Ordinal);

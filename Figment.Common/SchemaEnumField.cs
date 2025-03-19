@@ -101,12 +101,12 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
 
         var f = new SchemaEnumField(name, [.. vals])
         {
-            Required = required
+            Required = required,
         };
         return f;
     }
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken)
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
         if (Values == null || Values.Length == 0)
             return Task.FromResult("enum []");

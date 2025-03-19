@@ -3,11 +3,15 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// The settings supplied to the <see cref="SetSchemaPluralCommand"/>.
+/// </summary>
 public class SetSchemaPluralCommandSettings : SchemaCommandSettings
 {
-    public const int ARG_POSITION_PLURAL = 0;
-
+    /// <summary>
+    /// Gets the plural word for items of this schema, used as a keyword to enumerate items in interactive mode.
+    /// </summary>
     [Description("Plural word for items of this schema, used as a keyword to enumerate items in interactive mode")]
-    [CommandArgument(ARG_POSITION_PLURAL, "[PLURAL]")]
+    [CommandArgument(0, "[PLURAL]")]
     public string? Plural { get; init; }
 }

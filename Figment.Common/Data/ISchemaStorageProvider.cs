@@ -21,10 +21,10 @@ namespace Figment.Common.Data;
 public interface ISchemaStorageProvider
 {
     /// <summary>
-    /// Creates a new schema
+    /// Creates a new <see cref="Schema"/>.
     /// </summary>
-    /// <param name="schemaName">The name of the schema</param>
-    /// <param name="cancellationToken">A cancellation token for asynchronous methods</param>
+    /// <param name="schemaName">The name of the <see cref="Schema"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>True, if the operation was successful.  Otherwise, false.</returns>
     public Task<CreateSchemaResult> CreateAsync(
         string schemaName,

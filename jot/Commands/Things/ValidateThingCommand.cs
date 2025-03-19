@@ -5,19 +5,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Things;
 
+/// <summary>
+/// Validates a <see cref="Thing"/> is consistent with its <see cref="Schema"/>.
+/// </summary>
 public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        SCHEMA_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR,
-        THING_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR,
-    }
-
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ThingCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
@@ -26,7 +19,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AmbientErrorContext.Provider.LogError("To validate a thing, you must first 'select' a thing.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
             }
 
             var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
@@ -36,20 +29,20 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             {
                 case 0:
                     AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)ERROR_CODES.NOT_FOUND;
+                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibilities[0];
                     break;
                 default:
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
+                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
             AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-            return (int)ERROR_CODES.UNKNOWN_TYPE;
+            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -63,7 +56,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         if (thing == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
-            return (int)ERROR_CODES.THING_LOAD_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
         }
 
         await Console.Out.WriteLineAsync($"Validating {thing.Name} ({thing.Guid}) ...");
@@ -73,14 +66,16 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         {
             thingProperties.Add(property);
             if (!property.Valid)
+            {
                 AmbientErrorContext.Provider.LogWarning($"Property {property.SimpleDisplayName} ({property.TruePropertyName}) has an invalid value of '{property.Value}'.");
+            }
         }
 
         if (thing.SchemaGuids == null
             || thing.SchemaGuids.Count == 0)
         {
             AmbientErrorContext.Provider.LogDone($"Validation has finished.");
-            return (int)ERROR_CODES.SUCCESS;
+            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
         if (thing.SchemaGuids.Count > 0)
@@ -101,7 +96,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                 if (schemaLoaded == null)
                 {
                     AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
-                    return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+                    return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                 }
 
                 foreach (var sp in schemaLoaded.Properties
@@ -116,6 +111,6 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         }
 
         AmbientErrorContext.Provider.LogDone($"Validation has finished.");
-        return (int)ERROR_CODES.SUCCESS;
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

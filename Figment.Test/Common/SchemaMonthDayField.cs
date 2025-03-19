@@ -26,7 +26,7 @@ public sealed class SchemaMonthDayField
     {
         var f = new Figment.Common.SchemaMonthDayField(nameof(IsValidAsync));
 
-        var s = await f.GetReadableFieldTypeAsync(false, CancellationToken.None);
+        var s = await f.GetReadableFieldTypeAsync(CancellationToken.None);
 
         Assert.IsNotNull(s);
         Assert.AreEqual("month+day", s, StringComparer.Ordinal);

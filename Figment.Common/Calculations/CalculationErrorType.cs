@@ -26,5 +26,5 @@ public enum CalculationErrorType
     DivisionByZero = 3, // #DIV
     Recursion = 4,
     BadValue = 5, // #VALUE
-    InternalError = 6
+    InternalError = 6,
 }

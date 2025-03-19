@@ -4,8 +4,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas.ImportMaps;
 
+/// <summary>
+/// Creates a new import map to link file fields to <see cref="Schema"/> properties.
+/// </summary>
 public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, NewImportMapCommandSettings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.ImportMapName))
@@ -22,9 +26,12 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
 
         var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
-        if (schema!.ImportMaps.Any(i => string.Compare(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase) == 0)) {
+        if (schema!.ImportMaps.Any(i => string.Compare(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase) == 0))
+        {
             AmbientErrorContext.Provider.LogError($"Schema '{schema.Name}' already has an import map named '{settings.ImportMapName}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
@@ -36,9 +43,14 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
         if (!saved)
         {
             if (settings.Verbose ?? false)
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            }
             else
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

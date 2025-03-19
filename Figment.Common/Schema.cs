@@ -22,19 +22,13 @@ using Figment.Common.Data;
 namespace Figment.Common;
 
 /// <summary>
-/// A set of field definitions a thing can optionally implement
+/// A set of field definitions a thing can optionally implement.
 /// </summary>
-/// <param name="Guid">The immutable unique identifier of the schema</param>
-/// <param name="Name">A display name for the schema</param>
-/// <remarks>This class is not directly serialized to JSON, that is done by <see cref="SchemaDefinition"/>.
+/// <param name="Guid">The immutable unique identifier of the schema.</param>
+/// <param name="Name">A display name for the schema.</param>
+/// <remarks>This class is not directly serialized to JSON, that is done by <see cref="SchemaDefinition"/>.</remarks>
 public class Schema(string Guid, string Name)
 {
-    public enum SchemaFieldType
-    {
-        Text = 0,
-        Uri = 1,
-        Email = 2,
-    }
     public string Guid { get; init; } = Guid;
     public string Name { get; set; } = Name;
     public string EscapedName => Name.Contains(' ') && !Name.StartsWith('[') && !Name.EndsWith(']') ? $"[{Name}]" : Name;
@@ -58,11 +52,15 @@ public class Schema(string Guid, string Name)
 
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
+        {
             return null;
+        }
 
         var result = await provider.CreateAsync(schemaName, cancellationToken);
         if (!result.Success || result.NewGuid == null)
+        {
             return null;
+        }
 
         var newSchema = await provider.LoadAsync(result.NewGuid, cancellationToken);
         return newSchema;
@@ -72,7 +70,9 @@ public class Schema(string Guid, string Name)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
+        {
             return false;
+        }
 
         var success = await provider.DeleteAsync(Guid, cancellationToken);
         MarkModified();
@@ -83,7 +83,9 @@ public class Schema(string Guid, string Name)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
+        {
             return false;
+        }
 
         var saved = await provider.SaveAsync(this, cancellationToken);
         MarkModified();
@@ -97,16 +99,20 @@ public class Schema(string Guid, string Name)
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         if (minLength.HasValue && maxLength.HasValue)
+        {
             ArgumentOutOfRangeException.ThrowIfGreaterThan(minLength.Value, maxLength.Value, nameof(minLength));
+        }
 
         if (Properties.ContainsKey(name))
+        {
             throw new ArgumentException($"A field named '{name}' already exists on this schema", nameof(name));
+        }
 
         var stf = new SchemaTextField(name)
         {
             MinLength = minLength,
             MaxLength = maxLength,
-            Pattern = pattern
+            Pattern = pattern,
         };
         Properties.Add(name, stf);
         return stf;
@@ -118,7 +124,9 @@ public class Schema(string Guid, string Name)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
-            yield break; ;
+        {
+            yield break;
+        }
 
         // Shortcut - See if it's a guid first of all.
         if (await provider.GuidExists(guidOrNamePart, cancellationToken))
@@ -126,7 +134,7 @@ public class Schema(string Guid, string Name)
             yield return new Reference
             {
                 Guid = guidOrNamePart,
-                Type = Reference.ReferenceType.Schema
+                Type = Reference.ReferenceType.Schema,
             };
             yield break;
         }
@@ -135,7 +143,10 @@ public class Schema(string Guid, string Name)
         await foreach (var possible in provider.FindByPartialNameAsync(guidOrNamePart, cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
+            {
                 yield break;
+            }
+
             yield return possible;
         }
     }
@@ -145,7 +156,12 @@ public class Schema(string Guid, string Name)
         LastModified = DateTime.UtcNow;
         LastAccessed = LastModified;
     }
+
     public void MarkAccessed() => LastAccessed = DateTime.UtcNow;
 
+    /// <summary>
+    /// Returns the <see cref="Name"/> of this schema.
+    /// </summary>
+    /// <returns>The <see cref="Name"/> of this schema.</returns>
     public override string ToString() => Name;
 }

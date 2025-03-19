@@ -6,7 +6,8 @@ using Figment.Common.Errors;
 
 namespace jot.Commands.Schemas;
 
-public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand<T> where T : SchemaCommandSettings
+public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand<T>
+    where T : SchemaCommandSettings
 {
     protected async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(T settings, CancellationToken cancellationToken)
     {

@@ -6,11 +6,14 @@ namespace jot.Commands.Schemas;
 
 public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSchemaPropertyTypeCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SetSchemaPropertyTypeCommandSettings settings, CancellationToken cancellationToken)
     {
         var (tgs, schema, ssp) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
         // set work phone=+1 (212) 555-5555
         // auto-selects text
@@ -43,7 +46,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
                 Items = new SchemaArrayField.SchemaArrayFieldItems
                 {
                     Type = "string",
-                }
+                },
             };
             schema!.Properties[propName] = saf;
         }
@@ -58,6 +61,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             // Calculated
             var scf = new SchemaCalculatedField(propName);
             schema!.Properties[propName] = scf;
+
             // Formula is null at this point.
         }
         else if (string.CompareOrdinal(settings.FieldType, SchemaDateField.SCHEMA_FIELD_TYPE) == 0)
@@ -114,10 +118,10 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var suf = new SchemaUriField(propName);
             schema!.Properties[propName] = suf;
         }
-        else if (settings.FieldType != null 
-            && settings.FieldType.StartsWith('[') 
-            && settings.FieldType.EndsWith(']') 
-            && settings.FieldType.Length >= 5 
+        else if (settings.FieldType != null
+            && settings.FieldType.StartsWith('[')
+            && settings.FieldType.EndsWith(']')
+            && settings.FieldType.Length >= 5
             && settings.FieldType.Contains(','))
         {
             // Enum
@@ -143,9 +147,14 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
         if (!saved)
         {
             if (settings.Verbose ?? false)
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            }
             else
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

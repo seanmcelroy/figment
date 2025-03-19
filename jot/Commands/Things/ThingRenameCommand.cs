@@ -5,19 +5,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Things;
 
+/// <summary>
+/// Changes the name of a <see cref="Thing"/>.
+/// </summary>
 public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        SUCCESS = Globals.GLOBAL_ERROR_CODES.SUCCESS,
-        ARGUMENT_ERROR = Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR,
-        NOT_FOUND = Globals.GLOBAL_ERROR_CODES.NOT_FOUND,
-        AMBIGUOUS_MATCH = Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH,
-        UNKNOWN_TYPE = Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE,
-        SCHEMA_LOAD_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR,
-        SCHEMA_SAVE_ERROR = Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR,
-    }
-
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ThingRenameCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
@@ -26,7 +19,7 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
             if (string.IsNullOrWhiteSpace(settings.ThingName))
             {
                 AmbientErrorContext.Provider.LogError("To rename a thing, you must first 'select' one.");
-                return (int)ERROR_CODES.ARGUMENT_ERROR;
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
             }
 
             var possibleThings = Thing.ResolveAsync(settings.ThingName, cancellationToken)
@@ -36,20 +29,20 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
             {
                 case 0:
                     AmbientErrorContext.Provider.LogError("Nothing found with that name.");
-                    return (int)ERROR_CODES.NOT_FOUND;
+                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
                 case 1:
                     selected = possibleThings[0];
                     break;
                 default:
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
-                    return (int)ERROR_CODES.AMBIGUOUS_MATCH;
+                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
             }
         }
 
         if (selected.Type != Reference.ReferenceType.Thing)
         {
             AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-            return (int)ERROR_CODES.UNKNOWN_TYPE;
+            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -63,13 +56,13 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         if (thing == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
-            return (int)ERROR_CODES.SCHEMA_LOAD_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
         if (string.IsNullOrWhiteSpace(settings.NewName))
         {
             AmbientErrorContext.Provider.LogError("Name of a thing cannot be empty.");
-            return (int)ERROR_CODES.ARGUMENT_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         var oldName = thing.Name;
@@ -78,7 +71,7 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         if (!saved)
         {
             AmbientErrorContext.Provider.LogError($"Unable to save thing with Guid '{selected.Guid}'.");
-            return (int)ERROR_CODES.SCHEMA_SAVE_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
         // For 'name', we know we should rebuild indexes.
@@ -86,8 +79,10 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         AmbientErrorContext.Provider.LogDone($"'{oldName}' renamed to '{thing.Name}'.");
 
         if (string.CompareOrdinal(Program.SelectedEntity.Guid, thing.Guid) == 0)
+        {
             Program.SelectedEntityName = thing.Name;
+        }
 
-        return (int)ERROR_CODES.SUCCESS;
+        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

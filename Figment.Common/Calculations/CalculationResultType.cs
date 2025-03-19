@@ -18,10 +18,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations;
 
+/// <summary>
+/// The type of value stored in a <see cref="CalculationResult"/>.
+/// </summary>
 public enum CalculationResultType
 {
+    /// <summary>
+    /// The value represents an error.
+    /// </summary>
     Error = 0,
+
+    /// <summary>
+    /// The value represents a static value either input directly into a
+    /// formula definition.
+    /// </summary>
     StaticValue = 1,
+
+    /// <summary>
+    /// The value represents an indirect value dynamically dispatched
+    /// to a property on a <see cref="Thing"/>.
+    /// </summary>
     PropertyValue = 2,
-    FunctionResult = 3
+
+    /// <summary>
+    /// The value represents a static value from another inner calculation
+    /// returned from a <see cref="FunctionBase"/> subclass implementation.
+    /// </summary>
+    FunctionResult = 3,
 }

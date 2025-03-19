@@ -25,22 +25,49 @@ using Figment.Common.Errors;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A thing is the core object of Figment, which represents an entity which implements
+/// one or more schemas.
+/// </summary>
+/// <param name="Guid">Globally unique identifier for the thing.</param>
+/// <param name="Name">Name of the thing.</param>
 public class Thing(string Guid, string Name)
 {
-    private const string NameIndexFileName = $"_thing.names.csv";
+    private const string NameIndexFileName = "_thing.names.csv";
 
+    /// <summary>
+    /// Gets or sets the globally unique identifier for the thing.
+    /// </summary>
     public string Guid { get; set; } = Guid;
+
+    /// <summary>
+    /// Gets or sets the name of the thing.
+    /// </summary>
     public string Name { get; set; } = Name;
-    //    public string? SchemaGuid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique identifiers of the <see cref="Schema"/> associated with this thing.
+    /// </summary>
     public List<string> SchemaGuids { get; set; } = [];
 
-    //[Obsolete("Do not use outside of Things")]
+    // [Obsolete("Do not use outside of Things")]
     public Dictionary<string, object> Properties { get; init; } = [];
 
+    /// <summary>
+    /// Gets the date this thing was created.
+    /// </summary>
     [JsonIgnore]
     public DateTime CreatedOn { get; init; }
+
+    /// <summary>
+    /// Gets or sets the date things thing was last modified.
+    /// </summary>
     [JsonIgnore]
     public DateTime LastModified { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date things thing was last accessed.
+    /// </summary>
     [JsonIgnore]
     public DateTime LastAccessed { get; set; }
 
@@ -52,14 +79,16 @@ public class Thing(string Guid, string Name)
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
+        {
             yield break;
+        }
 
         if (await tsp.GuidExists(guidOrNamePart, cancellationToken))
         {
             yield return new Reference
             {
                 Guid = guidOrNamePart,
-                Type = Reference.ReferenceType.Thing
+                Type = Reference.ReferenceType.Thing,
             };
             yield break;
         }
@@ -67,44 +96,60 @@ public class Thing(string Guid, string Name)
         // Nope, so GLOBAL name searching...
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
+        {
             yield break;
+        }
 
         List<Reference> alreadyReturned = [];
 
         await foreach (var schemaRef in ssp.GetAll(cancellationToken))
+        {
             await foreach (var (reference, _) in tsp.FindByPartialNameAsync(schemaRef.reference.Guid, guidOrNamePart, cancellationToken))
             {
                 if (cancellationToken.IsCancellationRequested)
+                {
                     yield break;
+                }
 
                 if (alreadyReturned.Contains(reference))
+                {
                     continue;
+                }
 
                 alreadyReturned.Add(reference);
                 yield return reference;
             }
+        }
     }
 
     public async IAsyncEnumerable<Schema> GetAssociatedSchemas([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
-        if (SchemaGuids != null && SchemaGuids.Count > 0)
+        if (SchemaGuids?.Count > 0)
         {
             var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
             if (ssp == null)
+            {
                 yield break;
+            }
 
             foreach (var schemaGuid in SchemaGuids)
+            {
                 if (!string.IsNullOrWhiteSpace(schemaGuid))
                 {
                     if (cancellationToken.IsCancellationRequested)
+                    {
                         yield break;
+                    }
+
                     var schema = await ssp.LoadAsync(schemaGuid, cancellationToken);
                     if (schema != null)
+                    {
                         yield return schema;
+                    }
                 }
+            }
         }
-        yield break;
     }
 
     public static (string escapedPropKey, string fullDisplayName, string simpleDisplayName)
@@ -158,7 +203,9 @@ public class Thing(string Guid, string Name)
         MarkAccessed();
 
         if (Properties == null || Properties.Count == 0)
+        {
             yield break;
+        }
 
         // Does this thing adhere to any schemas?
         List<Schema> thingSchemas = [];
@@ -196,7 +243,7 @@ public class Thing(string Guid, string Name)
                 Valid = valid,
                 Required = required,
                 SchemaFieldType = schemaFieldType,
-                SchemaName = schema?.Name
+                SchemaName = schema?.Name,
             };
         }
     }
@@ -206,16 +253,23 @@ public class Thing(string Guid, string Name)
         // Does this thing adhere to any schemas?
         List<Schema> thingSchemas = [];
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
+        {
             thingSchemas.Add(schema);
+        }
 
         var unsetProperties = (await GetUnsetProperties(cancellationToken))
             .ToDictionary(k => $"{k.SchemaGuid}.{k.SimpleDisplayName}", v => (object?)null);
 
         var allProperties = new Dictionary<string, object?>();
         foreach (var setProperty in Properties)
+        {
             allProperties.Add(setProperty.Key, setProperty.Value);
+        }
+
         foreach (var unsetProperty in unsetProperties)
+        {
             allProperties.Add(unsetProperty.Key, null);
+        }
 
         var changedProperties = new Dictionary<string, object?>();
         foreach (var thingProp in allProperties)
@@ -227,7 +281,9 @@ public class Thing(string Guid, string Name)
             var required = false;
             var schemaFieldType = default(string?);
             if (schema == default)
+            {
                 continue; // If the schema was deleted, ignore this field.
+            }
 
             // Watch out, the schema field could have been deleted but it's still there on the instance.
             if (schema.Properties.TryGetValue(simpleDisplayName, out SchemaFieldBase? schemaField))
@@ -240,7 +296,9 @@ public class Thing(string Guid, string Name)
             if (schemaFieldType == null
                 || schemaFieldType.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0
                 || schemaField is not SchemaCalculatedField calcField)
+            {
                 continue; // Not a calculate field.
+            }
 
             if (string.IsNullOrWhiteSpace(calcField.Formula))
             {
@@ -256,17 +314,25 @@ public class Thing(string Guid, string Name)
 
             }
             else if ((thingProp.Value == null && result.Result != null)
-                || (thingProp.Value != null && !thingProp.Value.Equals(result.Result)))
+                || (thingProp.Value?.Equals(result.Result) == false))
+            {
                 changedProperties.Add(thingProp.Key, result.Result);
+            }
         }
 
         if (changedProperties.Count > 0)
         {
             foreach (var changed in changedProperties)
+            {
                 if (changed.Value == null)
+                {
                     Properties.Remove(changed.Key);
+                }
                 else
+                {
                     Properties[changed.Key] = changed.Value;
+                }
+            }
 
             await SaveAsync(cancellationToken);
         }
@@ -277,12 +343,15 @@ public class Thing(string Guid, string Name)
         // Does this thing adhere to any schemas?
         List<Schema> thingSchemas = [];
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
+        {
             thingSchemas.Add(schema);
+        }
 
         var unsetSchemaFields = thingSchemas
             .Select(s => new { Schema = s, s.Properties })
             .SelectMany(s => s.Properties
-                //.Where(p => p.Value.Type.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0) // Calculated properties are never 'unset'.
+
+                // .Where(p => p.Value.Type.CompareTo(SchemaCalculatedField.SCHEMA_FIELD_TYPE) != 0) // Calculated properties are never 'unset'.
                 .Select(p => (s, s.Schema.Guid, s.Schema.Name, p.Key)))
             .ToDictionary(
                 k => (k.Guid, k.Key),
@@ -297,14 +366,16 @@ public class Thing(string Guid, string Name)
                         SimpleDisplayName = simpleDisplayName,
                         SchemaGuid = v.Guid,
                         SchemaName = v.Name,
-                        Field = v.s.Properties[v.Key]
+                        Field = v.s.Properties[v.Key],
                     };
                 });
 
         await foreach (var thingProperty in GetProperties(cancellationToken))
         {
             if (thingProperty.SchemaGuid != null) // Remove from list of schema properties once we note it's set on the thing.
+            {
                 _ = unsetSchemaFields.Remove((thingProperty.SchemaGuid, thingProperty.SimpleDisplayName));
+            }
         }
 
         return [.. unsetSchemaFields.Values];
@@ -317,21 +388,23 @@ public class Thing(string Guid, string Name)
         await foreach (var prop in GetProperties(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
+            {
                 yield break;
+            }
 
-            if (string.Compare(propName, prop.TruePropertyName, StringComparison.CurrentCultureIgnoreCase) == 0)
+            if (string.Equals(propName, prop.TruePropertyName, StringComparison.CurrentCultureIgnoreCase))
             {
                 // For instance: c9882fca-62ed-4456-8dbb-231ae518a410.[Work Phone]
                 yield return prop;
             }
-            else if (string.Compare(propName, prop.FullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
-                && string.Compare(propName, nameof(Schema.Plural), StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
+            else if (string.Equals(propName, prop.FullDisplayName, StringComparison.CurrentCultureIgnoreCase)
+                && !string.Equals(propName, nameof(Schema.Plural), StringComparison.OrdinalIgnoreCase) // Ignore schema built-in
             )
             {
                 // For instance: vendor.[Work Phone]
                 yield return prop;
             }
-            else if (string.Compare(propName, prop.SimpleDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0)
+            else if (string.Equals(propName, prop.SimpleDisplayName, StringComparison.CurrentCultureIgnoreCase))
             {
                 // For instance: [Work Phone]
                 yield return prop;
@@ -343,14 +416,15 @@ public class Thing(string Guid, string Name)
         string propName,
         string? propValue,
         CancellationToken cancellationToken,
-        Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null
-        )
+        Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null)
     {
         MarkAccessed();
 
         // If prop name came in unescaped, and it should be escaped, then escape it here for comparisons.
         if (propName.Contains(' ') && !propName.StartsWith('[') && !propName.EndsWith(']'))
+        {
             propName = $"[{propName}]";
+        }
 
         // Is this property alerady set?
 
@@ -359,7 +433,6 @@ public class Thing(string Guid, string Name)
 
         // Step 2, Check properties on associated schemas NOT already set on this object
         Dictionary<string, object?> massagedPropValues = [];
-        //object? massagedPropValue = propValue; // comment
 
         var associatedSchemas = GetAssociatedSchemas(cancellationToken).ToBlockingEnumerable().ToArray();
 
@@ -369,15 +442,21 @@ public class Thing(string Guid, string Name)
             .Select(p => new { SchemaGuid = s.Guid, PropertyName = p.Key, Field = p.Value }))
             .ToArray();
         foreach (var y in x)
+        {
             if (y.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
+            {
                 massagedPropValues.Add($"{y.SchemaGuid}.{y.PropertyName}", prePossibleMassaged);
+            }
+        }
 
         List<ThingProperty> candidateProperties = [.. existingProperties];
 
         foreach (var schema in associatedSchemas)
         {
             if (cancellationToken.IsCancellationRequested)
+            {
                 return new ThingSetResult(false);
+            }
 
             foreach (var schemaProperty in schema.Properties)
             {
@@ -407,14 +486,17 @@ public class Thing(string Guid, string Name)
                                 string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0
                                     ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                                     : schemaProperty.Value.Type,
-                            SchemaName = candidateProperties[i].SchemaName
+                            SchemaName = candidateProperties[i].SchemaName,
                         };
                         candidatesMatch = true;
-                        //massagedPropValue = possibleMassagedPropValue;
                     }
                 }
+
                 if (candidatesMatch)
-                    continue;// Already set, no need to add a phantom.
+                {
+                    // Already set, no need to add a phantom.
+                    continue;
+                }
 
                 var fullDisplayName = $"{schema.EscapedName}.{schemaProperty.Key}";
                 var simpleDisplayName = schemaProperty.Key.Contains(' ') && !schemaProperty.Key.StartsWith('[') && !schemaProperty.Key.EndsWith(']') ? $"[{schemaProperty.Key}]" : schemaProperty.Key;
@@ -431,18 +513,19 @@ public class Thing(string Guid, string Name)
                         string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0
                             ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                             : schemaProperty.Value.Type,
-                    SchemaName = schema.Name
+                    SchemaName = schema.Name,
                 };
 
-                if (string.Compare(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
-                    && string.Compare(propName, "plural", StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
+                if (string.Equals(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase)
+                    && !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase) // Ignore schema built-in
                 )
                 {
                     // For instance, user does set vendor.[Work Phone]=+12125551234
                     candidateProperties.Add(phantomProp);
                 }
-                if (string.Compare(propName, simpleDisplayName, StringComparison.CurrentCultureIgnoreCase) == 0
-                    && string.Compare(propName, "plural", StringComparison.OrdinalIgnoreCase) != 0 // Ignore schema built-in
+
+                if (string.Equals(propName, simpleDisplayName, StringComparison.CurrentCultureIgnoreCase)
+                    && !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase) // Ignore schema built-in
                 )
                 {
                     // For instance, user does set [Work Phone]=+12125551234
@@ -453,7 +536,9 @@ public class Thing(string Guid, string Name)
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
+        {
             return new ThingSetResult(false);
+        }
 
         switch (candidateProperties.Count)
         {
@@ -461,27 +546,32 @@ public class Thing(string Guid, string Name)
                 {
                     // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
                     if (propValue == null || string.IsNullOrWhiteSpace(propValue.ToString()))
+                    {
                         Properties.Remove(propName);
+                    }
                     else
+                    {
                         Properties[propName] = propValue;
+                    }
 
                     // Special case for Name.
-                    if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
+                    if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
                     {
-                        if (propValue == null || string.IsNullOrWhiteSpace(propValue.ToString()))
+                        if (propValue == null || string.IsNullOrWhiteSpace(propValue))
                         {
                             AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
-                        Name = propValue.ToString()!;
+
+                        Name = propValue;
                     }
 
                     var saved = await SaveAsync(cancellationToken);
                     return new ThingSetResult(saved);
                 }
+
             case 1:
                 // Exactly one, we need to update:
-
                 var massagedPropValue = massagedPropValues
                     .Where(m => string.CompareOrdinal(m.Key, candidateProperties[0].TruePropertyName) == 0)
                     .Select(m => m.Value)
@@ -492,7 +582,9 @@ public class Thing(string Guid, string Name)
                 {
                     if (Properties.Remove(candidateProperties[0].TruePropertyName)
                         && candidateProperties[0].Required)
+                    {
                         AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
+                    }
 
                     var saved = await SaveAsync(cancellationToken);
                     return new ThingSetResult(saved);
@@ -549,49 +641,63 @@ public class Thing(string Guid, string Name)
 
                 // Special case for Name.
                 {
-                    if (string.Compare(propName, nameof(Name), StringComparison.OrdinalIgnoreCase) == 0)
+                    if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
                     {
                         if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                         {
                             AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false);
                         }
+
                         Name = massagedPropValue.ToString()!;
                     }
                     else
+                    {
                         Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                    }
 
                     var saved = await SaveAsync(cancellationToken);
                     return new ThingSetResult(saved);
                 }
+
             default:
                 // Ambiguous
                 AmbientErrorContext.Provider.LogError($"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.");
                 return new ThingSetResult(false);
         }
-
     }
 
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
+        {
             return false;
+        }
 
         var saved = await provider.SaveAsync(this, cancellationToken);
         MarkModified();
         return saved;
     }
 
+    /// <summary>
+    /// Associates this <see cref="Thing"/> with a <see cref="Schema"/>.
+    /// </summary>
+    /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which this <see cref="Thing"/> shall be associated.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
     public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
+        {
             return (false, null);
+        }
 
         var success = await provider.AssociateWithSchemaAsync(Guid, schemaGuid, cancellationToken);
+        MarkModified();
         return success;
     }
 
@@ -601,9 +707,12 @@ public class Thing(string Guid, string Name)
 
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
+        {
             return (false, null);
+        }
 
         var success = await provider.DissociateFromSchemaAsync(Guid, schemaGuid, cancellationToken);
+        MarkModified();
         return success;
     }
 
@@ -611,7 +720,9 @@ public class Thing(string Guid, string Name)
     {
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (provider == null)
+        {
             return false;
+        }
 
         var success = await provider.DeleteAsync(Guid, cancellationToken);
         MarkModified();
@@ -623,7 +734,12 @@ public class Thing(string Guid, string Name)
         LastModified = DateTime.UtcNow;
         LastAccessed = LastModified;
     }
+
     public void MarkAccessed() => LastAccessed = DateTime.UtcNow;
 
+    /// <summary>
+    /// Returns the <see cref="Name"/> of this thing.
+    /// </summary>
+    /// <returns>The <see cref="Name"/> of this thing.</returns>
     public override string ToString() => Name;
 }

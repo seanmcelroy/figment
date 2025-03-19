@@ -4,13 +4,19 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Sets the <see cref="SchemaCalculatedField.Formula"/> expression of a calculated property.
+/// </summary>
 public class SetSchemaPropertyFormulaCommand : SchemaCancellableAsyncCommand<SetSchemaPropertyFormulaCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SetSchemaPropertyFormulaCommandSettings settings, CancellationToken cancellationToken)
     {
         var (tgs, schema, ssp) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
         var propName = settings.PropertyName;
         if (string.IsNullOrWhiteSpace(propName))
@@ -51,9 +57,14 @@ public class SetSchemaPropertyFormulaCommand : SchemaCancellableAsyncCommand<Set
         if (!saved)
         {
             if (settings.Verbose ?? false)
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            }
             else
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

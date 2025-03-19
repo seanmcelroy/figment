@@ -5,11 +5,14 @@ namespace jot.Commands.Schemas;
 
 public class SchemaRenameCommand : SchemaCancellableAsyncCommand<SchemaRenameCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SchemaRenameCommandSettings settings, CancellationToken cancellationToken)
     {
         var (tgs, schema, ssp) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
         if (string.IsNullOrWhiteSpace(settings.NewName))
         {
@@ -23,9 +26,14 @@ public class SchemaRenameCommand : SchemaCancellableAsyncCommand<SchemaRenameCom
         if (!saved)
         {
             if (settings.Verbose ?? false)
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            }
             else
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
@@ -34,7 +42,9 @@ public class SchemaRenameCommand : SchemaCancellableAsyncCommand<SchemaRenameCom
         AmbientErrorContext.Provider.LogDone($"Schema '{oldName}' renamed to '{schema.Name}'.  Please ensure your 'plural' value for this schema is accurate.");
 
         if (string.CompareOrdinal(Program.SelectedEntity.Guid, schema.Guid) == 0)
+        {
             Program.SelectedEntityName = schema.Name;
+        }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

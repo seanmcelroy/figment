@@ -4,18 +4,26 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// The settings supplied to the <see cref="PromoteSelectedPropertyCommand"/>.
+/// </summary>
 public class PromoteSelectedPropertyCommandSettings : CommandSettings
 {
-    public const int ARG_POSITION_PROPERTY_NAME = 0;
-
+    /// <summary>
+    /// Gets the name of the property to promote.
+    /// </summary>
     [Description("Name of the property to promote")]
-    [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<PROPERTY>")]
+    [CommandArgument(0, "<PROPERTY>")]
     public string? PropertyName { get; init; }
 
+    /// <summary>
+    /// Gets whether to provide verbose detail, if available, for any outputs.
+    /// </summary>
     [Description("Provides verbose detail, if available, for any outputs")]
     [CommandOption("-v|--verbose")]
-    public required bool? Verbose { get; init; } = Program.Verbose;
+    required public bool? Verbose { get; init; } = Program.Verbose;
 
+    /// <inheritdoc/>
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(PropertyName)

@@ -4,13 +4,19 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// The settings supplied to the <see cref="SetSchemaPropertyRequiredCommand"/>.
+/// </summary>
 public class SetSchemaPropertyRequiredCommandSettings : SchemaPropertyCommandSettings
 {
-    public const int ARG_POSITION_REQUIRED = 0;
+    /// <summary>
+    /// Gets a value indicating whether the property is required.
+    /// </summary>
     [Description("Value indicating whether the property is required")]
-    [CommandArgument(ARG_POSITION_REQUIRED, "<REQUIRED>")]
-    public bool? Required { get; init; } = true;
+    [CommandArgument(0, "<REQUIRED>")]
+    required public bool Required { get; init; } = true;
 
+    /// <inheritdoc/>
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(PropertyName)

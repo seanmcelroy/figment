@@ -2,20 +2,28 @@ using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace jot.Commands;
+namespace jot.Commands.Interactive;
 
+/// <summary>
+/// The settings supplied to the <see cref="AssociateSchemaWithSelectedThingCommand"/>.
+/// </summary>
 public class AssociateSchemaWithSelectedThingCommandSettings : CommandSettings
 {
-    public const int ARG_POSITION_SCHEMA_NAME = 0;
-
+    /// <summary>
+    /// Gets the name of the <see cref="Schema"/> to target.
+    /// </summary>
     [Description("Name of the schema to target")]
-    [CommandArgument(ARG_POSITION_SCHEMA_NAME, "<SCHEMA>")]
+    [CommandArgument(0, "<SCHEMA>")]
     public string? SchemaName { get; init; }
 
+    /// <summary>
+    /// Gets whether to provide verbose detail, if available, for any outputs.
+    /// </summary>
     [Description("Provides verbose detail, if available, for any outputs")]
     [CommandOption("-v|--verbose")]
-    public required bool? Verbose { get; init; } = Program.Verbose;
+    required public bool? Verbose { get; init; } = Program.Verbose;
 
+    /// <inheritdoc/>
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(SchemaName)

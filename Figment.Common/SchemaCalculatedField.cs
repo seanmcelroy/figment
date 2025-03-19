@@ -21,10 +21,22 @@ using Figment.Common.Calculations;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A field which dynamically calculates its value base don a formula.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
 public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "calculated";
 
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
@@ -32,12 +44,16 @@ public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Formula { get; set; }
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
 
+    /// <inheritdoc/>
     public override Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(Formula))
+        {
             return Task.FromResult(false);
+        }
 
         var (success, _, _) = Parser.ParseFormula(Formula);
         return Task.FromResult(success);

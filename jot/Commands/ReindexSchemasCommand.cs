@@ -5,8 +5,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Rebuilds the index files for <see cref="Schema"/> for consistency.
+/// </summary>
 public class ReindexSchemasCommand : CancellableAsyncCommand
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
@@ -22,13 +26,19 @@ public class ReindexSchemasCommand : CancellableAsyncCommand
             .StartAsync("Rebuilding schema indexes...", async ctx =>
             {
                 if (AnsiConsole.Profile.Capabilities.Interactive)
+                {
                     Thread.Sleep(1000);
+                }
 
                 var success = await provider.RebuildIndexes(cancellationToken);
                 if (success)
+                {
                     ctx.Status("Success!");
+                }
                 else
+                {
                     ctx.Status("Failed!");
+                }
             });
 
         AmbientErrorContext.Provider.LogDone($"All schemas reindexed.");

@@ -18,8 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Data;
 
+/// <summary>
+/// An interface for storage providers that can create, read, update, and delete things in a data store.
+/// </summary>
 public interface IThingStorageProvider
 {
+    /// <summary>
+    /// Associates a <see cref="Thing"/> with a <see cref="Schema"/>.
+    /// </summary>
+    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to associate with the <see cref="Schema"/> specified by <paramref name="schemaGuid"/>.</param>
+    /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
     public Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
 
     public Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken);

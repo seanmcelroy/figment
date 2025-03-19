@@ -3,11 +3,16 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// The settings supplied to the <see cref="SetSchemaPropertyFormulaCommand"/>.
+/// </summary>
 public class SetSchemaPropertyFormulaCommandSettings : SchemaPropertyCommandSettings
 {
-    public const int ARG_POSITION_FORMULA = 0;
-
+    /// <summary>
+    /// Gets the formula to use if the field type is 'calculated'.
+    /// </summary>
+    /// <seealso cref="SchemaCalculatedField"/>
     [Description("If the field type is 'calculated', this is the formula to use")]
-    [CommandArgument(ARG_POSITION_FORMULA, "[FORMULA]")]
+    [CommandArgument(0, "[FORMULA]")]
     public string? Formula { get; init; }
 }

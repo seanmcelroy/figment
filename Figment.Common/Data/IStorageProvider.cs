@@ -18,16 +18,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Data;
 
+/// <summary>
+/// An interface for storage providers that can create, read, update, and delete entities in a data store.
+/// </summary>
 public interface IStorageProvider
 {
     /// <summary>
-    /// Request the storage provider prepare for requests
+    /// Request the storage provider prepare for requests.
     /// </summary>
-    /// <param name="cancellationToken">A cancellation token for asynchronous methods</param>
-    /// <returns>A value indicating whether the storage provider successfully initialized and is ready to take requests</returns>
+    /// <param name="cancellationToken">A cancellation token for asynchronous methods.</param>
+    /// <returns>A value indicating whether the storage provider successfully initialized and is ready to take requests.</returns>
     public Task<bool> InitializeAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Returns an <see cref="ISchemaStorageProvider"/> that can create, read, update, and delete <see cref="Schema"/> entities.
+    /// </summary>
+    /// <returns>An <see cref="ISchemaStorageProvider"/> that can create, read, update, and delete <see cref="Schema"/> entities.</returns>
     public ISchemaStorageProvider? GetSchemaStorageProvider();
 
+    /// <summary>
+    /// Returns an <see cref="IThingStorageProvider"/> that can create, read, update, and delete <see cref="Thing"/> entities.
+    /// </summary>
+    /// <returns>An <see cref="IThingStorageProvider"/> that can create, read, update, and delete <see cref="Thing"/> entities.</returns>
     public IThingStorageProvider? GetThingStorageProvider();
 }

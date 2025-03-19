@@ -22,18 +22,27 @@ namespace Figment.Common;
 
 public class SchemaNumberField(string Name) : SchemaFieldBase(Name)
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "number";
 
+    /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
-    public override Task<string> GetReadableFieldTypeAsync(bool _, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    /// <inheritdoc/>
+    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
+    /// <inheritdoc/>
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
     {
-        if (value == null)
-            return Task.FromResult(!Required);
-
-        return Task.FromResult(double.TryParse(value.ToString(), out double _));
+        return value == null
+            ? Task.FromResult(!Required)
+            : Task.FromResult(double.TryParse(value.ToString(), out double _));
     }
 }

@@ -5,8 +5,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Rebuilds the index files for <see cref="Thing"/>s for consistency.
+/// </summary>
 public class ReindexThingsCommand : CancellableAsyncCommand
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -22,12 +26,19 @@ public class ReindexThingsCommand : CancellableAsyncCommand
             .StartAsync("Rebuilding thing indexes...", async ctx =>
             {
                 if (AnsiConsole.Profile.Capabilities.Interactive)
+                {
                     Thread.Sleep(1000);
+                }
+
                 var success = await provider.RebuildIndexes(cancellationToken);
                 if (success)
+                {
                     ctx.Status("Success!");
+                }
                 else
+                {
                     ctx.Status("Failed!");
+                }
             });
 
         AmbientErrorContext.Provider.LogDone($"All things reindexed.");

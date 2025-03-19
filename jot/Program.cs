@@ -16,28 +16,40 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics;
+using System.Globalization;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using jot.Commands;
+using jot.Commands.Interactive;
 using jot.Commands.Schemas;
 using jot.Commands.Schemas.ImportMaps;
 using jot.Commands.Things;
 using jot.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using System.Diagnostics;
-using System.Globalization;
 
 namespace jot;
 
+/// <summary>
+/// The console application for jot.
+/// </summary>
 internal class Program
 {
     /// <summary>
     /// For interactive mode, this is the currently selected entity that commands can reference in a REPL.
     /// </summary>
     internal static Reference SelectedEntity = Reference.EMPTY;
+
+    /// <summary>
+    /// The name of the <see cref="SelectedEntity"/>.
+    /// </summary>
     internal static string SelectedEntityName = string.Empty;
+
+    /// <summary>
+    /// Whether commands should provide verbose output.
+    /// </summary>
     internal static bool Verbose = false;
 
     private static async Task<int> Main(string[] args)
@@ -75,7 +87,7 @@ internal class Program
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ImportSchemaThingsCommand>("import")
-                        .WithDescription("Imports things as entities of this schema type");
+                        .WithDescription("Imports entities as things of this schema type");
                     schema.AddBranch("import-map", map =>
                     {
                         map.AddCommand<NewImportMapCommand>("new")
@@ -95,7 +107,7 @@ internal class Program
                     {
                         // Note, adding one here requires a manual edit to SetSelectedPropertyCommand
                         set.AddCommand<SetSchemaPropertyDisplayCommand>("display")
-                            .WithDescription("Sets a 'pretty' display name for the column");
+                            .WithDescription("Sets a 'pretty' display name for the property");
                         set.AddCommand<SetSchemaPropertyTypeCommand>("type")
                             .WithDescription("Sets the data type of a property");
                         set.AddCommand<SetSchemaPropertyRequiredCommand>("require")
@@ -230,17 +242,26 @@ internal class Program
             if (AnsiConsole.Profile.Capabilities.Interactive)
             {
                 if (string.IsNullOrWhiteSpace(SelectedEntityName))
-                    input = AnsiConsole.Prompt(new TextPrompt<string>("[green]>[/]")/* { History = history }*/);
+                {
+                    input = AnsiConsole.Prompt(new TextPrompt<string>("[green]>[/]"));
+                }
                 else
-                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]")/* { History = history }*/);
+                {
+                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]"));
+                }
             }
             else
             {
                 // Handle vscode Debug Console, which is not 'interactive'
                 if (string.IsNullOrWhiteSpace(SelectedEntityName))
+                {
                     Console.Write($"> ");
+                }
                 else
+                {
                     Console.Write($"({SelectedEntityName})> ");
+                }
+
                 input = Console.ReadLine();
             }
 
@@ -261,8 +282,11 @@ internal class Program
                         {
                             var thing = await thingProvider.LoadAsync(thingRef.Guid, cts.Token);
                             if (thing != null)
+                            {
                                 thingsToDisplay.Add(thing);
+                            }
                         }
+
                         handled = true;
                         break;
                     }
@@ -280,10 +304,11 @@ internal class Program
             // Proceed as normal in interactive mode
             var result = await app.RunAsync(inputArgs);
             if (input != null)
+            {
                 history.Add(input);
-
-        } while (!cts.Token.IsCancellationRequested);
-
+            }
+        }
+        while (!cts.Token.IsCancellationRequested);
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
@@ -327,15 +352,12 @@ internal class Program
                         && await ssp.GuidExists(forSchemaGuid, cancellationToken))
                     {
                         // Found a matching view!
-
                         var viewColumnsObject = viewProps
                             .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns") == 0)
                             .Select(p => p.Value)
                             .FirstOrDefault();
 
                         var schema = await ssp.LoadAsync(forSchemaGuid, cancellationToken);
-
-                        //Console.Error.WriteLine($"DEBUG: Using view '{viewInstance.Name}'");
 
                         if (viewColumnsObject != default
                             && viewColumnsObject is System.Collections.IEnumerable viewColumns
@@ -363,7 +385,9 @@ internal class Program
                                     if (schema.Properties.TryGetValue(vc[(vc.IndexOf('.') + 1)..], out SchemaFieldBase? schprop)
                                         && schprop.DisplayNames != null
                                         && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
+                                    {
                                         columnName = prettyDisplayName;
+                                    }
 
                                     columns.Add(columnName);
                                 }
@@ -371,11 +395,14 @@ internal class Program
 
                             Table t = new();
                             foreach (var col in columns)
+                            {
                                 t.AddColumn(col);
+                            }
 
                             foreach (var thing in thingsToDisplay)
                             {
                                 Dictionary<string, object?> cellValues = [];
+
                                 // Add special view built-ins
                                 cellValues.Add(nameof(Thing.Name).ToLowerInvariant(), thing.Name);
                                 cellValues.Add(nameof(Thing.Guid).ToLowerInvariant(), thing.Guid);
@@ -386,9 +413,13 @@ internal class Program
                                     {
                                         string? text;
                                         if (schema.Properties.TryGetValue(thingProperty.FullDisplayName[(thingProperty.FullDisplayName.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
+                                        {
                                             text = await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken);
+                                        }
                                         else
+                                        {
                                             text = thingProperty.Value?.ToString();
+                                        }
 
                                         // Use ToLowerInvariant so column definition casing in views is forgiving.
                                         cellValues.Add(thingProperty.SimpleDisplayName.ToLowerInvariant(), text);
@@ -400,12 +431,18 @@ internal class Program
                                 {
                                     // Use ToLowerInvariant so column definition casing in views is forgiving.
                                     if (!cellValues.TryGetValue(col.ToLowerInvariant(), out object? cellValue))
+                                    {
                                         cells.Add("[red]<UNSET>[/]");
+                                    }
                                     else
+                                    {
                                         cells.Add(cellValue?.ToString() ?? string.Empty);
+                                    }
                                 }
+
                                 t.AddRow(cells.ToArray());
                             }
+
                             AnsiConsole.Write(t);
                             return;
                         }
@@ -419,6 +456,5 @@ internal class Program
         {
             await Console.Out.WriteLineAsync(thing.Name);
         }
-
     }
 }

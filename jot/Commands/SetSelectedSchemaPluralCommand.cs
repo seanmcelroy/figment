@@ -7,6 +7,7 @@ namespace jot.Commands;
 
 public class SetSelectedSchemaPluralCommand : CancellableAsyncCommand<SetSelectedSchemaPluralCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SetSelectedSchemaPluralCommandSettings settings, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;

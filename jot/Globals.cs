@@ -20,6 +20,9 @@ using System.Text;
 
 namespace jot;
 
+/// <summary>
+/// Global static variables and functions that support jot.
+/// </summary>
 public static class Globals
 {
     public enum GLOBAL_ERROR_CODES : int
@@ -32,17 +35,22 @@ public static class Globals
         GENERAL_IO_ERROR = -5,
         SCHEMA_LOAD_ERROR = -1000,
         SCHEMA_SAVE_ERROR = -1001,
+
         // SCHEMA_CREATE_ERROR = -1002
+        // SCHEMA_DELETE_ERROR = -2002
         THING_LOAD_ERROR = -2000,
         THING_SAVE_ERROR = -2001,
+
         // THING_CREATE_ERROR = -2002
-        // THING_DELETE_ERROR = -2003
-   }
+        // THING_DELETE_ERROR = -2003,
+    }
 
     public static IEnumerable<string> SplitArgs(string? commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine))
+        {
             yield break;
+        }
 
         var result = new StringBuilder();
 
@@ -91,7 +99,11 @@ public static class Globals
             }
             else if (chr == ' ' && !quoted)
             {
-                if (started) yield return result.ToString();
+                if (started)
+                {
+                    yield return result.ToString();
+                }
+
                 result.Clear();
                 started = false;
             }
@@ -102,6 +114,9 @@ public static class Globals
             }
         }
 
-        if (started) yield return result.ToString();
+        if (started)
+        {
+            yield return result.ToString();
+        }
     }
 }

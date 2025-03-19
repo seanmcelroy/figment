@@ -4,14 +4,19 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Things;
 
+/// <summary>
+/// The settings supplied to the <see cref="PromoteThingPropertyCommand"/>.
+/// </summary>
 public class PromoteThingPropertyCommandSettings : ThingCommandSettings
 {
-    public const int ARG_POSITION_PROPERTY_NAME = 0;
-
+    /// <summary>
+    /// Gets the name of the property to promote.
+    /// </summary>
     [Description("Name of the property to promote")]
-    [CommandArgument(ARG_POSITION_PROPERTY_NAME, "<PROPERTY>")]
-    public string? PropertyName { get; init; }
+    [CommandArgument(0, "<PROPERTY>")]
+    required public string PropertyName { get; init; }
 
+    /// <inheritdoc/>
     public override ValidationResult Validate()
     {
         return string.IsNullOrWhiteSpace(PropertyName)

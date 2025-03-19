@@ -1,15 +1,14 @@
-using Figment.Common;
 using Figment.Common.Errors;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas.ImportMaps;
 
+/// <summary>
+/// Deletes an import map from a <see cref="Schema"/> configuration.
+/// </summary>
 public class DeleteImportMapCommand : SchemaCancellableAsyncCommand<DeleteImportMapCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-    }
-
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, DeleteImportMapCommandSettings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.ImportMapName))
@@ -20,7 +19,9 @@ public class DeleteImportMapCommand : SchemaCancellableAsyncCommand<DeleteImport
 
         var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
         var importMap = schema!.ImportMaps.FirstOrDefault(i => string.Compare(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase) == 0);
 
@@ -35,9 +36,14 @@ public class DeleteImportMapCommand : SchemaCancellableAsyncCommand<DeleteImport
         if (!saved)
         {
             if (settings.Verbose ?? false)
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+            }
             else
+            {
                 AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

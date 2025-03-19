@@ -476,6 +476,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         return await LoadAsync(thingGuid, cancellationToken);
     }
 
+    /// <summary>
+    /// Associates a <see cref="Thing"/> with a <see cref="Schema"/>.
+    /// </summary>
+    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to associate with the <see cref="Schema"/> specified by <paramref name="schemaGuid"/>.</param>
+    /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
     public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);

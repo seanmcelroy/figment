@@ -20,6 +20,10 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// The abstract base class any <see cref="Schema"/> field type implements.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
 [JsonPolymorphic]
 [JsonDerivedType(typeof(SchemaArrayField), typeDiscriminator: SchemaArrayField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaBooleanField), typeDiscriminator: SchemaBooleanField.SCHEMA_FIELD_TYPE)]
@@ -38,48 +42,54 @@ namespace Figment.Common;
 public abstract class SchemaFieldBase(string Name)
 {
     /// <summary>
-    /// The type of the field
+    /// Gets the type of the field.
     /// </summary>
     /// <seealso cref="Schema"/>
     [JsonPropertyName("type")]
     public abstract string Type { get; }
 
     /// <summary>
-    /// The name of the field
+    /// Gets the name of the field.
     /// </summary>
     [JsonIgnore]
     public string Name { get; init; } = Name;
 
     /// <summary>
-    /// Whether this field is required
+    /// Gets or sets a value indicating whether this field is required.
     /// </summary>
     [JsonIgnore]
     public bool Required { get; set; }
 
+    /// <summary>
+    /// Gets or sets localizable display names.  This dictionary is keyed by the locale for the display name.
+    /// </summary>
     [JsonPropertyName("displayNames")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? DisplayNames { get; set; }
 
     /// <summary>
-    /// Validates a parsed field meets all applicable optionally-defined constraints
+    /// Validates a parsed field meets all applicable optionally-defined constraints.
     /// </summary>
-    /// <returns></returns>
+    /// <param name="value">The value to evaluate for validity.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating that the field value is valid as defined by any constraints inherent or configured for it.</returns>
     public abstract Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets a human-readable version of the field type, with no formatting markup
+    /// Gets a human-readable version of the field type, with no formatting markup.
     /// </summary>
-    /// <param name="cancellationToken">A cancellation token for asynchronous methods</param>
-    /// <returns>Text to display describing the field type of this schema field</returns>
-    public abstract Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken);
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Text to display describing the field type of this schema field.</returns>
+    public abstract Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Allows the field to modify the input to match its underlying requirement
+    /// Allows the field to modify the input to match its underlying requirement.
     /// </summary>
-    /// <param name="input">The original input value, usually a string</param>
-    /// <param name="output">The massaged input value formatted as the field prefers it to be provided</param>
+    /// <param name="input">The original input value, usually a string.</param>
+    /// <param name="output">The massaged input value formatted as the field prefers it to be provided.</param>
     /// <returns>Whether the value could be massaged or did not need to be massaged.  Otherwise, false.</returns>
-    public virtual bool TryMassageInput(object? input, out object? output) {
+    public virtual bool TryMassageInput(object? input, out object? output)
+    {
         output = input;
         return true;
     }

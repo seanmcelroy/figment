@@ -6,8 +6,12 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Lists all schemas.
+/// </summary>
 public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListSchemasCommandSettings settings, CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
@@ -42,13 +46,18 @@ public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSett
             t.AddColumn("GUID");
 
             foreach (var s in schemas)
+            {
                 t.AddRow(s.Name, s.Description ?? string.Empty, s.Plural ?? string.Empty, s.Guid);
+            }
+
             AnsiConsole.Write(t);
         }
         else
         {
             foreach (var schema in schemas)
+            {
                 Console.Out.WriteLine(schema.Name);
+            }
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
