@@ -29,6 +29,7 @@ using jot.Commands.Things;
 using jot.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using TextPromptWithHistory;
 
 namespace jot;
 
@@ -216,7 +217,7 @@ internal class Program
         }
 
         // Interactive mode
-        AnsiConsole.MarkupLine("[bold fuchsia]jot[/] v0.0.1");
+        AnsiConsole.MarkupLine("[bold fuchsia]jot[/] v0.0.2");
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
         AnsiConsole.MarkupLine("\r\nThere are additional undocumented commands in this mode.  Type [purple bold]ihelp[/] for help on this mode interactive.");
 
@@ -243,11 +244,11 @@ internal class Program
             {
                 if (string.IsNullOrWhiteSpace(SelectedEntityName))
                 {
-                    input = AnsiConsole.Prompt(new TextPrompt<string>("[green]>[/]"));
+                    input = AnsiConsole.Prompt(new TextPromptWithHistory<string>("[green]>[/]").AddHistory(history));
                 }
                 else
                 {
-                    input = AnsiConsole.Prompt(new TextPrompt<string>($"[green]({SelectedEntityName})>[/]"));
+                    input = AnsiConsole.Prompt(new TextPromptWithHistory<string>($"[green]({SelectedEntityName})>[/]").AddHistory(history));
                 }
             }
             else
