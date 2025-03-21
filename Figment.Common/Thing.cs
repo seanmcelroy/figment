@@ -31,14 +31,16 @@ namespace Figment.Common;
 /// </summary>
 /// <param name="Guid">Globally unique identifier for the thing.</param>
 /// <param name="Name">Name of the thing.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class Thing(string Guid, string Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     private const string NameIndexFileName = "_thing.names.csv";
 
     /// <summary>
-    /// Gets or sets the globally unique identifier for the thing.
+    /// Gets the globally unique identifier for the thing.
     /// </summary>
-    public string Guid { get; set; } = Guid;
+    public string Guid { get; init; } = Guid;
 
     /// <summary>
     /// Gets or sets the name of the thing.
@@ -50,7 +52,12 @@ public class Thing(string Guid, string Name)
     /// </summary>
     public List<string> SchemaGuids { get; set; } = [];
 
-    // [Obsolete("Do not use outside of Things")]
+    /// <summary>
+    /// Gets the list of properties, keyed by name, defined for this thing.
+    /// </summary>
+    /// <remarks>
+    /// Do not use this outside of this class.  Left public for serialization only.
+    /// </remarks>
     public Dictionary<string, object> Properties { get; init; } = [];
 
     /// <summary>
@@ -104,7 +111,7 @@ public class Thing(string Guid, string Name)
 
         await foreach (var schemaRef in ssp.GetAll(cancellationToken))
         {
-            await foreach (var (reference, _) in tsp.FindByPartialNameAsync(schemaRef.reference.Guid, guidOrNamePart, cancellationToken))
+            await foreach (var (reference, _) in tsp.FindByPartialNameAsync(schemaRef.Reference.Guid, guidOrNamePart, cancellationToken))
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -152,6 +159,27 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    /// <summary>
+    /// Parses the true property name stored for a thing into various versions.
+    /// </summary>
+    /// <param name="truePropertyName">The true property name.</param>
+    /// <param name="schema">The schema to which the property belongs, if any.</param>
+    /// <returns>
+    /// <para>
+    /// The escaped property name is the version without a schema prefix,
+    /// but which is encased in brackets if it contains spaces.
+    /// </para>
+    /// <para>
+    /// The full display name is the schema name (encased in brackets if it contains spaces),
+    /// a period separator, and then the escaped property name.  The schema could have
+    /// been subsequently deleted, in which case the full display name is the same as
+    /// the escaped property name.
+    /// </para>
+    /// <para>
+    /// The simple property name is always just the property name without any schema
+    /// prefix or any bracketing.
+    /// </para>
+    /// </returns>
     public static (string escapedPropKey, string fullDisplayName, string simpleDisplayName)
         CarvePropertyName(string truePropertyName, Schema? schema)
     {
@@ -166,7 +194,7 @@ public class Thing(string Guid, string Name)
             var simpleDisplayName = choppedPropName;
 
             // Watch out, the schema field could have been deleted but it's still there on the instance.
-            if (!schema.Properties.TryGetValue(choppedPropName, out SchemaFieldBase? schemaField))
+            if (!schema.Properties.TryGetValue(choppedPropName, out SchemaFieldBase? _))
             {
                 AmbientErrorContext.Provider.LogWarning($"Found property {truePropertyName} ({escapedPropKey}) on thing, but it doesn't appear on schema {schema.Name} ({schema.Guid}).");
                 escapedPropKey = truePropertyName.Contains(' ') && !truePropertyName.StartsWith('[') && !truePropertyName.EndsWith(']') ? $"[{truePropertyName}]" : truePropertyName;
@@ -185,18 +213,34 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    /// <summary>
+    /// Attempts to add a property to a thing by name and value.
+    /// </summary>
+    /// <param name="propertyyName">The name of the property to add.</param>
+    /// <param name="value">The value of the property.</param>
+    /// <returns>A value indicating whether or not the property was added.</returns>
     public bool TryAddProperty(string propertyyName, object value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
         return Properties.TryAdd(propertyyName, value);
     }
 
+    /// <summary>
+    /// Attempts to remove a property from a thing by the property's name.
+    /// </summary>
+    /// <param name="propertyyName">The name of the property to remove.</param>
+    /// <returns>A value indicating whether or not the property was removed.</returns>
     public bool TryRemoveProperty(string propertyyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
         return Properties.Remove(propertyyName);
     }
 
+    /// <summary>
+    /// Gets an asyncronous enumerable that iterats over the properties of the thing.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumerator for each <see cref="ThingProperty"/>.</returns>
     public async IAsyncEnumerable<ThingProperty> GetProperties(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -248,6 +292,12 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    /// <summary>
+    /// Recalculates all <see cref="SchemaCalculatedField"/> field values on any
+    /// associated schemas.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A take for asynchronous processing.</returns>
     public async Task ComputeCalculatedProperties(CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
@@ -311,7 +361,6 @@ public class Thing(string Guid, string Name)
             {
                 var carved = CarvePropertyName(thingProp.Key, schema);
                 AmbientErrorContext.Provider.LogWarning($"Unable to calculate field {carved.fullDisplayName}: {result.Message}");
-
             }
             else if ((thingProp.Value == null && result.Result != null)
                 || (thingProp.Value?.Equals(result.Result) == false))
@@ -338,6 +387,11 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    /// <summary>
+    /// Gets all properties defined for this thing which are not set.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A list of unset properties.</returns>
     public async Task<List<ThingUnsetProperty>> GetUnsetProperties(CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?
@@ -372,8 +426,9 @@ public class Thing(string Guid, string Name)
 
         await foreach (var thingProperty in GetProperties(cancellationToken))
         {
-            if (thingProperty.SchemaGuid != null) // Remove from list of schema properties once we note it's set on the thing.
+            if (thingProperty.SchemaGuid != null)
             {
+                // Remove from list of schema properties once we note it's set on the thing.
                 _ = unsetSchemaFields.Remove((thingProperty.SchemaGuid, thingProperty.SimpleDisplayName));
             }
         }
@@ -381,6 +436,15 @@ public class Thing(string Guid, string Name)
         return [.. unsetSchemaFields.Values];
     }
 
+    /// <summary>
+    /// Retrieves each property by the property name.
+    /// Because each <see cref="Thing"/> may have multiple properties that have the
+    /// same name, but are defined by varying schema, this can return zero to many
+    /// results for any given <paramref name="propName"/>.
+    /// </summary>
+    /// <param name="propName">The name of the property to retrieve.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumerator for each <see cref="ThingProperty"/>.</returns>
     public async IAsyncEnumerable<ThingProperty> GetPropertyByName(string propName, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         MarkAccessed();
@@ -412,6 +476,14 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    /// <summary>
+    /// Sets the value of a property.
+    /// </summary>
+    /// <param name="propName">The name of the property to update.</param>
+    /// <param name="propValue">The value for the property.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="chooserHandler">The function that selects which entity to use when setting a property which is a reference, when multiple entities are located by the given property name.</param>
+    /// <returns>The result of this operation.</returns>
     public async Task<ThingSetResult> Set(
         string propName,
         string? propValue,
@@ -545,7 +617,7 @@ public class Thing(string Guid, string Name)
             case 0:
                 {
                     // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
-                    if (propValue == null || string.IsNullOrWhiteSpace(propValue.ToString()))
+                    if (propValue == null || string.IsNullOrWhiteSpace(propValue))
                     {
                         Properties.Remove(propName);
                     }
@@ -602,7 +674,6 @@ public class Thing(string Guid, string Name)
                             ? []
                             : tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken)
                                 .ToBlockingEnumerable(cancellationToken)
-                                .Select(p => new PossibleNameMatch(p.reference, p.name))
                                 .ToArray();
 
                         if (disambig.Length == 1)
@@ -624,7 +695,15 @@ public class Thing(string Guid, string Name)
                         }
                         else
                         {
-                            Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                            if (massagedPropValue == null)
+                            {
+                                Properties.Remove(candidateProperties[0].TruePropertyName);
+                            }
+                            else
+                            {
+                                Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                            }
+
                             AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
                             var saved = await SaveAsync(cancellationToken);
                             return new ThingSetResult(saved);
@@ -667,6 +746,11 @@ public class Thing(string Guid, string Name)
         }
     }
 
+    /// <summary>
+    /// Attempts to save the thing to its underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the save attempt was successful.</returns>
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -701,6 +785,12 @@ public class Thing(string Guid, string Name)
         return success;
     }
 
+    /// <summary>
+    /// Attempts to dissociate a <see cref="Schema"/> from this thing.
+    /// </summary>
+    /// <param name="schemaGuid">Unique identiifer of the schema that will be dissociated. </param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether the operation was successful, and an updated <see cref="Thing"/> if it was successful.</returns>
     public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -716,6 +806,11 @@ public class Thing(string Guid, string Name)
         return success;
     }
 
+    /// <summary>
+    /// Attempts to delete this <see cref="Thing"/> from its underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the delete attempt was successful.</returns>
     public async Task<bool> DeleteAsync(CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -729,12 +824,18 @@ public class Thing(string Guid, string Name)
         return success;
     }
 
+    /// <summary>
+    /// Marks the thing as changed, updating both the <see cref="LastModified"/> and <see cref="LastAccessed"/> dates.
+    /// </summary>
     public void MarkModified()
     {
         LastModified = DateTime.UtcNow;
         LastAccessed = LastModified;
     }
 
+    /// <summary>
+    /// Marks the thing as accessed, updating the <see cref="LastAccessed"/> date.
+    /// </summary>
     public void MarkAccessed() => LastAccessed = DateTime.UtcNow;
 
     /// <summary>

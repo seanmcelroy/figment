@@ -71,9 +71,9 @@ public sealed class Thing
         var partialThings = tsp.FindByPartialNameAsync(csr.NewGuid, nameof(ThingCrud), CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(partialThings);
         Assert.AreEqual(1, partialThings.Count());
-        Assert.AreEqual(thing.Name, partialThings.First().name);
-        Assert.AreEqual(thing.Guid, partialThings.First().reference.Guid);
-        Assert.AreEqual(Reference.ReferenceType.Thing, partialThings.First().reference.Type);
+        Assert.AreEqual(thing.Name, partialThings.First().Name);
+        Assert.AreEqual(thing.Guid, partialThings.First().Reference.Guid);
+        Assert.AreEqual(Reference.ReferenceType.Thing, partialThings.First().Reference.Type);
 
         var deleted = await thing.DeleteAsync(CancellationToken.None);
         Assert.IsTrue(deleted);

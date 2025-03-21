@@ -18,10 +18,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Errors;
 
+/// <summary>
+/// A thread-safe and async-safe reference to the current <see cref="IErrorProvider"/>.
+/// </summary>
 public static class AmbientErrorContext
 {
     private static readonly AsyncLocal<IErrorProvider> _ErrorProvider = new();
 
+    /// <summary>
+    /// Gets or sets the ambient <see cref="IErrorProvider"/> instance that clients can use to promulgate error and informational messages.
+    /// </summary>
     public static IErrorProvider Provider
     {
         get => _ErrorProvider.Value ?? new DefaultConsoleErrorProvider();

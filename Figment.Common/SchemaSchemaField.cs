@@ -20,7 +20,14 @@ using Figment.Common.Data;
 
 namespace Figment.Common;
 
+/// <summary>
+/// This field is a reference to another <see cref="Schema"/> itself,
+/// as opposed to <see cref="SchemaRefField"/>, which is a reference to
+/// things in a given Schema.</summary>
+/// <param name="Name">The name of the field.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaSchemaField(string Name) : SchemaTextField(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.

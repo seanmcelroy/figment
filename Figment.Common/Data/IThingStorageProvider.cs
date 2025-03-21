@@ -34,23 +34,55 @@ public interface IThingStorageProvider
 
     public Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken);
 
-    public Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken);
+    /// <summary>
+    /// Attempts to delete this <see cref="Thing"/> from its underlying data store.
+    /// </summary>
+    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to attempt to delete.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the delete attempt was successful.</returns>
+    public Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Attempts to dissociate a <see cref="Schema"/> from a <see cref="Thing"/>.
+    /// </summary>
+    /// <param name="thingGuid">Unique identifier of the thing to dissociate.</param>
+    /// <param name="schemaGuid">Unique identiifer of the schema that will be dissociated. </param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether the operation was successful, and an updated <see cref="Thing"/> if it was successful.</returns>
     public Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
 
     public IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
 
     public Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase);
 
-    public IAsyncEnumerable<(Reference reference, string name)> FindByPartialNameAsync(string schemaGuid, string thingNamePart, CancellationToken cancellationToken);
+    /// <summary>
+    /// Attempts to find <see cref="Thing"/> entities by a partial name match.
+    /// </summary>
+    /// <param name="schemaGuid">The <see cref="Schema"/> to which matches must adhere.</param>
+    /// <param name="thingNamePart">The partial <see cref="Thing.Name"/> text that must match.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumerator for each <see cref="PossibleNameMatch"/> of each matching thing.</returns>
+    public IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, CancellationToken cancellationToken);
 
     public IAsyncEnumerable<(Reference reference, string? name)> GetAll(CancellationToken cancellationToken);
 
     public Task<bool> GuidExists(string thingGuid, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Attempts to load a thing from the underlying data store.
+    /// </summary>
+    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to load.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the load attempt was successful.</returns>
     public Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken);
 
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Attempts to save the thing to the underlying data store.
+    /// </summary>
+    /// <param name="thing">The <see cref="Thing"/> to save.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the save attempt was successful.</returns>
     public Task<bool> SaveAsync(Thing thing, CancellationToken cancellationToken);
 }

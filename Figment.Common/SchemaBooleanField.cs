@@ -25,7 +25,9 @@ namespace Figment.Common;
 /// A boolean field which stores a true or false value.
 /// </summary>
 /// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.
@@ -61,6 +63,12 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
         return Task.FromResult(bool.TryParse(value.ToString(), out bool _));
     }
 
+    /// <summary>
+    /// Attempts to parse a string into a boolean value.
+    /// </summary>
+    /// <param name="input">The string to parse as a boolean value.</param>
+    /// <param name="output">If successful, the boolean value parsed from the <paramref name="input"/>.</param>
+    /// <returns>A boolean indicating whether or not <paramref name="input"/> could be parsed into the <paramref name="output"/> boolean.</returns>
     public static bool TryParseBoolean([NotNullWhen(true)] string? input, out bool output)
     {
         if (bool.TryParse(input, out bool provBool))

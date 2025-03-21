@@ -18,12 +18,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// Returns 'null' as a native null value.
+/// </summary>
 public class Null : FunctionBase
 {
+    /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         if (parameters.Length != 0)
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "NULL() takes no parameters");
+        }
 
         return CalculationResult.Success(null, CalculationResultType.FunctionResult);
     }

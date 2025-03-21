@@ -79,7 +79,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         yield break;
     }
 
-    public async IAsyncEnumerable<(Reference reference, string name)> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
         ArgumentException.ThrowIfNullOrWhiteSpace(thingNamePart);
@@ -97,11 +98,15 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             var thing = await LoadAsync(guid, cancellationToken);
             if (thing == null || string.IsNullOrWhiteSpace(thing.Name))
                 continue;
-            yield return (new Reference
+            yield return new PossibleNameMatch
             {
-                Type = Reference.ReferenceType.Thing,
-                Guid = guid
-            }, thing.Name);
+                Reference = new()
+                {
+                    Type = Reference.ReferenceType.Thing,
+                    Guid = guid
+                },
+                Name = thing.Name
+            };
         }
     }
 
@@ -245,23 +250,31 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             return null;
         }
 
-        var thingLoaded = new Thing("", "")
-        {
-            CreatedOn = fileInfo.CreationTimeUtc,
-            LastModified = fileInfo.LastWriteTimeUtc,
-            LastAccessed = fileInfo.LastAccessTimeUtc
-        };
-
         using var fs = new FileStream(filePath, FileMode.Open);
         try
         {
             using var doc = await JsonDocument.ParseAsync(fs, cancellationToken: cancellationToken);
             var root = doc.RootElement;
 
-            if (root.TryGetProperty(nameof(Thing.Guid), out JsonElement guidProperty))
+            if (!root.TryGetProperty(nameof(Thing.Guid), out JsonElement guidProperty))
             {
-                thingLoaded.Guid = guidProperty.GetString() ?? "<UNDEFINED>";
+                AmbientErrorContext.Provider.LogError($"Unable to load thing. No required property {nameof(Thing.Guid)} found in file {filePath}");
+                return null;
             }
+
+            var guid = guidProperty.GetString();
+            if (string.IsNullOrWhiteSpace(guid))
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to load thing. Required property {nameof(Thing.Guid)} was null or blank in file {filePath}");
+                return null;
+            }
+
+            var thingLoaded = new Thing(guid, "")
+            {
+                CreatedOn = fileInfo.CreationTimeUtc,
+                LastModified = fileInfo.LastWriteTimeUtc,
+                LastAccessed = fileInfo.LastAccessTimeUtc
+            };
 
             if (root.TryGetProperty(nameof(Thing.Name), out JsonElement nameProperty))
             {
@@ -647,6 +660,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         return true;
     }
 
+    /// <inheritdoc/>
     public async Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);

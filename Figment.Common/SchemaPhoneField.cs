@@ -18,7 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common;
 
+/// <summary>
+/// A text field representing a phone number.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaPhoneField(string Name) : SchemaTextField(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.

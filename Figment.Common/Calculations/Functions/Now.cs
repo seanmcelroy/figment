@@ -18,12 +18,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// Returns the serial number of the current date and time.
+/// </summary>
 public class Now : FunctionBase
 {
+    /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         if (parameters.Length != 0)
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "NOW() takes no parameters");
+        }
 
         TimeSpan ts = DateTime.UtcNow - DateUtility.TwentiethCentry;
         return CalculationResult.Success(ts.TotalDays + 1, CalculationResultType.FunctionResult);

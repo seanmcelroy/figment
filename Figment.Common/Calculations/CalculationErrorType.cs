@@ -18,13 +18,47 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations;
 
+/// <summary>
+/// Reasons that a <see cref="CalculationResult"/> terminated.
+/// </summary>
 public enum CalculationErrorType
 {
+    /// <summary>
+    /// The calculation was successful; there was no error.
+    /// </summary>
     Success = 0,
-    FormulaParse = 1, // #ERR
-    NotANumber = 2, // #NAN
-    DivisionByZero = 3, // #DIV
+
+    /// <summary>
+    /// The formula could not be parsed.
+    /// </summary>
+    /// <remarks>#ERR</remarks>
+    FormulaParse = 1,
+
+    /// <summary>
+    /// The calculation resulted in a NaN result.
+    /// </summary>
+    /// <remarks>#NAN</remarks>
+    NotANumber = 2,
+
+    /// <summary>
+    /// The calculation resulted in a divide-by-zero error.
+    /// </summary>
+    /// <remarks>#DIV</remarks>
+    DivisionByZero = 3,
+
+    /// <summary>
+    /// The calculation resulted in recursion that went beyond the allowed recursion limit.
+    /// </summary>
     Recursion = 4,
-    BadValue = 5, // #VALUE
+
+    /// <summary>
+    /// The calculation resulted in an invalid value or received input of the wrong type.
+    /// </summary>
+    /// <remarks>#VALUE</remarks>
+    BadValue = 5,
+
+    /// <summary>
+    /// The calculation failed due to an unexpected internal program error.
+    /// </summary>
     InternalError = 6,
 }

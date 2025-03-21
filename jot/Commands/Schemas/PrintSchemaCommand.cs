@@ -4,13 +4,19 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Renders all fields on a schema to output.
+/// </summary>
 public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSettings>
 {
+    /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SchemaCommandSettings settings, CancellationToken cancellationToken)
     {
         var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        {
             return (int)tgs;
+        }
 
         var propBuilder = new StringBuilder();
         if (schema!.Properties != null && schema.Properties.Count > 0)
@@ -24,7 +30,10 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
 
         AnsiConsole.MarkupLine($"[silver]Schema[/]      : [bold white]{schema.Name}[/]");
         if (settings.Verbose ?? Program.Verbose)
+        {
             AnsiConsole.MarkupLine($"[silver]GUID[/]        : {schema.Guid}");
+        }
+
         AnsiConsole.MarkupLine($"Description : {schema.Description}");
         AnsiConsole.MarkupLine($"Plural      : {schema.Plural}");
 

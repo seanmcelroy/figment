@@ -4,6 +4,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Sets the property as a required field on the containing schema.
+/// </summary>
 public class SetSchemaPropertyRequiredCommand : SchemaCancellableAsyncCommand<SetSchemaPropertyRequiredCommandSettings>
 {
     /// <inheritdoc/>
@@ -14,10 +17,6 @@ public class SetSchemaPropertyRequiredCommand : SchemaCancellableAsyncCommand<Se
         {
             return (int)tgs;
         }
-
-        // require "work phone" true 
-        // require "work phone"
-        // require "work phone" false 
 
         var propName = settings.PropertyName;
         var required = settings.Required;

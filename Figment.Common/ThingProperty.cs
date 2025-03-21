@@ -21,42 +21,47 @@ namespace Figment.Common;
 public readonly record struct ThingProperty
 {
     /// <summary>
-    /// The property name serialized in a JSON file on a <see cref="Thing">
+    /// Gets the property name serialized in a JSON file on a Thing.
     /// </summary>
     /// <remarks>
-    /// Such as b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.email
+    /// Such as b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.email.
     /// </remarks>
-    public required readonly string TruePropertyName { get; init; }
+    required public readonly string TruePropertyName { get; init; }
+
     /// <summary>
-    /// The property name rendered for display with any accompanying <see cref="Schema">
+    /// Gets the property name rendered for display with any accompanying Schema.
     /// </summary>
     /// <remarks>
-    /// Such as Person.email
+    /// Such as Person.email.
     /// </remarks>
-    public required readonly string FullDisplayName { get; init; }
+    required public readonly string FullDisplayName { get; init; }
+
     /// <summary>
-    /// The property name rendered for display
+    /// Gets the property name rendered for display.
     /// </summary>
     /// <remarks>
-    /// Such as email
+    /// Such as email.
     /// </remarks>
-    public required readonly string SimpleDisplayName { get; init; }
+    required public readonly string SimpleDisplayName { get; init; }
+
     /// <summary>
-    /// If there is a <see cref="Schema"> associated with this property, this is its unique identifier
+    /// Gets the unique identifier of the Schema associated with this property.
     /// </summary>
-    public required readonly string? SchemaGuid { get; init; }
+    required public readonly string? SchemaGuid { get; init; }
+
     /// <summary>
-    /// The value of the property
+    /// Gets the value of the property.
     /// </summary>
-    public required readonly object? Value { get; init; }
+    required public readonly object? Value { get; init; }
+
     /// <summary>
-    /// If there is a <see cref="Schema"> associated with this property,
-    /// this is an indicator whether it is valid.
+    /// Gets a value indicating whether the value of this property is valid, as
+    /// according to the associated <see cref="Schema">.
     /// If no <see cref="Schema"> is associated, this is always true.
     /// </summary>
-    public required readonly bool Valid { get; init; }
+    required public readonly bool Valid { get; init; }
 
-    public required readonly bool Required { get; init; }
-    public required readonly string? SchemaFieldType { get; init; }
-    public required readonly string? SchemaName { get; init; }
+    required public readonly bool Required { get; init; }
+    required public readonly string? SchemaFieldType { get; init; }
+    required public readonly string? SchemaName { get; init; }
 }

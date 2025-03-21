@@ -39,7 +39,9 @@ namespace Figment.Common;
 [JsonDerivedType(typeof(SchemaSchemaField), typeDiscriminator: SchemaSchemaField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaTextField), typeDiscriminator: "text")]
 [JsonDerivedType(typeof(SchemaUriField), typeDiscriminator: SchemaUriField.SCHEMA_FIELD_TYPE)]
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public abstract class SchemaFieldBase(string Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// Gets the type of the field.

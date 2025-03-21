@@ -22,7 +22,13 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// An integer field representing a month and day in any non-specific year.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.

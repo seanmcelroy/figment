@@ -18,41 +18,58 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Errors;
 
+/// <summary>
+/// A simple implementation of <see cref="IErrorProvider"/> that logs to <see cref="Console.Error"/>.
+/// </summary>
 public class DefaultConsoleErrorProvider : IErrorProvider
 {
-    public void LogDone(FormattableString formattableString) => Console.Out.WriteLine(formattableString);
+    /// <inheritdoc/>
+    public void LogDone(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
-    public void LogDone(string message) => Console.Out.WriteLine(message);
+    /// <inheritdoc/>
+    public void LogDone(string message) => Console.Error.WriteLine(message);
 
+    /// <inheritdoc/>
     public void LogError(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
+    /// <inheritdoc/>
     public void LogError(string message) => Console.Error.WriteLine(message);
 
+    /// <inheritdoc/>
     public void LogException(Exception ex, FormattableString formattableString)
     {
         Console.Error.WriteLine(formattableString);
         Console.Error.WriteLine(ex);
     }
 
+    /// <inheritdoc/>
     public void LogException(Exception ex, string message)
     {
         Console.Error.WriteLine(message);
         Console.Error.WriteLine(ex);
     }
 
+    /// <inheritdoc/>
     public void LogInfo(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
+    /// <inheritdoc/>
     public void LogInfo(string message) => Console.Error.WriteLine(message);
 
+    /// <inheritdoc/>
     public void LogWarning(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
+    /// <inheritdoc/>
     public void LogWarning(string message) => Console.Error.WriteLine(message);
 
+    /// <inheritdoc/>
     public void LogProgress(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
+    /// <inheritdoc/>
     public void LogProgress(string message) => Console.Error.WriteLine(message);
 
-    public void LogDebug(FormattableString formattableString)=> Console.Error.WriteLine(formattableString);
+    /// <inheritdoc/>
+    public void LogDebug(FormattableString formattableString) => Console.Error.WriteLine(formattableString);
 
+    /// <inheritdoc/>
     public void LogDebug(string message) => Console.Error.WriteLine(message);
 }

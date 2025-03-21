@@ -18,11 +18,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common;
 
+/// <summary>
+/// A potential match to an entity.
+/// </summary>
+/// <param name="Reference">The weak reference to the entity that is a possible match.</param>
+/// <param name="Entity">The potentially-matching entity, fully loaded from its store.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public readonly record struct PossibleEntityMatch(Reference Reference, object Entity)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
+    /// <summary>
+    /// Gets the weak reference to the entity that is a possible match.
+    /// </summary>
     public Reference Reference { get; init; } = Reference;
+
+    /// <summary>
+    /// Gets the fully loaded/hydrated potentially-matching entity.
+    /// </summary>
     public object Entity { get; init; } = Entity;
 
+    /// <summary>
+    /// Gets the type and name of the entity pointed to by the <see cref="Reference"/>.
+    /// </summary>
+    /// <returns>A string representing the potentially matching entity's type and name.</returns>
     public override string ToString()
     {
         return Reference.Type switch

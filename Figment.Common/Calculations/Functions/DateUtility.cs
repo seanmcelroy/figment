@@ -20,19 +20,40 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// Utility methods for handling dates.
+/// </summary>
 public static class DateUtility
 {
-    public static readonly DateTime TwentiethCentry = new DateTime(1900, 01, 01, 0, 0, 0, DateTimeKind.Utc).Date;
+    /// <summary>
+    /// The <see cref="DateTime"/> for January 1, 1900.
+    /// </summary>
+    internal static readonly DateTime TwentiethCentry = new DateTime(1900, 01, 01, 0, 0, 0, DateTimeKind.Utc).Date;
 
+    /// <summary>
+    /// Attempts to parse a functional date value to a <see cref="DateTime"/>.
+    /// </summary>
+    /// <param name="functionalDateValue">The fractional days since January 1, 1900 to parse into a date.</param>
+    /// <param name="dateTime">If parsing <paramref name="functionalDateValue"/> was successful, the <see cref="DateTime"/> representation of the functional date value.</param>
+    /// <returns>Whether or not the parsing was successful.</returns>
     public static bool TryParseDate(double functionalDateValue, out DateTime dateTime)
     {
         dateTime = TwentiethCentry.AddDays(functionalDateValue);
         return true;
     }
 
+    /// <summary>
+    /// Attempts to parse a date time into a functional date value, that is, the
+    /// fractional number of days since January 1, 1900.
+    /// </summary>
+    /// <param name="dateTime">The date to parse as a functional date value.</param>
+    /// <param name="fdv">If parsing <paramref name="dateTime"/> was successful, the functional date value.</param>
+    /// <seealso cref="TwentiethCentry"/>
+    /// <returns>Whether or not the parsing was successful.</returns>
     public static bool TryParseFunctionalDateValue([NotNullWhen(true)] DateTime? dateTime, out double fdv)
     {
-        if (dateTime == null) {
+        if (dateTime == null)
+        {
             fdv = 0;
             return false;
         }
@@ -42,6 +63,14 @@ public static class DateUtility
         return true;
     }
 
+    /// <summary>
+    /// Attempts to parse a date time into a functional date value, that is, the
+    /// fractional number of days since January 1, 1900.
+    /// </summary>
+    /// <param name="dateTime">The date to parse as a functional date value.</param>
+    /// <param name="fdv">If parsing <paramref name="dateTime"/> was successful, the functional date value.</param>
+    /// <seealso cref="TwentiethCentry"/>
+    /// <returns>Whether or not the parsing was successful.</returns>
     public static bool TryParseFunctionalDateValue([NotNullWhen(true)] string? dateTime, out double fdv)
     {
         if (DateTime.TryParse(dateTime, out DateTime dt))

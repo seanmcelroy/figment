@@ -21,48 +21,71 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A schema field which contains one of a defined set of values.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+/// <param name="Values">The allowable values for the enum.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
+    /// <inheritdoc/>
     [JsonIgnore] // Only for enums.
     public override string Type { get; } = "enum";
 
+    /// <summary>
+    /// Gets or sets the allowable values for the enum.
+    /// </summary>
     [JsonPropertyName("enum")]
     public object?[] Values { get; set; } = Values;
 
+    /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         if (value == null)
+        {
             return Task.FromResult(!Required);
+        }
 
         if (value is string s)
+        {
             return Task.FromResult(Values.OfType<JsonElement>()
-                .Where(v => v.ValueKind == JsonValueKind.String)
-                .Any(v => string.CompareOrdinal(v.GetString(), s) == 0)
+                .Any(v => v.ValueKind == JsonValueKind.String && string.CompareOrdinal(v.GetString(), s) == 0)
                 || Values.OfType<string>()
                 .Any(v => string.CompareOrdinal(v, s) == 0));
+        }
 
         if (value is int i)
+        {
             return Task.FromResult(Values.OfType<JsonElement>()
-                .Where(v => v.ValueKind == JsonValueKind.Number)
-                .Any(v => v.GetInt64() == i)
+                .Any(v => v.ValueKind == JsonValueKind.Number && v.GetInt64() == i)
                 || Values.OfType<int>().Any(v => v == i));
+        }
 
         if (value is double d)
+        {
             return Task.FromResult(Values.OfType<JsonElement>()
-                .Where(v => v.ValueKind == JsonValueKind.Number)
-                .Any(v => Math.Abs(v.GetDouble() - d) < double.Epsilon)
+                .Any(v => v.ValueKind == JsonValueKind.Number && Math.Abs(v.GetDouble() - d) < double.Epsilon)
                 || Values.OfType<double>().Any(v => Math.Abs(v - d) < double.Epsilon));
+        }
 
         if (value is bool b)
+        {
             return Task.FromResult(Values.OfType<JsonElement>()
                 .Any(v => (v.ValueKind == JsonValueKind.True && b)
                     || (v.ValueKind == JsonValueKind.False && !b))
                 || Values.OfType<bool>().Any(v => v == b));
+        }
 
         if (value == null)
+        {
             return Task.FromResult(Values.OfType<JsonElement>()
                 .Any(v => v.ValueKind == JsonValueKind.Null)
             || Values.Any(v => v == null));
+        }
 
         throw new InvalidOperationException();
     }
@@ -71,7 +94,9 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (prop.Equals(default(JsonElement)))
+        {
             throw new ArgumentException("Default struct value is invalid", nameof(prop));
+        }
 
         var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
         List<object?> vals = [];
@@ -94,22 +119,25 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
                         vals.Add(null);
                         continue; // We don't load nulls
                     default:
-                        throw new NotImplementedException();
+                        throw new NotSupportedException($"Unsupported element value kind '{element.ValueKind}'");
                 }
             }
         }
 
-        var f = new SchemaEnumField(name, [.. vals])
+        return new SchemaEnumField(name, [.. vals])
         {
             Required = required,
         };
-        return f;
     }
 
+    /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
         if (Values == null || Values.Length == 0)
+        {
             return Task.FromResult("enum []");
+        }
+
         var fields = Values.Select(v => v?.ToString() ?? "null").Aggregate((c, n) => $"{c},{n}");
         return Task.FromResult($"enum [{fields}]");
     }

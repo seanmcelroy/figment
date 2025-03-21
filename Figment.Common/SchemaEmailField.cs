@@ -21,7 +21,13 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A text field which stores an email address.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.
@@ -36,6 +42,13 @@ public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
     [JsonPropertyName("type")]
     public override string Type { get; } = "string"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
+    /// <summary>
+    /// Gets the format of this string field.
+    /// </summary>
+    /// <remarks>
+    /// Because email addresses are serialized in JSON as strings with format 'email', the value of this field
+    /// is always <![CDATA[email]]>.
+    /// </remarks>
     [JsonPropertyName("format")]
     public string Format { get; } = "email"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
@@ -43,7 +56,9 @@ public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         return value == null
             ? Task.FromResult(!Required)

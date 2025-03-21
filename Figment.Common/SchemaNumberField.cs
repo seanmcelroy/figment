@@ -20,7 +20,13 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A field which stores a floating-point number.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaNumberField(string Name) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.
@@ -39,7 +45,9 @@ public class SchemaNumberField(string Name) : SchemaFieldBase(Name)
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         return value == null
             ? Task.FromResult(!Required)

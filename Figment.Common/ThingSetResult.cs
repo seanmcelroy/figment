@@ -22,7 +22,8 @@ namespace Figment.Common;
 /// The result of the <see cref="Thing.Set"/> operation
 /// </summary>
 /// <param name="Success">True if the operation was successful, otherwise false</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public readonly record struct ThingSetResult(bool Success)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
-
 }

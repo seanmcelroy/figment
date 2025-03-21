@@ -98,12 +98,14 @@ public static class Parser
             }
 
             string? nextToken;
-            if (nextRightParen == pos) // Ending a capture with a spurious right parenthesis
+            if (nextRightParen == pos)
             {
+                // Ending a capture with a spurious right parenthesis
                 nextToken = ")";
             }
-            else if (nextDoubleQuotation == pos) // Ending a capture with a spurious right parenthesis
+            else if (nextDoubleQuotation == pos)
             {
+                // Ending a capture with a spurious right parenthesis
                 nextToken = "\"";
                 var quotationStartPos = pos;
                 pos++;
@@ -125,8 +127,9 @@ public static class Parser
 
                 return (true, "static string", t => CalculationResult.Success(quoted, CalculationResultType.StaticValue));
             }
-            else if (nextSingleQuotation == pos) // Ending a capture with a spurious right parenthesis
+            else if (nextSingleQuotation == pos)
             {
+                // Ending a capture with a spurious right parenthesis
                 // Same as before
                 nextToken = "\'";
                 var quotationStartPos = pos;
@@ -231,7 +234,9 @@ public static class Parser
             }
             else
             {
+#pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
                 nextToken = nextLeftParen == -1 ? null : formula[pos..(nextLeftParen + 1)];
+#pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
                 if (nextToken != null)
                 {
                     switch (nextToken.ToLowerInvariant())

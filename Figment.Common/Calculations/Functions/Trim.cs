@@ -18,15 +18,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// Removes spaces from text.
+/// </summary>
 public class Trim : FunctionBase
 {
+    /// <inheritdoc/>
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
     {
         if (parameters.Length != 1)
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "TRIM() takes one parameter");
+        }
 
         if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? text))
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "TRIM() takes one non-null parameter");
+        }
 
         return CalculationResult.Success(text?.Trim() ?? string.Empty, CalculationResultType.FunctionResult);
     }

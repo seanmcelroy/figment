@@ -25,7 +25,9 @@ namespace Figment.Common;
 /// A field which dynamically calculates its value base don a formula.
 /// </summary>
 /// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.
@@ -40,6 +42,9 @@ public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
+    /// <summary>
+    /// Gets or sets the formula used to calculate new values for this field.
+    /// </summary>
     [JsonPropertyName("formula")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Formula { get; set; }

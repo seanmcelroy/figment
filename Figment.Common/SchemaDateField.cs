@@ -22,7 +22,13 @@ using System.Text.Json.Serialization;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A field that stores a date and time value.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaDateField(string Name) : SchemaTextField(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.
@@ -39,6 +45,7 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
         "yyyy-MM-ddTHH:mm:ss.ffK",
         "yyyy-MM-ddTHH:mm:ssZ",
         "yyyy-MM-ddTHH:mm:ss.ffZ",
+
         // Fallbacks
         "yyyy-MM-dd H:mm tt",
         "yyyy-MM-dd HH:mm",
@@ -57,6 +64,7 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
         "M/d/yyyy",
         DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern,
         DateTimeFormatInfo.InvariantInfo.SortableDateTimePattern,
+
         // Weird fallbacks
         "MMM d, yyyy",
         "MMMM d, yyyy",
@@ -68,7 +76,13 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
     [JsonPropertyName("type")]
     public override string Type { get; } = "string"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets the format of this string field.
+    /// </summary>
+    /// <remarks>
+    /// Because dates are serialized in JSON as strings with format 'date', the value of this field
+    /// is always <![CDATA[date]]>.
+    /// </remarks>
     [JsonPropertyName("format")]
     public string Format { get; } = "date"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
@@ -125,6 +139,12 @@ public class SchemaDateField(string Name) : SchemaTextField(Name)
         return false;
     }
 
+    /// <summary>
+    /// Attempts to parse a string into a <see cref="DateTimeOffset"/> value.
+    /// </summary>
+    /// <param name="input">The string to parse as a boolean value.</param>
+    /// <param name="output">If successful, the <see cref="DateTimeOffset"/> value parsed from the <paramref name="input"/>.</param>
+    /// <returns>A boolean indicating whether or not <paramref name="input"/> could be parsed into the <paramref name="output"/> <see cref="DateTimeOffset"/>.</returns>
     public static bool TryParseDate([NotNullWhen(true)] string? input, out DateTimeOffset output)
     {
         if (DateTimeOffset.TryParseExact(input, _formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset dte))

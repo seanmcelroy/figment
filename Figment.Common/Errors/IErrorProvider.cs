@@ -18,22 +18,94 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Errors;
 
+/// <summary>
+/// A provider that handles error messages propogated from core components.
+/// </summary>
 public interface IErrorProvider
 {
+    /// <summary>
+    /// Logs an exception.
+    /// </summary>
+    /// <param name="ex">The exception that was observed.</param>
+    /// <param name="formattableString">A formattable string representing a human-readable message or context for the exception.</param>
     public void LogException(Exception ex, FormattableString formattableString);
+
+    /// <summary>
+    /// Logs an error.
+    /// </summary>
+    /// <param name="formattableString">A formattable string representing a human-readable message or context for the error.</param>
     public void LogError(FormattableString formattableString);
+
+    /// <summary>
+    /// Logs a warning.
+    /// </summary>
+    /// <param name="formattableString">A formattable string representing a human-readable message or context for the warning.</param>
     public void LogWarning(FormattableString formattableString);
+
+    /// <summary>
+    /// Logs an informational message.
+    /// </summary>
+    /// <param name="formattableString">A formattable string representing a human-readable message.</param>
     public void LogInfo(FormattableString formattableString);
+
+    /// <summary>
+    /// Logs a message indicating an operation has completed.
+    /// </summary>
+    /// <param name="formattableString">A formattable string representing a human-readable message.</param>
     public void LogDone(FormattableString formattableString);
+
+    /// <summary>
+    /// Logs a message indicating an operation has begun or a status update if it is in progress.
+    /// </summary>
+    /// <param name="formattableString">A formattable string representing a human-readable message.</param>
     public void LogProgress(FormattableString formattableString);
+
+    /// <summary>
+    /// Logs a debugging message providing diagnostic information of interest to technical users or programmers.
+    /// </summary>
+    /// <param name="formattableString">A formattable string representing a human-readable message.</param>
     public void LogDebug(FormattableString formattableString);
 
+    /// <summary>
+    /// Logs an exception.
+    /// </summary>
+    /// <param name="ex">The exception that was observed.</param>
+    /// <param name="message">A human-readable message or context for the exception.</param>
     public void LogException(Exception ex, string message);
-    public void LogError(string message);
-    public void LogWarning(string message);
-    public void LogInfo(string message);
-    public void LogDone(string message);
-    public void LogProgress(string message);
-    public void LogDebug(string message);
 
+    /// <summary>
+    /// Logs an error.
+    /// </summary>
+    /// <param name="message">A human-readable message or context for the error.</param>
+    public void LogError(string message);
+
+    /// <summary>
+    /// Logs a warning.
+    /// </summary>
+    /// <param name="message">A human-readable message or context for the warning.</param>
+    public void LogWarning(string message);
+
+    /// <summary>
+    /// Logs an informational message.
+    /// </summary>
+    /// <param name="message">A human-readable message.</param>
+    public void LogInfo(string message);
+
+    /// <summary>
+    /// Logs a message indicating an operation has completed.
+    /// </summary>
+    /// <param name="message">A human-readable message.</param>
+    public void LogDone(string message);
+
+    /// <summary>
+    /// Logs a message indicating an operation has begun or a status update if it is in progress.
+    /// </summary>
+    /// <param name="message">A human-readable message.</param>
+    public void LogProgress(string message);
+
+    /// <summary>
+    /// Logs a debugging message providing diagnostic information of interest to technical users or programmers.
+    /// </summary>
+    /// <param name="message">A human-readable message.</param>
+    public void LogDebug(string message);
 }

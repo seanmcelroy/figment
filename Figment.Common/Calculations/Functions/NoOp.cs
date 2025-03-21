@@ -25,7 +25,9 @@ namespace Figment.Common.Calculations.Functions;
 public class NoOp : FunctionBase
 {
     /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         return parameters.Length switch
         {

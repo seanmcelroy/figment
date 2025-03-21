@@ -22,26 +22,43 @@ using System.Text.RegularExpressions;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A field which stores a string.
+/// </summary>
+/// <param name="Name">Name of the field on a <see cref="Schema"/>.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaTextField(string Name) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = "string";
 
+    /// <summary>
+    /// Gets or sets the minimum number of characters the text must have, if any.
+    /// </summary>
     [JsonPropertyName("minLength")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ushort? MinLength { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum number of characters the text must have, if any.
+    /// </summary>
     [JsonPropertyName("maxLength")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ushort? MaxLength { get; set; }
 
+    /// <summary>
+    /// Gets or sets the regular expression pattern the text must adhere to, if any.
+    /// </summary>
     [JsonPropertyName("pattern")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public virtual string? Pattern { get; set; }
 
     /// <inheritdoc/>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         if (value == null)
         {

@@ -18,11 +18,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common;
 
-public class Link(string Guid, string SourceGuid, string DestinationGuid)
+/// <summary>
+/// A link is an entity that connects two other non-link entities with some kind of relationship.
+/// </summary>
+/// <param name="Guid">The globally unique identifier for the link itself.</param>
+/// <param name="Source">The source of the linked relationship.</param>
+/// <param name="Destination">The destination of the linked relationship.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
+public class Link(string Guid, Reference Source, Reference Destination)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
-    private const string NameIndexFileName = $"_link.names.csv";
+    private const string NameIndexFileName = "_link.names.csv";
 
+    /// <summary>
+    /// Gets the globally unique identifier for the link itself.
+    /// </summary>
     public string Guid { get; init; } = Guid;
-    public string SourceGuid { get; init; } = SourceGuid;
-    public string DestinationGuid { get; init; } = DestinationGuid;
+
+    /// <summary>
+    /// Gets the source of the linked relationship.
+    /// </summary>
+    public Reference Source { get; init; } = Source;
+
+    /// <summary>
+    /// Gets the destination of the linked relationship.
+    /// </summary>
+    public Reference Destination { get; init; } = Destination;
 }

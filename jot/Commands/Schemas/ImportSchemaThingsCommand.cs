@@ -70,7 +70,9 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         {
             // Extension
             if (string.Compare(Path.GetExtension(settings.FilePath), "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+            {
                 fileFormat = "csv";
+            }
         }
 
         var possibleImportMaps = schema.ImportMaps
@@ -83,9 +85,10 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
-
         if (string.Compare(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+        {
             things = ImportCsv(settings.FilePath, schema);
+        }
         else
         {
             AmbientErrorContext.Provider.LogError($"Unsupported format '{settings.Format}'.");

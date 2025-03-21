@@ -18,10 +18,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common;
 
+/// <summary>
+/// A potential match to an entity.
+/// </summary>
+/// <param name="Reference">The weak reference to the entity that is a possible match.</param>
+/// <param name="Name">The name of the potentially-matching entity.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public readonly record struct PossibleNameMatch(Reference Reference, string Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
+    /// <summary>
+    /// Gets the weak reference to the entity that is a possible match.
+    /// </summary>
     public Reference Reference { get; init; } = Reference;
+
+    /// <summary>
+    /// Gets the name of the potentially-matching entity.
+    /// </summary>
     public string Name { get; init; } = Name;
 
+    /// <summary>
+    /// Gets the <see cref="Name"/> of the potentially-matching entity.
+    /// </summary>
+    /// <returns>The value of the <see cref="Name"/> property.</returns>
     public override string ToString() => Name;
 }

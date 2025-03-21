@@ -50,16 +50,20 @@ public class MemorySchemaStorageProvider : ISchemaStorageProvider
     /// <returns>Each schema</returns>
     /// <remarks>This may be a very expensive operation</remarks>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public async IAsyncEnumerable<(Reference reference, string? name)> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         foreach (var schema in SchemaCache.Values)
         {
-            yield return (new Reference
+            yield return new PossibleNameMatch
             {
-                Guid = schema.Guid,
-                Type = Reference.ReferenceType.Schema
-            }, schema?.Name);
+                Reference = new()
+                {
+                    Guid = schema.Guid,
+                    Type = Reference.ReferenceType.Schema
+                },
+                Name = schema?.Name ?? "<UNDEFINED>"
+            };
         }
     }
 

@@ -18,15 +18,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Calculations.Functions;
 
+/// <summary>
+/// Returns the number of characters in a text string.
+/// </summary>
 public class Len : FunctionBase
 {
+    /// <inheritdoc/>
     public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
     {
         if (parameters.Length != 1)
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "LEN() takes one parameter");
+        }
 
         if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? text))
+        {
             return CalculationResult.Error(CalculationErrorType.FormulaParse, "LEN() takes one non-null parameter");
+        }
 
         return CalculationResult.Success(text?.Length ?? 0, CalculationResultType.FunctionResult);
     }

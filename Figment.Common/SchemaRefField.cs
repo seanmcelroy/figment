@@ -22,11 +22,13 @@ using Figment.Common.Data;
 namespace Figment.Common;
 
 /// <summary>
-/// This field is a reference to a thing in a given <see cref="Schema"/>
+/// This field is a reference to a thing in a given Schema.
 /// </summary>
-/// <param name="Name">The name of the field</param>
-/// <param name="SchemaGuid">The schema to which the thing (whose guid is the value of this field) must adhere</param>
+/// <param name="Name">The name of the field.</param>
+/// <param name="SchemaGuid">The schema to which the thing (whose guid is the value of this field) must adhere.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Name)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
     /// A constant string value representing schema fields of this type.
@@ -41,9 +43,19 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
     [JsonIgnore] // Only for enums.
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
+    /// <summary>
+    /// Gets or sets the <see cref="Schema"/> to which this field refers.
+    /// </summary>
     [JsonIgnore]
     public string SchemaGuid { get; set; } = SchemaGuid;
 
+    /// <summary>
+    /// Gets or sets the identifier of the <see cref="Schema"/> to which this field refers.
+    /// </summary>
+    /// <remarks>
+    /// Due to limitations of the .NET 9 core framework, this cannot be a
+    /// $-meta property due to the polymorphism of <see cref="SchemaFieldBase"/>.
+    /// </remarks>
     [JsonPropertyName("ref")] // TODO: Someday, make this a $ meta property
     public string Id
     {

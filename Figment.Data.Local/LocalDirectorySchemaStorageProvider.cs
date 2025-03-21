@@ -163,7 +163,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
     /// <param name="cancellationToken">A cancellation token to abort the enumerator</param>
     /// <returns>Each schema</returns>
     /// <remarks>This may be a very expensive operation</remarks>
-    public async IAsyncEnumerable<(Reference reference, string? name)> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Shortcut - try to get them by name index first.
         var indexFilePath = Path.Combine(SchemaDirectoryPath, NameIndexFileName);
@@ -196,11 +196,15 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
                 && Guid.TryParse(schemaGuidString[0], out Guid _))
             {
                 var schema = await LoadAsync(schemaGuidString[0], cancellationToken);
-                yield return (new Reference
+                yield return new PossibleNameMatch
                 {
-                    Guid = schemaGuidString[0],
-                    Type = Reference.ReferenceType.Schema
-                }, schema?.Name);
+                    Reference = new()
+                    {
+                        Guid = schemaGuidString[0],
+                        Type = Reference.ReferenceType.Schema
+                    },
+                    Name = schema?.Name ?? "<UNDEFINED>"
+                };
             }
         }
     }
@@ -354,7 +358,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         return Reference.EMPTY;
     }
 
-    private async IAsyncEnumerable<(Reference reference, string name)> FindByNameAsync(Func<string, bool> nameSelector, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<PossibleNameMatch> FindByNameAsync(Func<string, bool> nameSelector, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(nameSelector);
 
@@ -372,11 +376,15 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             var schemaGuid = schemaFileName.Split('.')[0];
             var schema = await LoadAsync(schemaGuid, cancellationToken);
             if (schema != null)
-                yield return (new Reference
+                yield return new PossibleNameMatch
                 {
-                    Guid = schemaGuid,
-                    Type = Reference.ReferenceType.Schema
-                }, schema.Name);
+                    Reference = new()
+                    {
+                        Guid = schemaGuid,
+                        Type = Reference.ReferenceType.Schema
+                    },
+                    Name = schema.Name
+                };
         }
 
         yield break;
