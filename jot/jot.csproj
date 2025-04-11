@@ -8,11 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="com.seanmcelroy.Spectre.Console.Community.TextPromptWithHistory" Version="1.0.3" />
+    <PackageReference Include="com.seanmcelroy.Spectre.Console.Community.TextPromptWithHistory" Version="1.0.4" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
-    <PackageReference Include="Spectre.Console" Version="0.49.1" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.49.1" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+    <PackageReference Include="Spectre.Console" Version="0.50.0" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.50.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -22,6 +23,14 @@
   <ItemGroup>
     <ProjectReference Include="..\Figment.Common\Figment.Common.csproj" />
     <ProjectReference Include="..\Figment.Data.Local\Figment.Data.Local.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Resources/00000000-0000-0000-0000-000000000001.schema.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/00000000-0000-0000-0000-000000000001.schema.json" />
   </ItemGroup>
 
 </Project>
