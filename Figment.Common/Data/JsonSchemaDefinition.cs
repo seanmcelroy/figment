@@ -17,9 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Text.Json.Serialization;
-using Figment.Common;
 
-namespace Figment.Data.Local;
+namespace Figment.Common.Data;
 
 /// <summary>
 /// This is the definition of a <see cref="Figment.Schema"/> when it is persisted
@@ -31,18 +30,26 @@ namespace Figment.Data.Local;
 /// <param name="Plural">The plural word for the schema, which should be the plural form of the value provided in <paramref name="Name"/></param>
 [method: JsonConstructor]
 public record JsonSchemaDefinition(string Guid, string Name, string? Description, string? Plural)
-
 {
+    /// <summary>
+    /// Gets the Json schema $schema metadata property.
+    /// </summary>
     [JsonPropertyName("$schema")]
     public string Schema { get; init; } = "https://json-schema.org/draft/2020-12/schema";
 
+    /// <summary>
+    /// Gets or sets the Json schema $id metadata property.
+    /// </summary>
     [JsonPropertyName("$id")]
     public string Id
     {
         get
         {
             if (string.IsNullOrWhiteSpace(Guid))
+            {
                 return "???";
+            }
+
             return $"https://figment.seanmcelroy.com/{Guid}.schema.json";
         }
         set
@@ -80,7 +87,8 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
     [JsonIgnore]
     public string Guid { get; set; } = Guid;
 
-    public JsonSchemaDefinition(Schema schema) : this(schema.Guid, schema.Name, schema.Description, schema.Plural)
+    public JsonSchemaDefinition(Schema schema)
+        : this(schema.Guid, schema.Name, schema.Description, schema.Plural)
     {
         Description = schema.Description;
         Plural = schema.Plural;
@@ -94,6 +102,29 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
         ImportMaps = schema.ImportMaps;
     }
 
+    public Schema ToSchema()
+    {
+        var schema = new Schema(Guid, Name)
+        {
+            // Optional built-ins
+            Description = Description,
+            Plural = Plural,
+            CreatedOn = DateTime.UnixEpoch,
+            LastModified = DateTime.UnixEpoch,
+            LastAccessed = DateTime.UnixEpoch,
+        };
+
+        foreach (var prop in Properties)
+        {
+            prop.Value.Required = RequiredProperties?.Any(sdr => string.CompareOrdinal(sdr, prop.Key) == 0) == true;
+            schema.Properties.Add(prop.Key, prop.Value);
+        }
+
+        schema.ImportMaps.AddRange(ImportMaps);
+
+        return schema;
+    }
+
     public Schema ToSchema(FileInfo schemaFileInfo)
     {
         var schema = new Schema(Guid, Name)
@@ -103,17 +134,12 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
             Plural = Plural,
             CreatedOn = schemaFileInfo.CreationTimeUtc,
             LastModified = schemaFileInfo.LastWriteTimeUtc,
-            LastAccessed = schemaFileInfo.LastAccessTimeUtc
+            LastAccessed = schemaFileInfo.LastAccessTimeUtc,
         };
 
         foreach (var prop in Properties)
         {
-            var required =
-                RequiredProperties != null &&
-                RequiredProperties.Any(sdr => string.CompareOrdinal(sdr, prop.Key) == 0);
-
-            prop.Value.Required = required;
-
+            prop.Value.Required = RequiredProperties?.Any(sdr => string.CompareOrdinal(sdr, prop.Key) == 0) == true;
             schema.Properties.Add(prop.Key, prop.Value);
         }
 

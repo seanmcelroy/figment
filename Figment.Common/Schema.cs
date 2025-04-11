@@ -109,8 +109,7 @@ public class Schema(string Guid, string Name)
             return null;
         }
 
-        var newSchema = await provider.LoadAsync(result.NewGuid, cancellationToken);
-        return newSchema;
+        return await provider.LoadAsync(result.NewGuid, cancellationToken);
     }
 
     /// <summary>

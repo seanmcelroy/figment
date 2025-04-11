@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -138,6 +139,11 @@ internal class Program
                         .WithAlias("print")
                         .WithDescription("Views the values of all properties on a thing");
                 });
+            config.AddBranch("initialize", reindex =>
+                {
+                    reindex.AddCommand<InitSchemasCommand>("schemas")
+                        .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
+                });
             config.AddBranch("reindex", reindex =>
                 {
                     reindex.AddCommand<ReindexSchemasCommand>("schemas")
@@ -217,7 +223,8 @@ internal class Program
         }
 
         // Interactive mode
-        AnsiConsole.MarkupLine("[bold fuchsia]jot[/] v0.0.2");
+        var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "UNKNOWN";
+        AnsiConsole.MarkupLine($"[bold fuchsia]jot[/] version {version}");
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
         AnsiConsole.MarkupLine("\r\nThere are additional undocumented commands in this mode.  Type [purple bold]ihelp[/] for help on this mode interactive.");
 

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000002.schema.json",
+  "title": "view",
+  "description": "System schema for views of objects",
+  "$plural": "views",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "for": {
+      "$type": "schema",
+      "type": "string"
+    },
+    "displayColumns": {
+      "$type": "array",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

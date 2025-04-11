@@ -5,6 +5,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyVersion>0.0.3.0</AssemblyVersion>
+    <Version>0.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,11 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="Resources/00000000-0000-0000-0000-000000000001.schema.json" />
+    <Content Remove="Resources/DefaultSchemas/00000000-0000-0000-0000-*.schema.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources/00000000-0000-0000-0000-000000000001.schema.json" />
+    <EmbeddedResource Include="Resources/DefaultSchemas/00000000-0000-0000-0000-*.schema.json" />
   </ItemGroup>
 
 </Project>

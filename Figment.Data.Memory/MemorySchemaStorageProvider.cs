@@ -22,7 +22,7 @@ using Figment.Common.Data;
 
 namespace Figment.Data.Memory;
 
-public class MemorySchemaStorageProvider : ISchemaStorageProvider
+public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaStorageProvider
 {
     private static readonly Dictionary<string, Schema> SchemaCache = [];
 

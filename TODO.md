@@ -13,7 +13,7 @@
 - [x] pretty field names
 - [x] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
 - [x] Improved getting started documentation
-- [ ] Built-in system schemas
+- [x] Built-in system schemas
 - [ ] default schema values
 - [ ] Schema inheritence
 - [ ] Multiple schema applications

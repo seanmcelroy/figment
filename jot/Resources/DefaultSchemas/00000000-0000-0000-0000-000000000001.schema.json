@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000001.schema.json",
+  "title": "person",
+  "description": "System schema for an individual human",
+  "$plural": "people",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "email": {
+      "$type": "email",
+      "type": "string",
+      "format": "email"
+    },
+    "homepage": {
+      "$type": "uri",
+      "type": "string",
+      "format": "uri",
+      "pattern": "[-a-zA-Z0-9@:%._\\\u002B~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\\u002B.~#?\u0026//=]*)"
+    },
+    "gender": {
+      "$type": "enum",
+      "enum": [
+        "male",
+        "female"
+      ]
+    },
+    "phone": {
+      "$type": "phone",
+      "type": "string"
+    },
+    "active": {
+      "$type": "bool",
+      "type": "bool"
+    },
+    "manager": {
+      "$type": "ref",
+      "ref": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000001.schema.json"
+    },
+    "birthdate": {
+      "$type": "monthday",
+      "type": "integer"
+    },
+    "department": {
+      "$type": "text",
+      "type": "string"
+    },
+    "age": {
+      "$type": "calculated",
+      "type": "calculated",
+      "formula": "=FLOOR(DATEDIFF(\u0027yyyy\u0027,[birthdate],NOW()))"
+    },
+    "address": {
+      "$type": "array",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "importMaps": []
+}

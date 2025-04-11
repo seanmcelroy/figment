@@ -50,6 +50,12 @@ public interface ISchemaStorageProvider
 
     public IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Determines whether the schema with the given <paramref name="schemaGuid"/> exists in the underlying store.
+    /// </summary>
+    /// <param name="schemaGuid">Unique identifier of the <see cref="Schema"/> to check.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether the schema with the specified GUID exists.</returns>
     public Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken);
 
     /// <summary>
@@ -67,6 +73,14 @@ public interface ISchemaStorageProvider
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value indicating whether or not the load attempt was successful.</returns>
     public Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Loads schema from a serialized Json string.
+    /// </summary>
+    /// <param name="content">Json string to deserialize into a <see cref="Schema"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The deserliazed schema, or null if there was a serialization error.</returns>
+    public Task<Schema?> LoadJsonContentAsync(string content, CancellationToken cancellationToken);
 
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken);
 

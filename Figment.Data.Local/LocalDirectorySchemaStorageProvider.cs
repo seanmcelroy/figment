@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using Figment.Common;
 using Figment.Common.Data;
@@ -24,20 +25,11 @@ using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
-public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, string ThingDirectoryPath) : ISchemaStorageProvider
+public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, string ThingDirectoryPath) : SchemaStorageProviderBase, ISchemaStorageProvider
 {
     private const string NameIndexFileName = $"_schema.names.csv";
 
     private const string PluralIndexFileName = $"_schema.plurals.csv";
-
-    private static readonly JsonSerializerOptions jsonSerializerOptions = new()
-    {
-        // Required for $ref properties with type descriminator
-        AllowOutOfOrderMetadataProperties = true,
-#if DEBUG
-        WriteIndented = true,
-#endif
-    };
 
     public async Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken)
     {
@@ -58,7 +50,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         using var fs = new FileStream(schemaFilePath, FileMode.CreateNew);
         try
         {
-            await JsonSerializer.SerializeAsync(fs, schemaDefinition, jsonSerializerOptions, cancellationToken);
+            await JsonSerializer.SerializeAsync(fs, schemaDefinition, SerializerOptions, cancellationToken);
             await fs.FlushAsync(cancellationToken);
         }
         catch (Exception)
@@ -239,7 +231,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         using var fs = new FileStream(filePath, FileMode.Open);
         try
         {
-            var schemaDefinition = await JsonSerializer.DeserializeAsync<JsonSchemaDefinition>(fs, jsonSerializerOptions, cancellationToken);
+            var schemaDefinition = await JsonSerializer.DeserializeAsync<JsonSchemaDefinition>(fs, SerializerOptions, cancellationToken);
             if (schemaDefinition == null)
             {
                 AmbientErrorContext.Provider.LogError($"Unable to deserialize schema from {filePath}");
@@ -250,6 +242,26 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         catch (JsonException je)
         {
             AmbientErrorContext.Provider.LogException(je, $"Unable to deserialize schema from {filePath}");
+            return null;
+        }
+    }
+
+    private static async Task<Schema?> LoadContentAsync(string content, CancellationToken cancellationToken)
+    {
+        using var ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
+        try
+        {
+            var schemaDefinition = await JsonSerializer.DeserializeAsync<JsonSchemaDefinition>(ms, SerializerOptions, cancellationToken);
+            if (schemaDefinition == null)
+            {
+                AmbientErrorContext.Provider.LogError("Unable to deserialize schema from content");
+                return null;
+            }
+            return schemaDefinition.ToSchema();
+        }
+        catch (JsonException je)
+        {
+            AmbientErrorContext.Provider.LogException(je, $"Unable to deserialize schema from content string");
             return null;
         }
     }
@@ -271,7 +283,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         using var fs = File.Create(filePath);
         try
         {
-            await JsonSerializer.SerializeAsync(fs, schemaDefinition, jsonSerializerOptions, cancellationToken);
+            await JsonSerializer.SerializeAsync(fs, schemaDefinition, SerializerOptions, cancellationToken);
             await fs.FlushAsync(cancellationToken);
 
             if (File.Exists(backupFileName))
@@ -306,9 +318,23 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             var schema = await LoadFileAsync(schemaFileName.FullName, cancellationToken);
             if (schema == null)
                 continue;
-            namesIndex.Add(schema.Name, schemaFileName.Name);
+
+            if (!namesIndex.TryAdd(schema.Name, schemaFileName.Name))
+            {
+                var currentNames = namesIndex[schema.Name];
+                AmbientErrorContext.Provider.LogError($"An item with the same key in the namesIndex already exists for {schema.Name}.  Current value is '{currentNames}'.  Attempted new value was '{schemaFileName.Name}'.");
+                continue;
+            }
+
             if (!string.IsNullOrWhiteSpace(schema.Plural))
-                pluralsIndex.Add(schema.Plural, schemaFileName.Name);
+            {
+                if (!pluralsIndex.TryAdd(schema.Plural, schemaFileName.Name))
+                {
+                    var currentPlurals = pluralsIndex[schema.Plural];
+                    AmbientErrorContext.Provider.LogError($"An item with the same key in the pluralsIndex already exists for {schema.Plural}.  Current value is '{currentPlurals}'.  Attempted new value was '{schemaFileName.Name}'.");
+                    continue;
+                }
+            }
         }
 
         Dictionary<string, Dictionary<string, string>> indexesToWrite = new() {
