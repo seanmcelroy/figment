@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Diagnostics;
 using System.Globalization;
-using System.Reflection;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -69,9 +68,14 @@ internal class Program
             AmbientStorageContext.StorageProvider = ldsp;
         }
 
+        var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "UNKNOWN";
+
         var app = new CommandApp();
         app.Configure(config =>
         {
+            config.Settings.ApplicationName = "jot";
+            config.Settings.ApplicationVersion = version;
+
             config.AddCommand<NewCommand>("new")
                 .WithDescription("Creates new types (schemas) or instances of things");
             config.AddCommand<ListSchemasCommand>("schemas")
@@ -139,18 +143,9 @@ internal class Program
                         .WithAlias("print")
                         .WithDescription("Views the values of all properties on a thing");
                 });
-            config.AddBranch("initialize", reindex =>
-                {
-                    reindex.AddCommand<InitSchemasCommand>("schemas")
-                        .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
-                });
-            config.AddBranch("reindex", reindex =>
-                {
-                    reindex.AddCommand<ReindexSchemasCommand>("schemas")
-                        .WithDescription("Rebuilds the index files for schemas for consistency");
-                    reindex.AddCommand<ReindexThingsCommand>("things")
-                        .WithDescription("Rebuilds the index files for things for consistency");
-                });
+
+            config.AddCommand<HelpCommand>("help")
+                .IsHidden();
 
             // Interactive commands
             if (interactive)
@@ -213,6 +208,19 @@ internal class Program
 
                 config.AddCommand<VerboseCommand>("verbose")
                     .WithDescription("Toggles verbosity.  When verbosity is on, '-v' is specified automatically with every supported command");
+
+                config.AddBranch("initialize", reindex =>
+                    {
+                        reindex.AddCommand<InitSchemasCommand>("schemas")
+                            .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
+                    });
+                config.AddBranch("reindex", reindex =>
+                    {
+                        reindex.AddCommand<ReindexSchemasCommand>("schemas")
+                            .WithDescription("Rebuilds the index files for schemas for consistency");
+                        reindex.AddCommand<ReindexThingsCommand>("things")
+                            .WithDescription("Rebuilds the index files for things for consistency");
+                    });
             }
         });
 
@@ -223,10 +231,8 @@ internal class Program
         }
 
         // Interactive mode
-        var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "UNKNOWN";
         AnsiConsole.MarkupLine($"[bold fuchsia]jot[/] version {version}");
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
-        AnsiConsole.MarkupLine("\r\nThere are additional undocumented commands in this mode.  Type [purple bold]ihelp[/] for help on this mode interactive.");
 
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaProvider == null)

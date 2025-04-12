@@ -13,6 +13,19 @@ public class HelpCommand : CancellableAsyncCommand
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
+        if (string.Equals(context.Name, "help", StringComparison.CurrentCultureIgnoreCase))
+        {
+            AnsiConsole.MarkupLine(
+            """
+            Welcome to [bold fuchsia]jot[/]'s interactive mode.
+
+            You can type [purple]--help[/] in interactive mode to see help on the main commands.
+
+            Or you can type [purple]ihelp[/] to see commands only available in this special mode.
+            """);
+            return await Task.FromResult(0);
+        }
+
         var sb = new StringBuilder();
 
         sb.AppendLine(

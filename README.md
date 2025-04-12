@@ -33,38 +33,31 @@ The output from this cmomand in interactive mode is as follows:
 
 ```
 > new restaurant "Golden Corral"
-DONE: Schema restaurant created, and new instance Golden Corral created.
+Done: Schema restaurant created, and new instance Golden Corral created.
 ```
 
-Two entities are created: the schema 'restaurant' and the instance 'Golden Corral' which is a type of restaurant.  To view the details of the new restaurant schema in interactive mode, you can "select" the schema and then "view" it.
+Two entities are created: the schema 'restaurant' and the instance 'Golden Corral' which is a type of restaurant.  To view the details of the new restaurant schema in interactive mode, you can "select" the schema and then "view" it.  You'll also notice that the prompt changes from '>' to '(Golden Corral)>' which means that Golden Corral was selected automatically for you when you created it.  But now, let's look at the schema 'restaurant' instead by selecting that and then 'view'ing it.
 
 ```
-> select restaurant
-DONE: Schema restaurant selected.
+(Golden Corral)> select restaurant
+Done: Schema restaurant selected.
 
 (restaurant)> view
-Instance    : restaurant
-GUID        : b08d5e82-6a71-437d-9fd5-95915428d5d4
-Type        : Schema
-
+Schema      : restaurant
 Description : 
 Plural      : 
 
 Properties  : (None)
 ```
 
-Notice when you select an item in jot's interactive mode, the prompt reflects what you have selected.
-
-Schemas have four primary attributes: the name, a randomly assigned GUID, an optional description, and a plural form.  The plural form allows you to view things of the type in interactive mode.  So, if we set that Plural for restaurant to 'restaurants with this command:
+Schemas have some important attributes: the name, an optional description, and a plural form.  The plural form allows you to view things of the type in interactive mode.  So, if we set that Plural for restaurant to 'restaurants' with this command:
 
 ```
-(restaurant)> set plural restaurants
-DONE: restaurant saved.
-(restaurant)> ?
-Instance    : restaurant
-GUID        : b08d5e82-6a71-437d-9fd5-95915428d5d4
-Type        : Schema
+(restaurant)> plural restaurants
+Done: restaurant saved.  Plural keyword was '' but is now  'restaurants'.
 
+(restaurant)> ?
+Schema      : restaurant
 Description : 
 Plural      : restaurants
 
@@ -77,14 +70,14 @@ Let's create a second restaurant and then list all the restaurants by specifying
 
 ```
 (restaurant)> new restaurant "Riveras Mexican Cafe"
-DONE: Riveras Mexican Cafe, a type of restaurant, created.
+Done: Riveras Mexican Cafe, a type of restaurant, created.
 
 (Riveras Mexican Cafe)> restaurants
 Golden Corral
 Riveras Mexican Cafe
 ```
 
-As an aside, the same functionality is available in the non-interactive mode with the command:
+As an aside, the same functionality is available in the non-interactive mode (that is, by quitting the interactive mode and running jot as a command line with arguments) with the command:
 
 ```
 $ jot schema restaurant members 
@@ -132,16 +125,16 @@ An `array` field holds any number of individual text lines.  We can select a sch
 
 ```
 > s person
-DONE: Schema person selected
+Done: Schema person selected.
 (person)> set address array
-DONE: person saved.
+Done: person saved.
 ```
 
 Then, we can set that value on an instance of a person using these continuing statements:
 
 ```
 s sean
-DONE: Thing Sean selected
+Done: Thing Sean selected.
 (Sean)> set address "[1000 Main Street,Anytown,MA,01583]"
-DONE: Sean saved.
+Done: Sean saved.
 ```

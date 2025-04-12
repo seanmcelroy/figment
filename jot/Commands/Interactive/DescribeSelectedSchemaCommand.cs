@@ -5,6 +5,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Interactive;
 
+/// <summary>
+/// Sets the description for the currently selected schema.
+/// </summary>
 public class DescribeSelectedSchemaCommand : CancellableAsyncCommand<DescribeSelectedSchemaCommandSettings>
 {
     /// <inheritdoc/>
