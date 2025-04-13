@@ -58,7 +58,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
-        // new todo Call Jake
+        // new todo "Call Jake"
         bool createdNewSchema = false;
         {
             var schemaRef = await ssp.FindByNameAsync(settings.SchemaName, cancellationToken);

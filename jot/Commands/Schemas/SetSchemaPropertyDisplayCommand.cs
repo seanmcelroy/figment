@@ -51,9 +51,9 @@ public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<Set
             whatChanged = $" Added new display name '{settings.DisplayName}' for culture {culture}";
             prop.DisplayNames = new Dictionary<string, string>() { { culture, settings.DisplayName } };
         }
-        else if (prop.DisplayNames.ContainsKey(culture))
+        else if (prop.DisplayNames.TryGetValue(culture, out string? value))
         {
-            whatChanged = $" Changed display name from '{prop.DisplayNames[culture]}' to '{settings.DisplayName}' for culture {culture}";
+            whatChanged = $" Changed display name from '{value}' to '{settings.DisplayName}' for culture {culture}";
             prop.DisplayNames[culture] = settings.DisplayName;
         }
 

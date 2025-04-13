@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.4
+
+- 'clear' command added to jot
+- Schemas can now have a version plan (see schema version command)
+
+### Modified
+
+- 'delete' command can now take a named argument for ease of use
+- Improved saved messages detailing what changed
+- Updated README.md
+
 ## 0.0.3
 
 ### Added

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000003.schema.json",
+  "title": "version",
+  "description": "System schema for a versioning plan",
+  "$plural": "versions",
+  "type": "object",
+  "required": [
+    "basis",
+    "pattern"
+  ],
+  "properties": {
+    "basis": {
+      "$type": "enum",
+      "enum": [
+        "named",
+        "date"
+      ]
+    },
+    "pattern": {
+      "$type": "enum",
+      "enum": [
+        "freeform",
+        "counter",
+        "FYyyyy"
+      ]
+    }
+  },
+  "importMaps": []
+}

@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
@@ -66,6 +84,11 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         await thing.ComputeCalculatedProperties(cancellationToken);
 
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        if (schemaProvider == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
 
         Dictionary<string, Schema> schemas = [];
         if (thing.SchemaGuids != null)
@@ -199,8 +222,15 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 foreach (var lf in linkedFields)
                 {
                     var linkedSchema = await schemaProvider.LoadAsync(lf.Value.SchemaGuid, cancellationToken);
-                    var linkedPlural = linkedSchema.Plural;
-                    linksBuilder.AppendLine($"    {lf.Key} ({linkedPlural})");
+                    if (linkedSchema == null)
+                    {
+                        AmbientErrorContext.Provider.LogWarning($"Unable to load linked schema {lf.Value.SchemaGuid}.");
+                    }
+                    else
+                    {
+                        var linkedPlural = linkedSchema.Plural;
+                        linksBuilder.AppendLine($"    {lf.Key} ({linkedPlural})");
+                    }
                 }
             }
         }
@@ -217,13 +247,20 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             AnsiConsole.MarkupLine($"[silver]Modified On[/] : {thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}");
         }
 
+        static string ConditionalPrint(StringBuilder? sb)
+        {
+            if (sb == null || sb.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            return $"{sb}{Environment.NewLine}";
+        }
+
         AnsiConsole.MarkupLine(
             $"""
-            {schemaBuilder}
-            [chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
-            {propBuilder}
-            {unsetPropBuilder}
-            {linksBuilder}
+            {ConditionalPrint(schemaBuilder)}[chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
+            {propBuilder}{ConditionalPrint(unsetPropBuilder)}
             """);
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

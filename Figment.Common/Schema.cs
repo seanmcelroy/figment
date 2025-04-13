@@ -66,6 +66,11 @@ public class Schema(string Guid, string Name)
     public Dictionary<string, SchemaFieldBase> Properties { get; init; } = [];
 
     /// <summary>
+    /// Gets or sets the versioning plan for this schema, if the schema is versioned.
+    /// </summary>
+    public string? VersionGuid { get; set; }
+
+    /// <summary>
     /// Gets the list of import maps that define how to import external records into new things of this schema type.
     /// </summary>
     public List<SchemaImportMap> ImportMaps { get; init; } = [];

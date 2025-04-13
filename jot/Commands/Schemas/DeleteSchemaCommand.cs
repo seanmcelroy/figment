@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -15,10 +33,16 @@ public class DeleteSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSe
         SCHEMA_DELETE_ERROR = -2002,
     }
 
-    /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, SchemaCommandSettings settings, CancellationToken cancellationToken)
+    /// <summary>
+    /// Attempts to delete the schem by its name or identifier.
+    /// </summary>
+    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> of schemas to match and return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An integer indicating whether or not the command executed successfully.</returns>
+    /// <remarks>This can be used by <see cref="DeleteSchemaCommand"/> and <see cref="DeleteCommand"/>.</remarks>
+    internal static async Task<int> TryDeleteSchema(string guidOrNamePart, CancellationToken cancellationToken)
     {
-        var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
+        var (tgs, schema, _) = await TryGetSchema(guidOrNamePart, cancellationToken);
         if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
         {
             return (int)tgs;
@@ -50,22 +74,24 @@ public class DeleteSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSe
         var deleted = await schema.DeleteAsync(cancellationToken);
         if (deleted)
         {
-            if (settings.Verbose ?? Program.Verbose)
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} ({schema.Name}) deleted.");
+            if (string.Equals(Program.SelectedEntity.Guid, schema.Guid, StringComparison.OrdinalIgnoreCase))
             {
-                AmbientErrorContext.Provider.LogDone($"{schema.Name} ({schema.Guid}) deleted.");
-            }
-            else
-            {
-                AmbientErrorContext.Provider.LogDone($"{schema.Name} deleted.");
+                Program.SelectedEntity = Reference.EMPTY;
+                Program.SelectedEntityName = string.Empty;
             }
 
-            Program.SelectedEntity = Reference.EMPTY;
-            Program.SelectedEntityName = string.Empty;
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
         else
         {
             return (int)ERROR_CODES.SCHEMA_DELETE_ERROR;
         }
+    }
+
+    /// <inheritdoc/>
+    public override async Task<int> ExecuteAsync(CommandContext context, SchemaCommandSettings settings, CancellationToken cancellationToken)
+    {
+        return await TryDeleteSchema(settings.SchemaName, cancellationToken);
     }
 }

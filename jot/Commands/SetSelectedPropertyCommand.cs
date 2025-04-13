@@ -109,8 +109,23 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
 
             case Reference.ReferenceType.Thing:
                 {
+                    if (string.IsNullOrWhiteSpace(settings.PropertyName))
+                    {
+                        AmbientErrorContext.Provider.LogError("To set a property on a new thing, specify the name of the property.");
+                        return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+                    }
+
                     var cmd = new SetThingPropertyCommand();
-                    return await cmd.ExecuteAsync(context, new SetThingPropertyCommandSettings { ThingName = Program.SelectedEntity.Guid, PropertyName = settings.PropertyName, Value = settings.Values?[0], Verbose = settings.Verbose }, cancellationToken);
+                    return await cmd.ExecuteAsync(
+                        context,
+                        new SetThingPropertyCommandSettings
+                        {
+                            ThingName = Program.SelectedEntity.Guid,
+                            PropertyName = settings.PropertyName,
+                            Value = settings.Values?[0],
+                            Verbose = settings.Verbose,
+                        },
+                        cancellationToken);
                 }
 
             default:

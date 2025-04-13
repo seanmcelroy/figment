@@ -19,34 +19,50 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using jot.Commands.Schemas;
+using jot.Commands.Things;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Interactive;
 
 /// <summary>
-/// Selects an entity by name or ID.
+/// Deletes an entity by name or ID.
 /// </summary>
-public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
+public class DeleteCommand : CancellableAsyncCommand<DeleteCommandSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, SelectCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DeleteCommandSettings settings, CancellationToken cancellationToken)
     {
-        // select microsoft
+        var selected = Program.SelectedEntity;
+
+        // If something is selected already and no 'name' argument is provided, we're deleting the selected one.
+        if (!selected.Equals(Reference.EMPTY) && string.IsNullOrWhiteSpace(settings.Name))
+        {
+            switch (selected.Type)
+            {
+                case Reference.ReferenceType.Schema:
+                    {
+                        var cmd = new DeleteSchemaCommand();
+                        return await cmd.ExecuteAsync(context, new SchemaCommandSettings { SchemaName = selected.Guid, Verbose = settings.Verbose }, cancellationToken);
+                    }
+
+                case Reference.ReferenceType.Thing:
+                    {
+                        var cmd = new DeleteThingCommand();
+                        return await cmd.ExecuteAsync(context, new ThingCommandSettings { ThingName = selected.Guid, Verbose = settings.Verbose }, cancellationToken);
+                    }
+
+                default:
+                    AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
+                    return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
+            }
+        }
+
+        // This means nothing is selected AND no 'name' argument was provided.
         if (string.IsNullOrWhiteSpace(settings.Name))
         {
-            if (Program.SelectedEntity != Reference.EMPTY)
-            {
-                // Select with no arguments just clears the selection
-                AmbientErrorContext.Provider.LogDone($"Selection cleared.");
-                Program.SelectedEntity = Reference.EMPTY;
-                Program.SelectedEntityName = string.Empty;
-                return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
-            }
-
-            AmbientErrorContext.Provider.LogError("You must first 'select' one by specifying a [NAME] argument.");
-            Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
-            Program.SelectedEntityName = string.Empty;
+            AmbientErrorContext.Provider.LogError("You must specify the entity to delete using the [NAME] argument.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -66,50 +82,10 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 switch (possibilities[0].Type)
                 {
                     case Reference.ReferenceType.Schema:
-                        {
-                            var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
-                            if (provider == null)
-                            {
-                                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
-                                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
-                            }
-
-                            var schemaLoaded = await provider.LoadAsync(possibilities[0].Guid, cancellationToken);
-                            if (schemaLoaded == null)
-                            {
-                                AmbientErrorContext.Provider.LogError($"Unable to load schema with Guid '{possibilities[0].Guid}'.");
-                                Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
-                                Program.SelectedEntityName = string.Empty;
-                                return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
-                            }
-
-                            AmbientErrorContext.Provider.LogDone($"Schema {schemaLoaded.Name} selected.");
-                            Program.SelectedEntity = possibilities[0];
-                            Program.SelectedEntityName = schemaLoaded.Name;
-                            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
-                        }
+                        return await DeleteSchemaCommand.TryDeleteSchema(possibilities[0].Guid, cancellationToken);
 
                     case Reference.ReferenceType.Thing:
-                        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
-                        if (thingProvider == null)
-                        {
-                            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
-                            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
-                        }
-
-                        var thingLoaded = await thingProvider.LoadAsync(possibilities[0].Guid, cancellationToken);
-                        if (thingLoaded == null)
-                        {
-                            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{possibilities[0].Guid}'.");
-                            Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
-                            Program.SelectedEntityName = string.Empty;
-                            return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
-                        }
-
-                        AmbientErrorContext.Provider.LogDone($"Thing {thingLoaded.Name} selected.");
-                        Program.SelectedEntity = possibilities[0];
-                        Program.SelectedEntityName = thingLoaded.Name;
-                        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+                        return await DeleteThingCommand.TryDeleteThing(possibilities[0].Guid, cancellationToken);
 
                     default:
                         AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(possibilities[0].Type)}'.");
@@ -145,8 +121,6 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                 {
                     // Cannot show selection prompt, so just error message.
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
-                    Program.SelectedEntity = Reference.EMPTY; // On any non-success, clear the selected entity for clarity.
-                    Program.SelectedEntityName = string.Empty;
                     return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
                 }
 

@@ -14,6 +14,7 @@
 - [x] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
 - [x] Improved getting started documentation
 - [x] Built-in system schemas
+- [ ] Versioned things
 - [ ] default schema values
 - [ ] Schema inheritence
 - [ ] Multiple schema applications

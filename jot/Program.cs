@@ -38,6 +38,7 @@ namespace jot;
 /// </summary>
 internal class Program
 {
+#pragma warning disable SA1401 // Fields should be private
     /// <summary>
     /// For interactive mode, this is the currently selected entity that commands can reference in a REPL.
     /// </summary>
@@ -52,6 +53,7 @@ internal class Program
     /// Whether commands should provide verbose output.
     /// </summary>
     internal static bool Verbose = false;
+#pragma warning restore SA1401 // Fields should be private
 
     private static async Task<int> Main(string[] args)
     {
@@ -117,12 +119,16 @@ internal class Program
                         set.AddCommand<SetSchemaPropertyTypeCommand>("type")
                             .WithDescription("Sets the data type of a property");
                         set.AddCommand<SetSchemaPropertyRequiredCommand>("require")
+                            .WithAlias("required") // Have grace.
                             .WithDescription("Changes whether a property is required");
                         set.AddCommand<SetSchemaPropertyFormulaCommand>("formula")
                             .WithDescription("Sets the formula expression of a calculated property");
                     });
                     schema.AddCommand<ValidateSchemaCommand>("validate")
+                        .WithAlias("val") // Have grace.
                         .WithDescription("Validates the schema is consistent");
+                    schema.AddCommand<SetSchemaVersionCommand>("version")
+                        .WithDescription("Sets the versioning plan for the schema");
                     schema.AddCommand<PrintSchemaCommand>("view")
                         .WithAlias("print")
                         .WithDescription("Views all fields on a schema");
@@ -130,6 +136,8 @@ internal class Program
             config.AddBranch<ThingCommandSettings>("thing", thing =>
                 {
                     thing.AddCommand<DeleteThingCommand>("delete")
+                        .WithAlias("del") // Have grace.
+                        .WithAlias("remove") // Have grace.
                         .WithDescription("Permanently deletes a thing");
                     thing.AddCommand<PromoteThingPropertyCommand>("promote")
                         .WithDescription("Promotes a property on one thing to become a property defined on a schema");
@@ -138,6 +146,7 @@ internal class Program
                     thing.AddCommand<SetThingPropertyCommand>("set")
                         .WithDescription("Sets the value of a property on a thing");
                     thing.AddCommand<ValidateThingCommand>("validate")
+                        .WithAlias("val") // Have grace.
                         .WithDescription("Validates a thing is consistent with its schema");
                     thing.AddCommand<PrintThingCommand>("view")
                         .WithAlias("print")
@@ -157,13 +166,17 @@ internal class Program
                     .WithDescription("Interactive mode command.  Associates the currently selected thing with the specified schema")
                     .IsHidden();
 
+                config.AddCommand<ClearCommand>("clear")
+                    .WithDescription("Interactive mode command.  Clears the current console.")
+                    .IsHidden();
+
                 config.AddCommand<DescribeSelectedSchemaCommand>("describe")
                     .WithDescription("Interactive mode command.  Sets the description for the currently selected schema")
                     .IsHidden();
 
-                config.AddCommand<DeleteSelectedCommand>("delete")
+                config.AddCommand<DeleteCommand>("delete")
                     .WithAlias("del")
-                    .WithDescription("Interactive mode command.  Deletes the currently selected entity")
+                    .WithDescription("Deletes an entity by name or ID, or the selected entity if no name is provided.")
                     .IsHidden();
 
                 config.AddCommand<DissociateSchemaFromSelectedThingCommand>("dissociate")

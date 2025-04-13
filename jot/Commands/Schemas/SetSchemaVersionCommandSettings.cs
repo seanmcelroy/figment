@@ -19,17 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.ComponentModel;
 using Spectre.Console.Cli;
 
-namespace jot.Commands.Interactive;
+namespace jot.Commands.Schemas;
 
 /// <summary>
-/// The settings supplied to the <see cref="SelectCommand"/>.
+/// The settings supplied to the <see cref="SetSchemaVersionCommand"/>.
 /// </summary>
-public class SelectCommandSettings : CommandSettings
+public class SetSchemaVersionCommandSettings : SchemaCommandSettings
 {
     /// <summary>
-    /// Gets the name of the entity to select. If nothing is specified, selection is cleared.
+    /// Gets the version plan of the <see cref="Schema"/>.  If blank, the version plan will be cleared.
     /// </summary>
-    [Description("Name of the entity to select. If nothing is specified, selection is cleared")]
-    [CommandArgument(0, "[NAME]")]
-    public string? Name { get; init; }
+    [Description("Version plan for the schema. If blank, the version plan will be cleared")]
+    [CommandArgument(0, "[VERSION GUID OR NAME]")]
+    public string? VersionGuidOrName { get; init; }
 }

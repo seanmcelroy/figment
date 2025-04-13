@@ -21,7 +21,7 @@ public class SetSchemaPluralCommand : SchemaCancellableAsyncCommand<SetSchemaPlu
 
         schema.Plural = string.IsNullOrWhiteSpace(settings.Plural)
             ? null
-            : settings.Plural;
+            : settings.Plural.Trim();
 
         if (string.Compare(oldPlural, schema.Plural, StringComparison.InvariantCultureIgnoreCase) == 0)
         {
@@ -53,7 +53,7 @@ public class SetSchemaPluralCommand : SchemaCancellableAsyncCommand<SetSchemaPlu
         }
         else
         {
-            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Plural keyword was '{oldPlural}' but is now  '{settings.Plural}'.");
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Plural keyword was '{oldPlural}' but is now '{settings.Plural}'.");
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

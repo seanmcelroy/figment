@@ -36,7 +36,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
         var schemaGuid = Guid.NewGuid().ToString();
-        var schemaDefinition = new JsonSchemaDefinition(schemaGuid, schemaName, null, null);
+        var schemaDefinition = new JsonSchemaDefinition(schemaGuid, schemaName, null, null, null);
 
         var schemaFileName = $"{schemaGuid}.schema.json";
         var schemaFilePath = Path.Combine(SchemaDirectoryPath, schemaFileName);

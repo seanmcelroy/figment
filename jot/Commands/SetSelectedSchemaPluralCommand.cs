@@ -5,6 +5,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Interactive mode command.  Sets the plural name for the schema.
+/// </summary>
 public class SetSelectedSchemaPluralCommand : CancellableAsyncCommand<SetSelectedSchemaPluralCommandSettings>
 {
     /// <inheritdoc/>
@@ -24,6 +27,7 @@ public class SetSelectedSchemaPluralCommand : CancellableAsyncCommand<SetSelecte
                     var cmd = new SetSchemaPluralCommand();
                     return await cmd.ExecuteAsync(context, new SetSchemaPluralCommandSettings { SchemaName = selected.Guid, Plural = settings.Plural, Verbose = settings.Verbose }, cancellationToken);
                 }
+
             default:
                 AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
                 return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;

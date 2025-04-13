@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using Figment.Common;
 using Figment.Common.Errors;
 using Spectre.Console.Cli;
@@ -28,7 +46,15 @@ public class SetSchemaPropertyRequiredCommand : SchemaCancellableAsyncCommand<Se
             return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
         }
 
+        var oldRequired = sp.Value.Required;
+
         sp.Value.Required = required;
+
+        if (oldRequired == sp.Value.Required)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Required for {propName} is already '{required}'. Nothing to do.");
+            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+        }
 
         var saved = await schema.SaveAsync(cancellationToken);
         if (!saved)
@@ -45,7 +71,7 @@ public class SetSchemaPropertyRequiredCommand : SchemaCancellableAsyncCommand<Se
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.");
+        AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Required was '{oldRequired}' but is now '{required}' for '{propName}'.");
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

@@ -14,7 +14,18 @@ public class SetSchemaDescriptionCommand : SchemaCancellableAsyncCommand<SetSche
             return (int)tgs;
         }
 
-        schema!.Description = settings.Description;
+        var oldDescription = schema!.Description;
+
+        schema.Description = string.IsNullOrWhiteSpace(settings.Description)
+            ? null
+            : settings.Description.Trim();
+
+        if (string.Compare(oldDescription, schema.Description, StringComparison.InvariantCultureIgnoreCase) == 0)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Description for {schema.Name} is already the same value. Nothing to do.");
+            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+        }
+
         var saved = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
@@ -30,7 +41,15 @@ public class SetSchemaDescriptionCommand : SchemaCancellableAsyncCommand<SetSche
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 
-        AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.");
+        if (schema.Description == null)
+        {
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Description was '{oldDescription}' but is now removed.");
+        }
+        else
+        {
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Description was '{oldDescription}' but is now '{settings.Description}'.");
+        }
+
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

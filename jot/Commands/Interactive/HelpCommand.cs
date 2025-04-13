@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using System.Text;
 using Figment.Common;
 using Spectre.Console;
@@ -39,14 +57,7 @@ public class HelpCommand : CancellableAsyncCommand
         """);
 
         // Contextual coloring
-        if (Program.SelectedEntity == Reference.EMPTY)
-        {
-            sb.AppendLine("[grey62]    select <NAME>         Selects an entity as the target for other interactive commands[/]");
-        }
-        else
-        {
-            sb.AppendLine("    select <NAME>         [white]Selects an entity as the target for other interactive commands[/]");
-        }
+        sb.AppendLine("    select <NAME>         [white]Selects an entity as the target for other interactive commands[/]");
 
         if (Program.SelectedEntity == Reference.EMPTY
             || Program.SelectedEntity.Type != Reference.ReferenceType.Thing)
@@ -58,11 +69,13 @@ public class HelpCommand : CancellableAsyncCommand
             sb.AppendLine("    associate <SCHEMA>    [white]Associates the currently selected thing with the specified schema[/]");
         }
 
+        sb.AppendLine("    clear                 [white]Clears the current console[/]");
+
         if (Program.SelectedEntity == Reference.EMPTY
             || (Program.SelectedEntity.Type != Reference.ReferenceType.Schema
                 && Program.SelectedEntity.Type != Reference.ReferenceType.Thing))
         {
-            sb.AppendLine("[grey62]    delete                Deletes the selected entity[/]");
+            sb.AppendLine("    delete <NAME>         [white]Deletes the entity with the given name[/]");
         }
         else
         {

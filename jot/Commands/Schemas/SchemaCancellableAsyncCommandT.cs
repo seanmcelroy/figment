@@ -1,5 +1,3 @@
-
-
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -11,16 +9,21 @@ public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand
 {
     protected async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(T settings, CancellationToken cancellationToken)
     {
+        return await TryGetSchema(settings.SchemaName, cancellationToken);
+    }
+
+    public static async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(string guidOrNamePart, CancellationToken cancellationToken)
+    {
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY) || selected.Type != Reference.ReferenceType.Schema)
         {
-            if (string.IsNullOrWhiteSpace(settings.SchemaName))
+            if (string.IsNullOrWhiteSpace(guidOrNamePart))
             {
                 AmbientErrorContext.Provider.LogError("To modify a schema, you must first 'select' one.");
                 return (Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR, null, null);
             }
 
-            var possibleSchemas = Schema.ResolveAsync(settings.SchemaName, cancellationToken)
+            var possibleSchemas = Schema.ResolveAsync(guidOrNamePart, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibleSchemas.Length)

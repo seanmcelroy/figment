@@ -22,14 +22,21 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Interactive;
 
 /// <summary>
-/// The settings supplied to the <see cref="SelectCommand"/>.
+/// The settings supplied to the <see cref="DeleteCommand"/>.
 /// </summary>
-public class SelectCommandSettings : CommandSettings
+public class DeleteCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the name of the entity to select. If nothing is specified, selection is cleared.
+    /// Gets the name of the entity to delete.
     /// </summary>
-    [Description("Name of the entity to select. If nothing is specified, selection is cleared")]
+    [Description("Name of the entity to delete.  If not provided, the currently selected entity is deleted.")]
     [CommandArgument(0, "[NAME]")]
     public string? Name { get; init; }
+
+    /// <summary>
+    /// Gets whether to provide verbose detail, if available, for any outputs.
+    /// </summary>
+    [Description("Provides verbose detail, if available, for any outputs")]
+    [CommandOption("-v|--verbose")]
+    required public bool? Verbose { get; init; } = Program.Verbose;
 }

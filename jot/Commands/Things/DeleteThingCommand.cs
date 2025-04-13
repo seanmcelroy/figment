@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -15,19 +33,25 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         THING_DELETE_ERROR = -2004,
     }
 
-    /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, ThingCommandSettings settings, CancellationToken cancellationToken)
+    /// <summary>
+    /// Attempts to delete the <see cref="Thing"/> by its name or identifier.
+    /// </summary>
+    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> of things to match and return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An integer indicating whether or not the command executed successfully.</returns>
+    /// <remarks>This can be used by <see cref="DeleteThingCommand"/> and <see cref="DeleteCommand"/>.</remarks>
+    internal static async Task<int> TryDeleteThing(string guidOrNamePart, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY))
         {
-            if (string.IsNullOrWhiteSpace(settings.ThingName))
+            if (string.IsNullOrWhiteSpace(guidOrNamePart))
             {
                 AmbientErrorContext.Provider.LogError("To delete a thing, you must first 'select' a thing.");
                 return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
             }
 
-            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
+            var possibilities = Thing.ResolveAsync(guidOrNamePart, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
                 .ToArray();
             switch (possibilities.Length)
@@ -69,13 +93,23 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         if (deleted)
         {
             AmbientErrorContext.Provider.LogDone($"{thing.Name} ({thing.Guid}) deleted.");
-            Program.SelectedEntity = Reference.EMPTY;
-            Program.SelectedEntityName = string.Empty;
+            if (string.Equals(Program.SelectedEntity.Guid, thing.Guid, StringComparison.OrdinalIgnoreCase))
+            {
+                Program.SelectedEntity = Reference.EMPTY;
+                Program.SelectedEntityName = string.Empty;
+            }
+
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
         else
         {
             return (int)ERROR_CODES.THING_DELETE_ERROR;
         }
+    }
+
+    /// <inheritdoc/>
+    public override async Task<int> ExecuteAsync(CommandContext context, ThingCommandSettings settings, CancellationToken cancellationToken)
+    {
+        return await TryDeleteThing(settings.ThingName, cancellationToken);
     }
 }

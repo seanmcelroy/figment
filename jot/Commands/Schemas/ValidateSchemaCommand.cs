@@ -1,9 +1,31 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Validates the schema is consistent.
+/// </summary>
 public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSettings>
 {
     /// <inheritdoc/>
@@ -26,12 +48,29 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
 
         if (string.IsNullOrWhiteSpace(schema.Description))
         {
-            AmbientErrorContext.Provider.LogWarning("Description is not set, leading to an invalid JSON schema on disk.  Resolve with: set Description \"Sample description\"");
+            AmbientErrorContext.Provider.LogWarning("Description is not set, leading to an invalid JSON schema on disk.  Resolve with: describe \"Sample description\"");
         }
 
         if (string.IsNullOrWhiteSpace(schema.Plural))
         {
             AmbientErrorContext.Provider.LogWarning($"Plural is not set, rendering listing of all things with this schema on the REPL inaccessible.  Resolve with: set plural {schema.Name.ToLowerInvariant()}s");
+        }
+
+        if (!string.IsNullOrWhiteSpace(schema.VersionGuid))
+        {
+            var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+            if (provider == null)
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            }
+            else
+            {
+                var version = await provider.LoadAsync(schema.VersionGuid, cancellationToken);
+                if (version == null)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Version is set to {schema.VersionGuid}, but unable to load it.");
+                }
+            }
         }
 
         AmbientErrorContext.Provider.LogDone($"Validation has finished.");

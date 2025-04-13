@@ -119,6 +119,59 @@ If you wanted to specify restaurants have common attributes, you could select th
 | text       | Text                                                          |
 | uri        | A uri, which could include a web address, like a URL          |
 
+### Adding a field to a schema
+
+Let's define a simple vendor management system.  First, let's create a vendor named Acme and specify a company homepage as a field we want to track for vendors.  Then, we'll specify the URL for Acme.  Instead of describing each command step by step, the entire sequence is just shown below from creating the vendor to setting the homepage for Acme.
+
+```
+> new vendor Acme
+Done: Schema vendor created, and new instance Acme created.
+```
+
+```
+(Acme)> select vendor
+Done: Schema vendor selected.
+```
+
+```
+(vendor)> plural vendors
+Done: vendor saved.  Plural keyword was '' but is now 'vendors'.
+```
+
+```
+(vendor)> set homepage type uri
+Done: vendor saved.
+```
+
+```
+(vendor)> ?
+Schema      : vendor
+Description : 
+Plural      : vendors
+
+Properties  : 
+   homepage : uri
+```
+
+```
+(vendor)> s acme
+Done: Thing Acme selected.
+```
+
+```
+(Acme)> set homepage https://example.com/
+Done: Acme saved.
+```
+
+```
+(Acme)> ?
+Instance    : Acme
+Schema      : vendor
+
+Properties  : 
+   vendor.homepage : https://example.com/
+```
+
 ### Arrays
 
 An `array` field holds any number of individual text lines.  We can select a schema and create an array field on it schema like so in jot's interactive mode;
@@ -137,4 +190,91 @@ s sean
 Done: Thing Sean selected.
 (Sean)> set address "[1000 Main Street,Anytown,MA,01583]"
 Done: Sean saved.
+```
+
+### Versioned schemas
+
+A `schema` can be configured for versioning, which requires things of that schema type to also belong to a specific version.
+
+Here's an example of how versioning can be used: A department manager uses `jot` to manage an annual budget for their department.  Each budget belongs to a certain budget year, and so every budget that is created can belong to one and only one budget year, which is the 'version' of the budget.  To express this, the department manager would create a schema for `budget` and add a field to that schema named `version (field)` of type `version (schema)`.  The schema `version` is a built-in schema that has a basis (or how versions are specified) and a pattern to which the basis must adhere.  In this example, the version basis would be `date` because budgets are created based on a date.  In this example, the version pattern would be `FYyyyy` designating a valid budget version could be, for instance, FY2026.
+
+Here are the commmands that would implement the example above.  First, we create a 'version plan' which is an instance of a version that specifies the basis and pattern.
+
+```
+> new version "Budget Version Plan"
+Done: Budget Version Plan, a type of version, created.
+```
+```
+(Budget Version Plan)> set basis date
+Done: Budget Version Plan saved.
+```
+```
+(Budget Version Plan)> set pattern FYyyyy
+Done: Budget Version Plan saved.
+```
+```
+(Budget Version Plan)> ?
+Instance    : Budget Version Plan
+Schema      : version
+
+Properties  : 
+   version.basis   : date
+   version.pattern : FYyyyy
+```
+
+Next, we create the budget schema and an instance of that schema for our fictional 'ERM' department.
+
+```
+> new budget "ERM Budget"
+Done: Schema budget created, and new instance ERM Budget created.
+```
+
+We set the plural attribute for `budget` so later on we can review budgets with the `budgets` command from the interactive mode, as is good practice.
+```
+(ERM Budget)> select budget
+Done: budget selected.
+```
+```
+(budget)> plural budgets
+Done: budget saved.  Plural keyword was '' but is now  'budgets'.
+```
+We add a brief description to the `budget` schema.
+```
+(budget)> describe "Department Budgets"
+Done: budget saved.
+```
+
+We add the `version` field which references the built-in `version` schema.
+```
+(budget)> set version type version
+Done: budget saved.
+```
+
+Finally, we set this `version` field as required.
+```
+(budget)> set version require yes
+Done: budget saved.
+```
+
+The resulting budget schema we is as follows:
+```
+(budget)> ?
+Schema      : budget
+Description : Department Budgets
+Plural      : budgets
+
+Properties  : 
+   version : version (00000000-0000-0000-0000-000000000003) (REQUIRED)
+```
+
+Any thing belonging to a schema which has a `version` field of type `version` which is also marked `REQUIRED` is a 'versionedt thing'.  This means in order to create things of that type, the version must be specified thereafter.  Let's look at this in practice by setting our `ERM Budget` to use our `Budget Version Plan` we created above.
+
+```
+(budget)> s "ERM Budget"
+Done: Thing ERM Budget selected.
+```
+```
+(ERM Budget)> set version "Budget Version Plan"
+INFO: Set version to Budget Version Plan.
+Done: ERM Budget saved.
 ```

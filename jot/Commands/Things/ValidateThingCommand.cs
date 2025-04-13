@@ -1,3 +1,21 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -102,8 +120,8 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                 foreach (var sp in schemaLoaded.Properties
                     .Where(sp => sp.Value.Required
                         && !thingProperties.Any(
-                            tp => tp.SchemaGuid == schemaLoaded.Guid
-                            && string.CompareOrdinal(tp.SimpleDisplayName, sp.Key) == 0)))
+                            tp => string.Equals(tp.SchemaGuid, schemaLoaded.Guid, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(tp.SimpleDisplayName, sp.Key, StringComparison.OrdinalIgnoreCase))))
                 {
                     AmbientErrorContext.Provider.LogWarning($"Schema property {sp.Key} is required but is not set!");
                 }
