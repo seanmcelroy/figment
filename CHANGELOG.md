@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - 'delete' command can now take a named argument for ease of use
 - Improved saved messages detailing what changed
 - Updated README.md
+- Updated licensing banners in jot
 
 ## 0.0.3
 
