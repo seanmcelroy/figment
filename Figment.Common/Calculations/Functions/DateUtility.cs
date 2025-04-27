@@ -89,4 +89,126 @@ public static class DateUtility
         fdv = 0;
         return false;
     }
+
+    /// <summary>
+    /// Turns a time span into a human-readable relative phrase, such as "one second ago" or "yesterday".
+    /// </summary>
+    /// <param name="duration">Duration to convert into a phrase.</param>
+    /// <returns>An English phrase representing the elapsed relative time.</returns>
+    public static string GetRelativePastTimeString(TimeSpan duration)
+    {
+        const int MINUTE = 60;
+        const int HOUR = 60 * MINUTE;
+        const int DAY = 24 * HOUR;
+        const int MONTH = 30 * DAY;
+
+        double delta = Math.Abs(duration.TotalSeconds);
+
+        if (delta < 1 * MINUTE)
+        {
+            return duration.Seconds == 1 ? "one second ago" : duration.Seconds + " seconds ago";
+        }
+
+        if (delta < 2 * MINUTE)
+        {
+            return "a minute ago";
+        }
+
+        if (delta < 45 * MINUTE)
+        {
+            return duration.Minutes + " minutes ago";
+        }
+
+        if (delta < 90 * MINUTE)
+        {
+            return "an hour ago";
+        }
+
+        if (delta < 24 * HOUR)
+        {
+            return duration.Hours + " hours ago";
+        }
+
+        if (delta < 48 * HOUR)
+        {
+            return "yesterday";
+        }
+
+        if (delta < 30 * DAY)
+        {
+            return duration.Days + " days ago";
+        }
+
+        if (delta < 12 * MONTH)
+        {
+            int months = Convert.ToInt32(Math.Floor((double)duration.Days / 30));
+            return months <= 1 ? "one month ago" : months + " months ago";
+        }
+        else
+        {
+            int years = Convert.ToInt32(Math.Floor((double)duration.Days / 365));
+            return years <= 1 ? "one year ago" : years + " years ago";
+        }
+    }
+
+    /// <summary>
+    /// Turns a time span into a human-readable relative phrase, such as "one second" or "a day".
+    /// </summary>
+    /// <param name="duration">Duration to convert into a phrase.</param>
+    /// <returns>An English phrase representing the elapsed relative time.</returns>
+    public static string GetRelativeTimeString(TimeSpan duration)
+    {
+        const int MINUTE = 60;
+        const int HOUR = 60 * MINUTE;
+        const int DAY = 24 * HOUR;
+        const int MONTH = 30 * DAY;
+
+        double delta = Math.Abs(duration.TotalSeconds);
+
+        if (delta < 1 * MINUTE)
+        {
+            return duration.Seconds == 1 ? "one second" : duration.Seconds + " seconds";
+        }
+
+        if (delta < 2 * MINUTE)
+        {
+            return "a minute";
+        }
+
+        if (delta < 45 * MINUTE)
+        {
+            return duration.Minutes + " minutes";
+        }
+
+        if (delta < 90 * MINUTE)
+        {
+            return "an hour";
+        }
+
+        if (delta < 24 * HOUR)
+        {
+            return duration.Hours + " hours";
+        }
+
+        if (delta < 48 * HOUR)
+        {
+            return "a day";
+        }
+
+        if (delta < 30 * DAY)
+        {
+            return duration.Days + " days";
+        }
+
+        if (delta < 12 * MONTH)
+        {
+            int months = Convert.ToInt32(Math.Floor((double)duration.Days / 30));
+            return months <= 1 ? "one month" : months + " months";
+        }
+        else
+        {
+            int years = Convert.ToInt32(Math.Floor((double)duration.Days / 365));
+            return years <= 1 ? "one year" : years + " years";
+        }
+    }
 }

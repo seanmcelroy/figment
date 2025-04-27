@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.5
+
+### Added
+
+- 'pomo' command added to jot, whch implements Pomodoro timers
+
 ## 0.0.4
+
+### Added
 
 - 'clear' command added to jot
 - Schemas can now have a version plan (see schema version command)

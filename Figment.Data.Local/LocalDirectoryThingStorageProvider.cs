@@ -628,6 +628,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                         value2?.Add(thing.Name, thingFileName.Name);
         }
         indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
+
         foreach (var kvp in schemaGuidsAndThingIndexes)
         {
             if (cancellationToken.IsCancellationRequested)

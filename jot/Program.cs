@@ -23,6 +23,7 @@ using Figment.Common.Data;
 using Figment.Common.Errors;
 using jot.Commands;
 using jot.Commands.Interactive;
+using jot.Commands.Pomodoro;
 using jot.Commands.Schemas;
 using jot.Commands.Schemas.ImportMaps;
 using jot.Commands.Things;
@@ -84,6 +85,14 @@ internal class Program
                 .WithDescription("Lists all the schemas in the database");
             config.AddCommand<ListThingsCommand>("things")
                 .WithDescription("Lists all the things in the database");
+
+            config.AddBranch("pomodoro", pomo =>
+                {
+                    pomo.AddCommand<StartPomodoro>("start")
+                        .WithDescription("Starts a pomodoro timer");
+                })
+                .WithAlias("pomo");
+
             config.AddBranch<SchemaCommandSettings>("schema", schema =>
                 {
                     schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
