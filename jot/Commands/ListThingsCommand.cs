@@ -45,13 +45,30 @@ public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettin
             t.AddColumn("GUID");
 
             await foreach (var (reference, name) in thingProvider.GetAll(cancellationToken))
-                t.AddRow(name ?? string.Empty, reference.Guid);
+                if (string.IsNullOrWhiteSpace(settings.PartialNameMatch)
+                    || (
+                        name != null
+                        && name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                )
+                {
+                    t.AddRow(name ?? string.Empty, reference.Guid);
+                }
+
             AnsiConsole.Write(t);
         }
         else
         {
             await foreach (var (_, name) in thingProvider.GetAll(cancellationToken))
-                Console.WriteLine(name);
+                if (string.IsNullOrWhiteSpace(settings.PartialNameMatch)
+                    || (
+                        name != null
+                        && name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                )
+                {
+                    Console.WriteLine(name);
+                }
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

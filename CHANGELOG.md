@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Modified
 
 - 'jot' now uses the user's application directory for local storage provider
+- 'jot' commands 'things' and 'schemas' now take an optional name filter for searching
 
 ## 0.0.5
 

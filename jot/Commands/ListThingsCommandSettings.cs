@@ -27,6 +27,13 @@ namespace jot.Commands;
 public class ListThingsCommandSettings : CommandSettings
 {
     /// <summary>
+    /// Gets an optional partial name match to filter results.
+    /// </summary>
+    [Description("An optional partial name match to filter results")]
+    [CommandArgument(0, "[PARTIAL_NAME]")]
+    public string? PartialNameMatch { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the command output should be in a human-readable tabular format.
     /// </summary>
     [Description("Outputs the list in a human-readable tabular format")]
