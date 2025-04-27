@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## NEXT
+
+### Modified
+
+- 'jot' now uses the user's application directory for local storage provider
+
 ## 0.0.5
 
 ### Added

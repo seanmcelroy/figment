@@ -64,10 +64,17 @@ internal class Program
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
         // Setup the providers. TODO: Allow CLI config
+        Queue<Action> postBannerActionQueue = new();
         AmbientErrorContext.Provider = new SpectreConsoleErrorProvider();
         {
-            var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider("/home/sean/src/figment/jot/db");
+            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "figment/db");
+            var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider(dataDir);
             await ldsp.InitializeAsync(cts.Token);
+            if (interactive)
+            {
+                postBannerActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogInfo($"Using local storage of database at {dataDir}"));
+            }
+
             AmbientStorageContext.StorageProvider = ldsp;
         }
 
@@ -254,6 +261,13 @@ internal class Program
 
         // Interactive mode
         AnsiConsole.MarkupLine($"[bold fuchsia]jot[/] version {version}");
+
+        while (postBannerActionQueue.Count > 0)
+        {
+            var action = postBannerActionQueue.Dequeue();
+            action.Invoke();
+        }
+
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
 
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
