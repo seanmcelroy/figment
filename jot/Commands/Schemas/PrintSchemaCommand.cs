@@ -1,4 +1,3 @@
-using System.Text;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
@@ -20,24 +19,51 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
             return (int)tgs;
         }
 
-        var propBuilder = new StringBuilder();
+        var masterTable = new Table()
+            .AddColumn(
+                new TableColumn(new Text("Name", new Style(decoration: Decoration.Conceal))).Padding(0, 0, 2, 2))
+            .AddColumn(
+                new TableColumn(new Text("Value", new Style(decoration: Decoration.Conceal))).Padding(0, 0, 2, 2))
+            .HideHeaders()
+            .NoBorder();
+
+        masterTable.AddRow("[indianred1]Schema[/]", $"[bold orange1]{Markup.Escape(schema.Name)}[/]");
+        masterTable.AddRow("[indianred1]Description[/]", string.IsNullOrWhiteSpace(schema.Description) ? "[red]<UNSET>[/]" : schema.Description);
+        masterTable.AddRow("[indianred1]Plural[/]", string.IsNullOrWhiteSpace(schema.Plural) ? "[red]<UNSET>[/]" : schema.Plural);
+
+        if (settings.Verbose ?? Program.Verbose)
+        {
+            masterTable.AddRow("[indianred1]GUID[/]", $"[gray]{Markup.Escape(schema.Guid)}[/]");
+            masterTable.AddRow("[indianred1]Created On[/]", $"[gray]{schema.CreatedOn.ToLocalTime().ToLongDateString()} at {schema.CreatedOn.ToLocalTime().ToLongTimeString()}[/]");
+            masterTable.AddRow("[indianred1]Modified On[/]", $"[gray]{schema.LastModified.ToLocalTime().ToLongDateString()} at {schema.LastModified.ToLocalTime().ToLongTimeString()}[/]");
+        }
+
+        var propertyTable = new Table()
+            .AddColumn(
+                new TableColumn(new Text("Property Name", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+            .AddColumn(
+                new TableColumn(new Text("Data Type", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+            .AddColumn(
+                new TableColumn(new Text("Display Name", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+            .AddColumn(
+                new TableColumn(new Text("Required?", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+            .ShowRowSeparators()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Orange1);
+
         if (schema!.Properties != null && schema.Properties.Count > 0)
         {
             var maxPropNameLen = schema.Properties.Max(p => p.Key.Length); // In case it will be escaped
             foreach (var prop in schema.Properties)
             {
-                propBuilder.AppendLine($"   {prop.Key.PadRight(maxPropNameLen)} : {Markup.Escape(await prop.Value.GetReadableFieldTypeAsync(cancellationToken))}{(prop.Value.Required ? " (REQUIRED)" : string.Empty)}");
+                propertyTable.AddRow(
+                    $"[dodgerblue1]{Markup.Escape(prop.Key)}[/]",
+                    Markup.Escape(await prop.Value.GetReadableFieldTypeAsync(cancellationToken)),
+                    prop.Value.DisplayNames?.Select(x => x.Value).FirstOrDefault() ?? Emoji.Known.CrossMark,
+                    prop.Value.Required ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark);
             }
         }
 
-        AnsiConsole.MarkupLine($"[silver]Schema[/]      : [bold white]{schema.Name}[/]");
-        if (settings.Verbose ?? Program.Verbose)
-        {
-            AnsiConsole.MarkupLine($"[silver]GUID[/]        : {schema.Guid}");
-        }
-
-        AnsiConsole.MarkupLine($"Description : {schema.Description}");
-        AnsiConsole.MarkupLine($"Plural      : {schema.Plural}");
         if (!string.IsNullOrWhiteSpace(schema.VersionGuid))
         {
             var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -63,12 +89,10 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
             AnsiConsole.MarkupLine($"[silver]Modified On[/] : {schema.LastModified.ToLocalTime().ToLongDateString()} at {schema.LastModified.ToLocalTime().ToLongTimeString()}");
         }
 
-        AnsiConsole.MarkupLine(
-            $"""
+        masterTable.AddRow(new Markup("[indianred1]Properties[/]"), propertyTable);
 
-            [chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
-            {propBuilder}
-            """);
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(masterTable);
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

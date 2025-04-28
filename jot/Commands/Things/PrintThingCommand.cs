@@ -24,6 +24,7 @@ using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Rendering;
 
 namespace jot.Commands.Things;
 
@@ -35,6 +36,8 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, PrintThingCommandSettings settings, CancellationToken cancellationToken)
     {
+        var verbose = settings.Verbose ?? Program.Verbose;
+
         Reference thingReference;
         var thingResolution = settings.ResolveThingName(cancellationToken);
         switch (thingResolution.Item1)
@@ -53,12 +56,6 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 break;
             default:
                 throw new NotImplementedException($"Unexpected return code {Enum.GetName(thingResolution.Item1)}");
-        }
-
-        if (thingReference.Type != Reference.ReferenceType.Thing)
-        {
-            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(thingReference.Type)}'.");
-            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -107,102 +104,6 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             }
         }
 
-        var propDict = new Dictionary<string, (string? schemaGuid, object? fieldValue, bool valid)>();
-
-        var maxPropNameLen = 0;
-        await foreach (var property in thing.GetProperties(cancellationToken))
-        {
-            maxPropNameLen = Math.Max(maxPropNameLen, property.FullDisplayName.Length);
-            propDict.Add(property.FullDisplayName, (property.SchemaGuid, property.Value, property.Valid));
-        }
-
-        var schemaBuilder = new StringBuilder();
-        foreach (var schema in schemas)
-        {
-            if (settings.Verbose ?? Program.Verbose)
-            {
-                schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name} [silver]({schema.Value.Guid})[/]");
-            }
-            else
-            {
-                schemaBuilder.AppendLine($"[silver]Schema[/]      : {schema.Value.Name}");
-            }
-        }
-
-        if (schemaBuilder.Length == 0)
-        {
-            schemaBuilder.AppendLine();
-        }
-
-        var propBuilder = new StringBuilder();
-        foreach (var prop in propDict)
-        {
-            // Skip built-ins
-            if (string.CompareOrdinal(prop.Key, nameof(Thing.Name)) == 0
-                || string.CompareOrdinal(prop.Key, nameof(Thing.Guid)) == 0
-                || string.CompareOrdinal(prop.Key, nameof(Thing.SchemaGuids)) == 0
-                )
-            {
-                continue;
-            }
-
-            // Coerce value if schema-bound using a field renderer.
-            var propDisplayName = prop.Key;
-            if (prop.Value.schemaGuid != null
-                && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch)
-                && sch.Properties.TryGetValue(prop.Key[(prop.Key.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
-            {
-                if (!(settings.NoPrettyDisplayNames ?? false)
-                    && schprop.DisplayNames != null
-                    && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
-                {
-                    propDisplayName = prettyDisplayName;
-                }
-
-                var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
-                if (prop.Value.valid)
-                {
-                    propBuilder.AppendLine($"   {Markup.Escape(propDisplayName.PadRight(maxPropNameLen))} : {text}");
-                }
-                else
-                {
-                    propBuilder.AppendLine($"   {Markup.Escape(propDisplayName.PadRight(maxPropNameLen))} : [red bold]{text}[/]");
-                }
-            }
-            else
-            {
-                propBuilder.AppendLine($"   {Markup.Escape(prop.Key.PadRight(maxPropNameLen))} : {Markup.Escape(prop.Value.fieldValue?.ToString() ?? string.Empty)}");
-            }
-        }
-
-        var unsetPropBuilder = new StringBuilder();
-        if (settings.Verbose ?? Program.Verbose)
-        {
-            var anyUnset = await thing.GetUnsetProperties(cancellationToken);
-            if (anyUnset.Count > 0)
-            {
-                unsetPropBuilder.AppendLine("[red]Unset Properties[/]");
-                maxPropNameLen = 0;
-                foreach (var grp in anyUnset.GroupBy(p => (p.SchemaGuid, p.SchemaName)))
-                {
-                    maxPropNameLen = grp.Max(g => g.SimpleDisplayName.Length);
-                    if (settings.Verbose ?? Program.Verbose)
-                    {
-                        unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver]({grp.Key.SchemaGuid})[/]");
-                    }
-                    else
-                    {
-                        unsetPropBuilder.AppendLine($"  [silver]For schema[/] [bold white]{grp.Key.SchemaName}[/] [silver][/]");
-                    }
-
-                    foreach (var prop in grp)
-                    {
-                        unsetPropBuilder.AppendLine($"    {prop.SimpleDisplayName.PadRight(maxPropNameLen)} : [silver]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}{(prop.Field.Required ? " (REQUIRED)" : string.Empty)}[/]");
-                    }
-                }
-            }
-        }
-
         var linksBuilder = new StringBuilder();
         if (schemas.Count > 0)
         {
@@ -229,33 +130,164 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             }
         }
 
-        AnsiConsole.MarkupLine($"[silver]Instance[/]    : [bold white]{thing.Name}[/]");
-        if (settings.Verbose ?? Program.Verbose)
-        {
-            AnsiConsole.MarkupLine($"[silver]GUID[/]        : {thing.Guid}");
-        }
+        var masterTable = new Table()
+            .AddColumn(
+                new TableColumn(new Text("Name", new Style(decoration: Decoration.Conceal))).Padding(0, 0, 2, 2))
+            .AddColumn(
+                new TableColumn(new Text("Value", new Style(decoration: Decoration.Conceal))).Padding(0, 0, 2, 2))
+            .HideHeaders()
+            .NoBorder();
 
-        if (settings.Verbose ?? Program.Verbose)
-        {
-            AnsiConsole.MarkupLine($"[silver]Created On[/]  : {thing.CreatedOn.ToLocalTime().ToLongDateString()} at {thing.CreatedOn.ToLocalTime().ToLongTimeString()}");
-            AnsiConsole.MarkupLine($"[silver]Modified On[/] : {thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}");
-        }
+        masterTable.AddRow("[indianred1]Instance[/]", $"[bold orange1]{Markup.Escape(thing.Name)}[/]");
 
-        static string ConditionalPrint(StringBuilder? sb)
+        List<IRenderable> schemaRowRenderables = [];
+        foreach (var schema in schemas)
         {
-            if (sb == null || sb.Length == 0)
+            if (verbose)
             {
-                return string.Empty;
+                schemaRowRenderables.Add(new Markup($"[aqua]{Markup.Escape(schema.Value.Name)}[/] [gray]({Markup.Escape(schema.Value.Guid)})[/]"));
+            }
+            else
+            {
+                schemaRowRenderables.Add(new Markup($"[aqua]{Markup.Escape(schema.Value.Name)}[/]"));
+            }
+        }
+
+        masterTable.AddRow(new Markup("[indianred1]Schemas[/]"), new Rows(schemaRowRenderables));
+
+        if (verbose)
+        {
+            masterTable.AddRow("[indianred1]GUID[/]", $"[gray]{Markup.Escape(thing.Guid)}[/]");
+            masterTable.AddRow("[indianred1]Created On[/]", $"[gray]{thing.CreatedOn.ToLocalTime().ToLongDateString()} at {thing.CreatedOn.ToLocalTime().ToLongTimeString()}[/]");
+            masterTable.AddRow("[indianred1]Modified On[/]", $"[gray]{thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}[/]");
+        }
+
+        // Properties
+        {
+            var propertyTable = new Table();
+
+            if (verbose)
+            {
+                propertyTable.AddColumn(
+                    new TableColumn(new Text("Schema", new Style(decoration: Decoration.Bold | Decoration.Underline))));
             }
 
-            return $"{sb}{Environment.NewLine}";
+            propertyTable
+                .AddColumn(
+                    new TableColumn(new Text("Name", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+                .AddColumn(
+                    new TableColumn(new Text("Value", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+                .ShowRowSeparators()
+                .Border(TableBorder.Rounded)
+                .BorderColor(Color.Orange1);
+
+            var propDict = new Dictionary<string, (string? schemaGuid, object? fieldValue, bool valid)>();
+
+            await foreach (var property in thing.GetProperties(cancellationToken))
+            {
+                propDict.Add(property.FullDisplayName, (property.SchemaGuid, property.Value, property.Valid));
+            }
+
+            foreach (var prop in propDict)
+            {
+                // Skip built-ins
+                if (string.CompareOrdinal(prop.Key, nameof(Thing.Name)) == 0
+                    || string.CompareOrdinal(prop.Key, nameof(Thing.Guid)) == 0
+                    || string.CompareOrdinal(prop.Key, nameof(Thing.SchemaGuids)) == 0
+                    )
+                {
+                    continue;
+                }
+
+                // Coerce value if schema-bound using a field renderer.
+                var propDisplayName = prop.Key;
+                if (prop.Value.schemaGuid != null
+                    && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch)
+                    && sch.Properties.TryGetValue(prop.Key[(prop.Key.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
+                {
+                    if (!(settings.NoPrettyDisplayNames ?? false)
+                        && schprop.DisplayNames != null
+                        && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
+                    {
+                        propDisplayName = prettyDisplayName;
+                    }
+
+                    var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
+                    if (prop.Value.valid)
+                    {
+                        if (verbose)
+                        {
+                            propertyTable.AddRow(sch.Name, propDisplayName, text ?? string.Empty);
+                        }
+                        else
+                        {
+                            propertyTable.AddRow(propDisplayName, text ?? string.Empty);
+                        }
+                    }
+                    else
+                    {
+                        if (verbose)
+                        {
+                            propertyTable.AddRow(new Markup(sch.Name), new Markup(propDisplayName), new Markup($"[red bold]{text}[/]"));
+                        }
+                        else
+                        {
+                            propertyTable.AddRow(new Markup(propDisplayName), new Markup($"[red bold]{text}[/]"));
+                        }
+                    }
+                }
+                else
+                {
+                    if (verbose)
+                    {
+                        propertyTable.AddRow("???", prop.Key, prop.Value.fieldValue?.ToString() ?? string.Empty);
+                    }
+                    else
+                    {
+                        propertyTable.AddRow(prop.Key, prop.Value.fieldValue?.ToString() ?? string.Empty);
+                    }
+                }
+            }
+
+            masterTable.AddRow(new Markup("[indianred1]Properties[/]"), propertyTable);
+
+            if (verbose)
+            {
+                var unsetPropertyTable = new Table()
+                    .AddColumn(
+                        new TableColumn(new Text("Schema", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+                    .AddColumn(
+                        new TableColumn(new Text("Property Name", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+                    .AddColumn(
+                        new TableColumn(new Text("Data Type", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+                    .AddColumn(
+                        new TableColumn(new Text("Required?", new Style(decoration: Decoration.Bold | Decoration.Underline))))
+                    .ShowRowSeparators()
+                    .Border(TableBorder.Rounded)
+                    .BorderColor(Color.IndianRed1);
+
+                var anyUnset = await thing.GetUnsetProperties(cancellationToken);
+                if (anyUnset.Count > 0)
+                {
+                    foreach (var grp in anyUnset.GroupBy(p => (p.SchemaGuid, p.SchemaName)))
+                    {
+                        foreach (var prop in grp)
+                        {
+                            unsetPropertyTable.AddRow(
+                                new Markup($"[aqua]{grp.Key.SchemaName}[/]"),
+                                new Markup($"[red]{prop.SimpleDisplayName}[/]"),
+                                new Markup($"[red]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}[/]"),
+                                new Markup(prop.Field.Required ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark));
+                        }
+                    }
+                }
+
+                masterTable.AddRow(new Markup("[indianred1]Unset Properties[/]"), unsetPropertyTable);
+            }
         }
 
-        AnsiConsole.MarkupLine(
-            $"""
-            {ConditionalPrint(schemaBuilder)}[chartreuse4]Properties[/]  : {(propBuilder.Length == 0 ? "(None)" : string.Empty)}
-            {propBuilder}{ConditionalPrint(unsetPropBuilder)}
-            """);
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(masterTable);
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 
