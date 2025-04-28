@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 - 'jot' now uses the user's application directory for local storage provider
 - 'jot' commands 'things' and 'schemas' now take an optional name filter for searching
 - Updated 'jot' to TextPromptWithHistory 1.0.5, which now provides inline prompt editing
+- Improve the output of printing schemas and things
+- 'jot' commands 'initialize', 'verbose', and 'reindex' are now parented under a 'configure' branch.
 
 ### Fixed
 

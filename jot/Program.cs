@@ -169,6 +169,31 @@ internal class Program
                         .WithDescription("Views the values of all properties on a thing");
                 });
 
+            config.AddBranch("configure", configure =>
+                {
+                    configure.AddBranch("initialize", reindex =>
+                        {
+                            reindex.AddCommand<InitSchemasCommand>("schemas")
+                                .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
+                        })
+                        .WithAlias("init");
+                    configure.AddBranch("reindex", reindex =>
+                        {
+                            reindex.AddCommand<ReindexSchemasCommand>("schemas")
+                                .WithDescription("Rebuilds the index files for schemas for consistency");
+                            reindex.AddCommand<ReindexThingsCommand>("things")
+                                .WithDescription("Rebuilds the index files for things for consistency");
+                        });
+
+                    if (interactive)
+                    {
+                        configure.AddCommand<VerboseCommand>("verbosity")
+                            .WithAlias("verbose")
+                            .WithDescription("Toggles verbosity.  When verbosity is on, '-v' is specified automatically with every supported command");
+                    }
+                })
+                .WithAlias("config");
+
             config.AddCommand<HelpCommand>("help")
                 .IsHidden();
 
@@ -234,22 +259,6 @@ internal class Program
                 config.AddCommand<ValidateSelectedCommand>("validate")
                     .WithAlias("val")
                     .IsHidden();
-
-                config.AddCommand<VerboseCommand>("verbose")
-                    .WithDescription("Toggles verbosity.  When verbosity is on, '-v' is specified automatically with every supported command");
-
-                config.AddBranch("initialize", reindex =>
-                    {
-                        reindex.AddCommand<InitSchemasCommand>("schemas")
-                            .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
-                    });
-                config.AddBranch("reindex", reindex =>
-                    {
-                        reindex.AddCommand<ReindexSchemasCommand>("schemas")
-                            .WithDescription("Rebuilds the index files for schemas for consistency");
-                        reindex.AddCommand<ReindexThingsCommand>("things")
-                            .WithDescription("Rebuilds the index files for things for consistency");
-                    });
             }
         });
 
