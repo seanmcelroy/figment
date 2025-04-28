@@ -73,41 +73,39 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Dissocia
         }
 
         // Now on to the thing.
-        if (string.IsNullOrWhiteSpace(settings.ThingName))
+        Reference thingReference;
+        var thingResolution = settings.ResolveThingName(cancellationToken);
+        switch (thingResolution.Item1)
         {
-            AmbientErrorContext.Provider.LogError("Thing name must be specified.");
-            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
-        }
-
-        var thingPossibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
-            .ToBlockingEnumerable(cancellationToken)
-            .ToArray();
-
-        Thing? thing;
-        switch (thingPossibilities.Length)
-        {
-            case 0:
+            case Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR:
+                AmbientErrorContext.Provider.LogError("Thing name must be specified.");
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+            case Globals.GLOBAL_ERROR_CODES.NOT_FOUND:
                 AmbientErrorContext.Provider.LogError($"No thing found named '{settings.ThingName}'");
                 return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
-            case 1:
-                var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
-                if (thingProvider == null)
-                {
-                    AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
-                    return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
-                }
-
-                thing = await thingProvider.LoadAsync(thingPossibilities[0].Guid, cancellationToken);
-                if (thing == null)
-                {
-                    AmbientErrorContext.Provider.LogError($"Unable to load schema '{settings.ThingName}'.");
-                    return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
-                }
-
-                break;
-            default:
+            case Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH:
                 AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
                 return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
+            case Globals.GLOBAL_ERROR_CODES.SUCCESS:
+                thingReference = thingResolution.thing;
+                break;
+            default:
+                throw new NotImplementedException($"Unexpected return code {Enum.GetName(thingResolution.Item1)}");
+        }
+
+        Thing? thing;
+        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        thing = await thingProvider.LoadAsync(thingReference.Guid, cancellationToken);
+        if (thing == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to load thing '{settings.ThingName}'.");
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
         }
 
         var (success, modifiedThing) = await thing.DissociateFromSchemaAsync(schema.Guid, cancellationToken);

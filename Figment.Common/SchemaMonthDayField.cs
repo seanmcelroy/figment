@@ -41,10 +41,10 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
 
     // RFC 3339 Formats
     private static readonly string[] _formats = [
-        "M-d",
-        "M/d",
-        "MMM d",
-        "MMMM d",
+        "M-dd",
+        "M/dd",
+        "MMM dd",
+        "MMMM dd",
     ];
 
     /// <inheritdoc/>
@@ -77,7 +77,17 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
             return true;
         }
 
-        return value is int i && IsValid(i);
+        if (value is int i && IsValid(i))
+        {
+            return true;
+        }
+
+        if (value is ulong l && IsValid((int)l))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <inheritdoc/>
@@ -108,7 +118,7 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
 
     public static bool TryParseMonthDay([NotNullWhen(true)] string? input, out int output)
     {
-        if (input != null && int.TryParse(input.ToString(), out int i) && IsValid(i))
+        if (input != null && int.TryParse(input, out int i) && IsValid(i))
         {
             output = i;
             return true;

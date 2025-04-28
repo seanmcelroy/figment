@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - 'jot' now uses the user's application directory for local storage provider
 - 'jot' commands 'things' and 'schemas' now take an optional name filter for searching
 
+### Fixed
+
+- Setting a month+date field now does not complain about an invalid value.
+
 ## 0.0.5
 
 ### Added

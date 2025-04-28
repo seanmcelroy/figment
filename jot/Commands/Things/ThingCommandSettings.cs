@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.ComponentModel;
+using Figment.Common;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -50,5 +51,46 @@ public class ThingCommandSettings : CommandSettings
         return string.IsNullOrWhiteSpace(ThingName)
             ? ValidationResult.Error("Name must either be the GUID of a thing or a name that resolves to just one")
             : ValidationResult.Success();
+    }
+
+    /// <summary>
+    /// Attempts to resolve the specified <see cref="ThingName"/>.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple with a indicating whether the resolution was successful, and if so, what the reference to the <see cref="Thing"/> is.</returns>
+    public (Globals.GLOBAL_ERROR_CODES, Reference thing) ResolveThingName(CancellationToken cancellationToken)
+    {
+        return ResolveThingName(ThingName, cancellationToken);
+    }
+
+    /// <summary>
+    /// Attempts to resolve the specified <paramref name="thingName"/>.
+    /// </summary>
+    /// <param name="thingName">Name of the thing to resolve.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple with a indicating whether the resolution was successful, and if so, what the reference to the <see cref="Thing"/> is.</returns>
+    internal static (Globals.GLOBAL_ERROR_CODES, Reference thing) ResolveThingName(string thingName, CancellationToken cancellationToken)
+    {
+        var selected = Program.SelectedEntity;
+        if (!selected.Equals(Reference.EMPTY) && selected.Type == Reference.ReferenceType.Thing)
+        {
+            return (Globals.GLOBAL_ERROR_CODES.SUCCESS, selected);
+        }
+
+        if (string.IsNullOrWhiteSpace(thingName))
+        {
+            return (Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR, Reference.EMPTY);
+        }
+
+        var possibilities = Thing.ResolveAsync(thingName, cancellationToken)
+            .ToBlockingEnumerable(cancellationToken)
+            .ToArray();
+
+        return possibilities.Length switch
+        {
+            0 => (Globals.GLOBAL_ERROR_CODES.NOT_FOUND, Reference.EMPTY),
+            1 => (Globals.GLOBAL_ERROR_CODES.SUCCESS, possibilities[0]),
+            _ => (Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH, Reference.EMPTY),
+        };
     }
 }

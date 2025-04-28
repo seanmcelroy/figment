@@ -41,4 +41,14 @@ public class DissociateSchemaFromThingCommandSettings : SchemaCommandSettings
             ? ValidationResult.Error("Thing name must be set")
             : ValidationResult.Success();
     }
+
+    /// <summary>
+    /// Attempts to resolve the specified <see cref="ThingName"/>.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple with a indicating whether the resolution was successful, and if so, what the reference to the <see cref="Thing"/> is.</returns>
+    public (Globals.GLOBAL_ERROR_CODES, Figment.Common.Reference thing) ResolveThingName(CancellationToken cancellationToken)
+    {
+        return Things.ThingCommandSettings.ResolveThingName(ThingName, cancellationToken);
+    }
 }

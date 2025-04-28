@@ -31,36 +31,24 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ThingRenameCommandSettings settings, CancellationToken cancellationToken)
     {
-        var selected = Program.SelectedEntity;
-        if (selected.Equals(Reference.EMPTY) || selected.Type != Reference.ReferenceType.Schema)
+        Reference thingReference;
+        var thingResolution = settings.ResolveThingName(cancellationToken);
+        switch (thingResolution.Item1)
         {
-            if (string.IsNullOrWhiteSpace(settings.ThingName))
-            {
+            case Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR:
                 AmbientErrorContext.Provider.LogError("To rename a thing, you must first 'select' one.");
                 return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
-            }
-
-            var possibleThings = Thing.ResolveAsync(settings.ThingName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
-            switch (possibleThings.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name.");
-                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibleThings[0];
-                    break;
-                default:
-                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
-                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
-            }
-        }
-
-        if (selected.Type != Reference.ReferenceType.Thing)
-        {
-            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(selected.Type)}'.");
-            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
+            case Globals.GLOBAL_ERROR_CODES.NOT_FOUND:
+                AmbientErrorContext.Provider.LogError($"No thing found named '{settings.ThingName}'");
+                return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
+            case Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH:
+                AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
+                return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
+            case Globals.GLOBAL_ERROR_CODES.SUCCESS:
+                thingReference = thingResolution.thing;
+                break;
+            default:
+                throw new NotImplementedException($"Unexpected return code {Enum.GetName(thingResolution.Item1)}");
         }
 
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
@@ -70,10 +58,10 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thing = await tsp.LoadAsync(selected.Guid, cancellationToken);
+        var thing = await tsp.LoadAsync(thingReference.Guid, cancellationToken);
         if (thing == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{thingReference.Guid}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
         }
 
@@ -88,7 +76,7 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         var saved = await thing.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to save thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to save thing with Guid '{thingReference.Guid}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

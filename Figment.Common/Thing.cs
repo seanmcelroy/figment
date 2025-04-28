@@ -272,7 +272,7 @@ public class Thing(string Guid, string Name)
                 if (schema.Properties.TryGetValue(simpleDisplayName, out SchemaFieldBase? schemaField))
                 {
                     valid = schemaField == null || await schemaField.IsValidAsync(thingProp.Value, cancellationToken); // Valid if no schema.
-                    required = schemaField != null && schemaField.Required;
+                    required = schemaField?.Required == true;
                     schemaFieldType = schemaField?.Type;
                 }
             }
