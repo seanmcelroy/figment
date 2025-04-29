@@ -55,6 +55,8 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
             }
 
             AmbientErrorContext.Provider.LogDone($"Schema '{settings.SchemaName}' created. ({schema.Guid})");
+            Program.SelectedEntity = schema;
+            Program.SelectedEntityName = schema.Name;
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
