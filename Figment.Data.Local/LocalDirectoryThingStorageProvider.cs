@@ -330,7 +330,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                         continue; // We don't load nulls
                     case JsonValueKind.Object:
                         {
-                            if (string.CompareOrdinal(prop.Name, "Properties") == 0)
+                            if (string.Equals(prop.Name, "Properties", StringComparison.Ordinal))
                             {
                                 foreach (var sub in prop.Value.EnumerateObject())
                                 {

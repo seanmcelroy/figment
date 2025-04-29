@@ -21,7 +21,7 @@ public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<Set
         // display Pizza
         // require pizza it-IT
         var propName = settings.PropertyName;
-        var sp = schema!.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
+        var sp = schema!.Properties.FirstOrDefault(p => string.Equals(p.Key, propName, StringComparison.CurrentCultureIgnoreCase));
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
         {
             AmbientErrorContext.Provider.LogError($"No schema field named '{propName}' was found.");

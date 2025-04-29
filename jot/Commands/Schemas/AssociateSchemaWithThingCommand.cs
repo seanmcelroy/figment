@@ -113,7 +113,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
             return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
         }
 
-        if (thing.SchemaGuids.Any(s => string.CompareOrdinal(s, schema.Guid) == 0))
+        if (thing.SchemaGuids.Any(s => string.Equals(s, schema.Guid, StringComparison.Ordinal)))
         {
             AmbientErrorContext.Provider.LogDone($"{thing.Name} is already associated with schema {schema.Name}. No change.");
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

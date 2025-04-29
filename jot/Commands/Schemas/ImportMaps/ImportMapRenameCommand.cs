@@ -41,7 +41,7 @@ public class ImportMapRenameCommand : SchemaCancellableAsyncCommand<ImportMapRen
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var importMap = schema!.ImportMaps.FirstOrDefault(i => string.Compare(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase) == 0);
+        var importMap = schema!.ImportMaps.FirstOrDefault(i => string.Equals(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase));
 
         if (importMap == null)
         {

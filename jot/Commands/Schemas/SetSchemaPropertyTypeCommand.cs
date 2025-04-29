@@ -85,13 +85,13 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
 
             // Formula is null at this point.
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaDateField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaDateField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Date
             var sdf = new SchemaDateField(propName);
             schema!.Properties[propName] = sdf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaEmailField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaEmailField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Email
             var sef = new SchemaEmailField(propName);
@@ -115,13 +115,13 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var snf = new SchemaNumberField(propName);
             schema!.Properties[propName] = snf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaPhoneField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaPhoneField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Phone
             var spf = new SchemaPhoneField(propName);
             schema!.Properties[propName] = spf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaSchemaField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaSchemaField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Schema
             var ssf = new SchemaSchemaField(propName);
@@ -133,7 +133,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var stf = new SchemaTextField(propName);
             schema!.Properties[propName] = stf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaUriField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaUriField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Uri
             var suf = new SchemaUriField(propName);

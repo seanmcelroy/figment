@@ -62,7 +62,7 @@ public class SchemaRenameCommand : SchemaCancellableAsyncCommand<SchemaRenameCom
         await ssp!.RebuildIndexes(cancellationToken);
         AmbientErrorContext.Provider.LogDone($"Schema '{oldName}' renamed to '{schema.Name}'.  Please ensure your 'plural' value for this schema is accurate.");
 
-        if (string.CompareOrdinal(Program.SelectedEntity.Guid, schema.Guid) == 0)
+        if (string.Equals(Program.SelectedEntity.Guid, schema.Guid, StringComparison.Ordinal))
         {
             Program.SelectedEntityName = schema.Name;
         }

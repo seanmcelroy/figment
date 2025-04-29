@@ -87,7 +87,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
-        foreach (var schema in SchemaCache.Values.Where(e => string.Compare(e.Name, schemaName, StringComparison.CurrentCultureIgnoreCase) == 0))
+        foreach (var schema in SchemaCache.Values.Where(e => string.Equals(e.Name, schemaName, StringComparison.CurrentCultureIgnoreCase)))
             return Task.FromResult(new Reference
             {
                 Guid = schema.Guid,
@@ -147,7 +147,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         ArgumentException.ThrowIfNullOrWhiteSpace(plural);
 
 
-        foreach (var schema in SchemaCache.Values.Where(e => string.Compare(e.Plural, plural, StringComparison.CurrentCultureIgnoreCase) == 0))
+        foreach (var schema in SchemaCache.Values.Where(e => string.Equals(e.Plural, plural, StringComparison.CurrentCultureIgnoreCase)))
         {
             yield return new Reference
             {

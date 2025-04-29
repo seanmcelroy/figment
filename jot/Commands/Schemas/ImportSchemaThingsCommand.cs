@@ -87,14 +87,14 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         if (string.IsNullOrWhiteSpace(settings.Format))
         {
             // Extension
-            if (string.Compare(Path.GetExtension(settings.FilePath), "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+            if (string.Equals(Path.GetExtension(settings.FilePath), "csv", StringComparison.InvariantCultureIgnoreCase))
             {
                 fileFormat = "csv";
             }
         }
 
         var possibleImportMaps = schema.ImportMaps
-            .Where(s => string.Compare(s.Format, settings.Format, StringComparison.InvariantCultureIgnoreCase) == 0)
+            .Where(s => string.Equals(s.Format, settings.Format, StringComparison.InvariantCultureIgnoreCase))
             .ToArray();
 
         if (possibleImportMaps.Length == 0)
@@ -103,7 +103,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        if (string.Compare(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase) == 0)
+        if (string.Equals(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase))
         {
             things = ImportCsv(settings.FilePath, schema);
         }

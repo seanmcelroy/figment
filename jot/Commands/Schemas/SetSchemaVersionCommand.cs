@@ -65,7 +65,7 @@ public class SetSchemaVersionCommand : SchemaCancellableAsyncCommand<SetSchemaVe
             schema!.VersionGuid = versionPlan.Guid;
         }
 
-        if (string.Compare(oldVersion, schema.VersionGuid, StringComparison.InvariantCultureIgnoreCase) == 0)
+        if (string.Equals(oldVersion, schema.VersionGuid, StringComparison.InvariantCultureIgnoreCase))
         {
             AmbientErrorContext.Provider.LogWarning($"Version plan for {schema.Name} is already '{schema.VersionGuid}'. Nothing to do.");
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

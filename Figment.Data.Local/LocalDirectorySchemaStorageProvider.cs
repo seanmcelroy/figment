@@ -369,8 +369,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
         await foreach (var entry in IndexManager.LookupAsync(
             indexFilePath
-            , e => string.Compare(e.Key, schemaName, StringComparison.CurrentCultureIgnoreCase) == 0
-            , cancellationToken))
+            , e => string.Equals(e.Key, schemaName, StringComparison.CurrentCultureIgnoreCase), cancellationToken))
         {
             var schemaFileName = entry.Value;
             var schemaGuid = schemaFileName.Split('.')[0];

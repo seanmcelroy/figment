@@ -26,7 +26,7 @@ public class LinkFileFieldToPropertyCommand : SchemaCancellableAsyncCommand<Link
             return (int)tgs;
         }
 
-        var importMap = schema!.ImportMaps.FirstOrDefault(i => string.Compare(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase) == 0);
+        var importMap = schema!.ImportMaps.FirstOrDefault(i => string.Equals(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase));
 
         if (importMap == null)
         {
