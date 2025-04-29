@@ -49,7 +49,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
         if (string.IsNullOrWhiteSpace(settings.FieldType))
         {
             // Deletes a property.
-            var propToDelete = schema!.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.OrdinalIgnoreCase) == 0);
+            var propToDelete = schema!.Properties.FirstOrDefault(p => string.Equals(p.Key, propName, StringComparison.OrdinalIgnoreCase));
             if (propToDelete.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
             {
                 AmbientErrorContext.Provider.LogError($"No property named '{propName}' found on schema '{schema.Name}'");
@@ -59,7 +59,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             schema.Properties.Remove(propToDelete.Key);
             AmbientErrorContext.Provider.LogWarning($"Deleted property name '{propName}'.");
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaArrayField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaArrayField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Array
             var saf = new SchemaArrayField(propName)
@@ -71,13 +71,13 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             };
             schema!.Properties[propName] = saf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaBooleanField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaBooleanField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Boolean
             var sbf = new SchemaBooleanField(propName);
             schema!.Properties[propName] = sbf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaCalculatedField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaCalculatedField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Calculated
             var scf = new SchemaCalculatedField(propName);
@@ -97,19 +97,19 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var sef = new SchemaEmailField(propName);
             schema!.Properties[propName] = sef;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaIntegerField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaIntegerField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Number (integer)
             var sif = new SchemaIntegerField(propName);
             schema!.Properties[propName] = sif;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaMonthDayField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaMonthDayField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Month+day
             var ssf = new SchemaMonthDayField(propName);
             schema!.Properties[propName] = ssf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, SchemaNumberField.SCHEMA_FIELD_TYPE) == 0)
+        else if (string.Equals(settings.FieldType, SchemaNumberField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Number (double)
             var snf = new SchemaNumberField(propName);
@@ -127,7 +127,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var ssf = new SchemaSchemaField(propName);
             schema!.Properties[propName] = ssf;
         }
-        else if (string.CompareOrdinal(settings.FieldType, "text") == 0)
+        else if (string.Equals(settings.FieldType, "text", StringComparison.Ordinal))
         {
             // Text
             var stf = new SchemaTextField(propName);

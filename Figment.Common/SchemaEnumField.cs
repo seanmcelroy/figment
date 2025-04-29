@@ -55,7 +55,7 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
             return Task.FromResult(Values.OfType<JsonElement>()
                 .Any(v => v.ValueKind == JsonValueKind.String && string.Equals(v.GetString(), s, StringComparison.Ordinal))
                 || Values.OfType<string>()
-                .Any(v => string.CompareOrdinal(v, s) == 0));
+                .Any(v => string.Equals(v, s, StringComparison.Ordinal)));
         }
 
         if (value is int i)

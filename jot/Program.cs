@@ -414,19 +414,19 @@ internal class Program
                     var viewProps = viewInstance.GetProperties(cancellationToken).ToBlockingEnumerable(cancellationToken).ToArray();
 
                     var forSchemaGuidObject = viewProps
-                        .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.for") == 0)
+                        .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.for", StringComparison.Ordinal))
                         .Select(p => p.Value)
                         .FirstOrDefault();
 
                     if (forSchemaGuidObject != default
                         && forSchemaGuidObject is string forSchemaGuid
                         && !string.IsNullOrWhiteSpace(forSchemaGuid)
-                        && string.CompareOrdinal(forSchemaGuid, commonSchema.Guid) == 0
+                        && string.Equals(forSchemaGuid, commonSchema.Guid, StringComparison.Ordinal)
                         && await ssp.GuidExists(forSchemaGuid, cancellationToken))
                     {
                         // Found a matching view!
                         var viewColumnsObject = viewProps
-                            .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns") == 0)
+                            .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns", StringComparison.Ordinal))
                             .Select(p => p.Value)
                             .FirstOrDefault();
 

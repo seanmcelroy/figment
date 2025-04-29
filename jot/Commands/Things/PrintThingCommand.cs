@@ -111,7 +111,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             foreach (var schema in schemas)
             {
                 var linkedFields = schema.Value.Properties
-                    .Where(p => string.CompareOrdinal(p.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0)
+                    .Where(p => p.Value.Type.Equals(SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
                     .ToDictionary(k => k.Key, v => (SchemaRefField)v.Value);
 
                 foreach (var lf in linkedFields)
@@ -191,10 +191,9 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
             foreach (var prop in propDict)
             {
                 // Skip built-ins
-                if (string.CompareOrdinal(prop.Key, nameof(Thing.Name)) == 0
-                    || string.CompareOrdinal(prop.Key, nameof(Thing.Guid)) == 0
-                    || string.CompareOrdinal(prop.Key, nameof(Thing.SchemaGuids)) == 0
-                    )
+                if (string.Equals(prop.Key, nameof(Thing.Name), StringComparison.Ordinal)
+                    || string.Equals(prop.Key, nameof(Thing.Guid), StringComparison.Ordinal)
+                    || string.Equals(prop.Key, nameof(Thing.SchemaGuids), StringComparison.Ordinal))
                 {
                     continue;
                 }

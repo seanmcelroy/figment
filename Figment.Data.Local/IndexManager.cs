@@ -110,7 +110,7 @@ public static class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(keyToRemove);
 
-        return await RemoveAsync(indexFilePath, entry => string.CompareOrdinal(entry.Key, keyToRemove) == 0, cancellationToken);
+        return await RemoveAsync(indexFilePath, entry => string.Equals(entry.Key, keyToRemove, StringComparison.Ordinal), cancellationToken);
     }
 
     public static async Task<bool> RemoveByValueAsync(string indexFilePath, string valueToRemove, CancellationToken cancellationToken)
@@ -118,7 +118,7 @@ public static class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(valueToRemove);
 
-        return await RemoveAsync(indexFilePath, entry => string.CompareOrdinal(entry.Value, valueToRemove) == 0, cancellationToken);
+        return await RemoveAsync(indexFilePath, entry => string.Equals(entry.Value, valueToRemove, StringComparison.Ordinal), cancellationToken);
     }
 
     private static async Task<bool> RemoveAsync(string indexFilePath, Func<Entry, bool> deleteSelector, CancellationToken cancellationToken)

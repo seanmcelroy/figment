@@ -84,7 +84,7 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         await tsp.RebuildIndexes(cancellationToken);
         AmbientErrorContext.Provider.LogDone($"'{oldName}' renamed to '{thing.Name}'.");
 
-        if (string.CompareOrdinal(Program.SelectedEntity.Guid, thing.Guid) == 0)
+        if (Program.SelectedEntity.Guid.Equals(thing.Guid, StringComparison.Ordinal))
         {
             Program.SelectedEntityName = thing.Name;
         }

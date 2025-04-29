@@ -40,7 +40,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     public async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
         await foreach (var reference in FindByNameAsync(
-            new Func<string, bool>(x => string.Compare(x, exactName, comparisonType) == 0), cancellationToken))
+            new Func<string, bool>(x => string.Equals(x, exactName, comparisonType)), cancellationToken))
         {
             return reference.reference; // Returns the first match
         }
@@ -192,7 +192,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                 yield break;
 
             var thing = await LoadAsync(thingRef.reference.Guid, cancellationToken);
-            if (thing != null && thing.SchemaGuids.Any(s => string.CompareOrdinal(s, schemaGuid) == 0))
+            if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
                 yield return thingRef.reference;
         }
     }
@@ -305,10 +305,9 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                     return null;
 
                 if (
-                  string.CompareOrdinal(prop.Name, nameof(Thing.Name)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(Thing.Guid)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(Thing.SchemaGuids)) == 0
-                )
+                    string.Equals(prop.Name, nameof(Thing.Name), StringComparison.Ordinal)
+                    || string.Equals(prop.Name, nameof(Thing.Guid), StringComparison.Ordinal)
+                    || string.Equals(prop.Name, nameof(Thing.SchemaGuids), StringComparison.Ordinal))
                 {
                     // Ignore built-ins, as they're defined on root, not Properties
                     continue;
@@ -561,7 +560,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 
         if (thing.SchemaGuids.Contains(schemaGuid))
         {
-            thing.SchemaGuids.RemoveAll(new Predicate<string>(s => string.Compare(schemaGuid, s, StringComparison.InvariantCultureIgnoreCase) == 0));
+            thing.SchemaGuids.RemoveAll(new Predicate<string>(s => string.Equals(schemaGuid, s, StringComparison.InvariantCultureIgnoreCase)));
             var saved = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);

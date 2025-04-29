@@ -146,7 +146,7 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
 
         foreach (var prop in Properties)
         {
-            prop.Value.Required = RequiredProperties?.Any(sdr => string.CompareOrdinal(sdr, prop.Key) == 0) == true;
+            prop.Value.Required = RequiredProperties?.Any(sdr => string.Equals(sdr, prop.Key, StringComparison.Ordinal)) == true;
             schema.Properties.Add(prop.Key, prop.Value);
         }
 
@@ -170,7 +170,7 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
 
         foreach (var prop in Properties)
         {
-            prop.Value.Required = RequiredProperties?.Any(sdr => string.CompareOrdinal(sdr, prop.Key) == 0) == true;
+            prop.Value.Required = RequiredProperties?.Any(sdr => string.Equals(sdr, prop.Key, StringComparison.Ordinal)) == true;
             schema.Properties.Add(prop.Key, prop.Value);
         }
 
