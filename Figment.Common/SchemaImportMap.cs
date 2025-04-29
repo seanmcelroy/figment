@@ -13,11 +13,11 @@ public class SchemaImportMap(string Name, string Format)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
-    /// Gets the name of the import map.
+    /// Gets or sets the name of the import map.
     /// </summary>
     /// <example>Google Contacts CSV file export.</example>
     [JsonPropertyName("name")]
-    public string Name { get; init; } = Name;
+    public string Name { get; set; } = Name;
 
     /// <summary>
     /// Gets the format to which this import map applies.

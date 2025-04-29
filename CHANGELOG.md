@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - Updated 'jot' to TextPromptWithHistory 1.0.5, which now provides inline prompt editing
 - Improve the output of printing schemas and things
 - 'jot' commands 'initialize', 'verbose', and 'reindex' are now parented under a 'configure' branch.
+- 'jot' now includes commands to manage import-map field configurations
+- 'jot' has additional hidden command aliases to make the CLI more intuitive
 
 ### Fixed
 

@@ -7,15 +7,8 @@ namespace jot.Commands.Schemas.ImportMaps;
 /// <summary>
 /// The settings supplied to the <see cref="NewImportMapCommand"/>.
 /// </summary>
-public class NewImportMapCommandSettings : SchemaCommandSettings
+public class NewImportMapCommandSettings : ImportMapCommandSettings
 {
-    /// <summary>
-    /// Gets the name of the import map.
-    /// </summary>
-    [Description("Name of the import map")]
-    [CommandArgument(0, "<MAP_NAME>")]
-    required public string ImportMapName { get; init; }
-
     /// <summary>
     /// Gets the type of the file this map applies to, such as 'csv'.
     /// </summary>
@@ -23,14 +16,16 @@ public class NewImportMapCommandSettings : SchemaCommandSettings
     [CommandArgument(1, "<FILE_TYPE>")]
     required public string FileType { get; init; }
 
+    /// <summary>
+    /// Gets the path to a sample file from which to read file fields into the import map.
+    /// </summary>
+    [Description("Path to a sample file from which to read file fields into the import map")]
+    [CommandArgument(2, "<SAMPLE_FILE_PATH>")]
+    required public string SampleFilePath { get; init; }
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
-        if (string.IsNullOrWhiteSpace(ImportMapName))
-        {
-            return ValidationResult.Error("Import map name must be specified");
-        }
-
         if (string.IsNullOrWhiteSpace(FileType))
         {
             return ValidationResult.Error("File type must be specified");
@@ -41,6 +36,17 @@ public class NewImportMapCommandSettings : SchemaCommandSettings
             return ValidationResult.Error("csv is the only currently supported file type");
         }
 
-        return ValidationResult.Success();
+        if (string.IsNullOrWhiteSpace(SampleFilePath))
+        {
+            return ValidationResult.Error("Sample file must be specified");
+        }
+
+        if (string.IsNullOrWhiteSpace(SampleFilePath))
+        {
+            return ValidationResult.Error($"File path '{SampleFilePath}' was not found.");
+        }
+
+        // Because we inherit from a non-base class of settings, call down to the base class validation.
+        return base.Validate();
     }
 }

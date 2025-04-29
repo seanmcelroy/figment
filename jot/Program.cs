@@ -118,14 +118,22 @@ internal class Program
                             .WithDescription("Creates a new import map to link file fields to schema properties");
                         map.AddCommand<ListImportMapsCommand>("list")
                             .WithDescription("Lists all import maps defined on the schema");
+                        map.AddCommand<PrintImportMapCommand>("view")
+                            .WithAlias("print")
+                            .WithAlias("show")
+                            .WithDescription("Views all fields on an import map on the schema");
+                        map.AddCommand<ImportMapRenameCommand>("rename")
+                            .WithAlias("ren")
+                            .WithDescription("Changes the name of an import map");
                         map.AddCommand<DeleteImportMapCommand>("delete")
                             .WithDescription("Deletes an import map from the schema configuration");
-                    });
+                    }).WithAlias("import-maps");
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated with a schema");
                     schema.AddCommand<SetSchemaPluralCommand>("plural")
                         .WithDescription("Sets the plural name for the schema");
                     schema.AddCommand<SchemaRenameCommand>("rename")
+                        .WithAlias("ren")
                         .WithDescription("Changes the name of a schema");
                     schema.AddBranch<SchemaPropertyCommandSettings>("set", set =>
                     {
@@ -147,6 +155,7 @@ internal class Program
                         .WithDescription("Sets the versioning plan for the schema");
                     schema.AddCommand<PrintSchemaCommand>("view")
                         .WithAlias("print")
+                        .WithAlias("show")
                         .WithDescription("Views all fields on a schema");
                 });
             config.AddBranch<ThingCommandSettings>("thing", thing =>
@@ -158,6 +167,7 @@ internal class Program
                     thing.AddCommand<PromoteThingPropertyCommand>("promote")
                         .WithDescription("Promotes a property on one thing to become a property defined on a schema");
                     thing.AddCommand<ThingRenameCommand>("rename")
+                        .WithAlias("ren")
                         .WithDescription("Changes the name of a thing");
                     thing.AddCommand<SetThingPropertyCommand>("set")
                         .WithDescription("Sets the value of a property on a thing");
@@ -166,6 +176,7 @@ internal class Program
                         .WithDescription("Validates a thing is consistent with its schema");
                     thing.AddCommand<PrintThingCommand>("view")
                         .WithAlias("print")
+                        .WithAlias("show")
                         .WithDescription("Views the values of all properties on a thing");
                 });
 
@@ -246,6 +257,7 @@ internal class Program
                     .IsHidden();
 
                 config.AddCommand<RenameSelectedCommand>("rename")
+                    .WithAlias("ren")
                     .IsHidden();
 
                 config.AddCommand<SelectCommand>("select")

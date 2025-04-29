@@ -53,7 +53,6 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
 
         if (schema!.Properties != null && schema.Properties.Count > 0)
         {
-            var maxPropNameLen = schema.Properties.Max(p => p.Key.Length); // In case it will be escaped
             foreach (var prop in schema.Properties)
             {
                 propertyTable.AddRow(
@@ -81,12 +80,6 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
             }
 
             AnsiConsole.MarkupLine($"Version     : {version.Name}");
-        }
-
-        if (settings.Verbose ?? Program.Verbose)
-        {
-            AnsiConsole.MarkupLine($"[silver]Created On[/]  : {schema.CreatedOn.ToLocalTime().ToLongDateString()} at {schema.CreatedOn.ToLocalTime().ToLongTimeString()}");
-            AnsiConsole.MarkupLine($"[silver]Modified On[/] : {schema.LastModified.ToLocalTime().ToLongDateString()} at {schema.LastModified.ToLocalTime().ToLongTimeString()}");
         }
 
         masterTable.AddRow(new Markup("[indianred1]Properties[/]"), propertyTable);
