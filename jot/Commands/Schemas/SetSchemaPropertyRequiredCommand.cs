@@ -39,7 +39,7 @@ public class SetSchemaPropertyRequiredCommand : SchemaCancellableAsyncCommand<Se
         var propName = settings.PropertyName;
         var required = settings.Required;
 
-        var sp = schema!.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) == 0);
+        var sp = schema!.Properties.FirstOrDefault(p => p.Key.Equals(propName, StringComparison.CurrentCultureIgnoreCase));
         if (sp.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
         {
             AmbientErrorContext.Provider.LogError($"No schema field named '{propName}' was found.");

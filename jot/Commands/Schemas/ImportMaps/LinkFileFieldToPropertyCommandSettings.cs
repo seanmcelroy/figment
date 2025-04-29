@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas.ImportMaps;
@@ -9,9 +10,24 @@ namespace jot.Commands.Schemas.ImportMaps;
 public class LinkFileFieldToPropertyCommandSettings : ImportMapCommandSettings
 {
     /// <summary>
-    /// Gets a value indicating whether the command output should be in a human-readable tabular format.
+    /// Gets the name of the source import file field.
     /// </summary>
-    [Description("Outputs the list in a human-readable tabular format")]
-    [CommandOption("--as-table")]
-    public bool? AsTable { get; init; } = false;
+    [Description("Name of the source import file field")]
+    [CommandArgument(0, "<FILE_FIELD>")]
+    public string FileField { get; init; }
+
+    /// <summary>
+    /// Gets the name of the destination schema property.
+    /// </summary>
+    [Description("Name of the destination schema property")]
+    [CommandArgument(1, "[PROPERTY]")]
+    public string? SchemaProperty { get; init; }
+
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        return string.IsNullOrWhiteSpace(FileField)
+            ? ValidationResult.Error("File field name must be provided and cannot be blank or only whitespaces")
+            : ValidationResult.Success();
+    }
 }

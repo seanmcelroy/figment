@@ -13,7 +13,7 @@ public class SchemaImportField(string? SchemaPropertyName, string ImportFieldNam
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
-    /// Gets the schema property name into which data is imported.
+    /// Gets or sets the schema property name into which data is imported.
     /// </summary>
     /// <remarks>
     /// This is the schema's property name, not any human-readable version.
@@ -22,7 +22,7 @@ public class SchemaImportField(string? SchemaPropertyName, string ImportFieldNam
     /// </remarks>
     /// <example>c9882fca-62ed-4456-8dbb-231ae518a410.[Work Phone].</example>
     [JsonPropertyName("schemaProperty")]
-    public string? SchemaPropertyName { get; init; } = SchemaPropertyName;
+    public string? SchemaPropertyName { get; set; } = SchemaPropertyName;
 
     /// <summary>
     /// Gets the field name from the import source from where data is retrieved.

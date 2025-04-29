@@ -122,6 +122,8 @@ internal class Program
                             .WithAlias("print")
                             .WithAlias("show")
                             .WithDescription("Views all fields on an import map on the schema");
+                        map.AddCommand<LinkFileFieldToPropertyCommand>("link")
+                            .WithDescription("Links a given source file field to a schema property for imports");
                         map.AddCommand<ImportMapRenameCommand>("rename")
                             .WithAlias("ren")
                             .WithDescription("Changes the name of an import map");
