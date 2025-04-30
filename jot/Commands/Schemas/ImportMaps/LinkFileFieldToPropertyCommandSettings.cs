@@ -14,7 +14,7 @@ public class LinkFileFieldToPropertyCommandSettings : ImportMapCommandSettings
     /// </summary>
     [Description("Name of the source import file field")]
     [CommandArgument(0, "<FILE_FIELD>")]
-    public string FileField { get; init; }
+    required public string FileField { get; init; }
 
     /// <summary>
     /// Gets the name of the destination schema property.

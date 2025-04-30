@@ -56,6 +56,7 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
                 break;
         }
 
+        importMap.EnsureMetadataFields();
         schema!.ImportMaps.Add(importMap);
         var saved = await schema.SaveAsync(cancellationToken);
         if (!saved)
@@ -99,14 +100,9 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
             yield break;
         }
 
-        if (!csv.ReadHeader())
+        if (!csv.ReadHeader() || csv.HeaderRecord == null || csv.HeaderRecord.Length == 0)
         {
             AmbientErrorContext.Provider.LogError($"Unable to read CSV file headers from {filePath}");
-            yield break;
-        }
-
-        if (csv.HeaderRecord == null)
-        {
             yield break;
         }
 
@@ -114,8 +110,9 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
         {
             yield return new SchemaImportField(null, header)
             {
-                SkipRecordIfInvalid = true,
-                SkipRecordIfMissing = true,
+                // By default, the property name is null, and thefore 'skip' settings are false.
+                SkipRecordIfInvalid = false,
+                SkipRecordIfMissing = false,
             };
         }
     }

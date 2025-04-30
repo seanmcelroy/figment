@@ -9,7 +9,7 @@ namespace Figment.Common;
 /// <param name="SchemaPropertyName">Schema property name into which data is imported.</param>
 /// <param name="ImportFieldName">Field name from the import source from where data is retrieved.</param>
 #pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-public class SchemaImportField(string? SchemaPropertyName, string ImportFieldName)
+public class SchemaImportField(string? SchemaPropertyName, string? ImportFieldName)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
@@ -28,8 +28,9 @@ public class SchemaImportField(string? SchemaPropertyName, string ImportFieldNam
     /// Gets the field name from the import source from where data is retrieved.
     /// </summary>
     /// <example>Phone 1 - Value.</example>
+    /// <remarks>This should only ever be null for uninitialized schema metadata.</remarks>
     [JsonPropertyName("importField")]
-    public string ImportFieldName { get; init; } = ImportFieldName;
+    public string? ImportFieldName { get; init; } = ImportFieldName;
 
     /// <summary>
     /// Gets or sets a value indicating whether to skip the whole record

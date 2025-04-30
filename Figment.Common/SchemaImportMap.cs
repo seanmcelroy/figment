@@ -31,4 +31,28 @@ public class SchemaImportMap(string Name, string Format)
     /// </summary>
     [JsonPropertyName("fields")]
     public List<SchemaImportField> FieldConfiguration { get; init; } = [];
+
+    /// <summary>
+    /// Ensures <see cref="Schema"/> metadata fields are present on the map.
+    /// </summary>
+    public void EnsureMetadataFields()
+    {
+        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.Name)}") == true))
+        {
+            FieldConfiguration.Add(new SchemaImportField($"${nameof(Thing.Name)}", null)
+            {
+                SkipRecordIfInvalid = true,
+                SkipRecordIfMissing = true,
+            });
+        }
+
+        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.CreatedOn)}") == true))
+        {
+            FieldConfiguration.Add(new SchemaImportField($"${nameof(Thing.CreatedOn)}", null)
+            {
+                SkipRecordIfInvalid = false,
+                SkipRecordIfMissing = false,
+            });
+        }
+    }
 }

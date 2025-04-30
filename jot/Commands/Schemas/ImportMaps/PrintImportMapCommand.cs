@@ -71,11 +71,14 @@ public class PrintImportMapCommand : SchemaCancellableAsyncCommand<PrintImportMa
         {
             foreach (var fc in importMap.FieldConfiguration)
             {
+                // Is this field configuration actively mapped, that is, is the SchemaPropertyName not null?
+                var isFileSet = !string.IsNullOrWhiteSpace(fc.ImportFieldName);
+                var isPropSet = !string.IsNullOrWhiteSpace(fc.SchemaPropertyName);
                 fieldConfigurationTable.AddRow(
-                    $"[dodgerblue1]{Markup.Escape(fc.ImportFieldName)}[/]",
-                    string.IsNullOrWhiteSpace(fc.SchemaPropertyName) ? "[red]<UNSET>[/]" : fc.SchemaPropertyName,
-                    fc.SkipRecordIfMissing ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark,
-                    fc.SkipRecordIfInvalid ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark);
+                    !isFileSet ? "[red]<UNSET>[/]" : $"[dodgerblue1]{Markup.Escape(fc.ImportFieldName!)}[/]",
+                    !isPropSet ? "[red]<UNSET>[/]" : fc.SchemaPropertyName!,
+                    fc.SkipRecordIfMissing && (isPropSet || fc.SchemaPropertyName?[0] == '$') ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark,
+                    fc.SkipRecordIfInvalid && (isPropSet || fc.SchemaPropertyName?[0] == '$') ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark);
             }
         }
 

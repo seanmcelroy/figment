@@ -112,12 +112,13 @@ internal class Program
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ImportSchemaThingsCommand>("import")
                         .WithDescription("Imports entities as things of this schema type");
-                    schema.AddBranch("import-map", map =>
+
+                    schema.AddCommand<ListImportMapsCommand>("import-maps")
+                        .WithDescription("Lists all import maps defined on the schema");
+                    schema.AddBranch<ImportMapCommandSettings>("import-map", map =>
                     {
                         map.AddCommand<NewImportMapCommand>("new")
                             .WithDescription("Creates a new import map to link file fields to schema properties");
-                        map.AddCommand<ListImportMapsCommand>("list")
-                            .WithDescription("Lists all import maps defined on the schema");
                         map.AddCommand<PrintImportMapCommand>("view")
                             .WithAlias("print")
                             .WithAlias("show")

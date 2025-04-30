@@ -21,6 +21,7 @@ using CsvHelper;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
@@ -105,7 +106,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
         if (string.Equals(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase))
         {
-            things = ImportCsv(settings.FilePath, schema);
+            things = ImportCsv(settings.FilePath, schema, possibleImportMaps, cancellationToken);
         }
         else
         {
@@ -123,7 +124,9 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
     private static async IAsyncEnumerable<Thing> ImportCsv(
         string filePath,
-        Schema schema)
+        Schema schema,
+        SchemaImportMap[] possibleImportMaps,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(schema);
@@ -142,7 +145,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             yield break;
         }
 
-        if (!csv.ReadHeader())
+        if (!csv.ReadHeader() || csv.HeaderRecord == null || csv.HeaderRecord.Length == 0)
         {
             AmbientErrorContext.Provider.LogError($"Unable to read CSV file headers from {filePath}");
             yield break;
@@ -151,7 +154,79 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         // Dump headers
         AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c, n) => $"{c},{n}")}");
 
-        // Is this a CSV?
+        // Select import map
+        SchemaImportMap importMap;
+
+        if (possibleImportMaps.Length == 0)
+        {
+            AmbientErrorContext.Provider.LogError("No import maps found for schema.");
+            yield break;
+        }
+
+        if (possibleImportMaps.Length == 1)
+        {
+            importMap = possibleImportMaps[0];
+        }
+        else
+        {
+            var which = AnsiConsole.Prompt(
+                new SelectionPrompt<PossibleGenericMatch<SchemaImportMap>>()
+                    .Title($"There was more than one import map.  Which do you want to use for this import?")
+                    .PageSize(5)
+                    .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
+                    .EnableSearch()
+                    .AddChoices(possibleImportMaps.Select(m => new PossibleGenericMatch<SchemaImportMap>(x => x.Name, m))));
+            importMap = which.Entity;
+        }
+
+        if (importMap.FieldConfiguration == null
+            || importMap.FieldConfiguration.Count == 0
+            || !importMap.FieldConfiguration.Any(fc => !string.IsNullOrWhiteSpace(fc.SchemaPropertyName)))
+        {
+            AmbientErrorContext.Provider.LogError($"Import map '{importMap.Name}' does not map to any fields on {schema.Name}.  This file will not be imported.");
+            yield break;
+        }
+
+        // Build index map
+        Dictionary<int, string> columnIndexToPropertyName = [];
+        foreach (var fc in importMap.FieldConfiguration)
+        {
+            if (string.IsNullOrWhiteSpace(fc.SchemaPropertyName))
+            {
+                // Field is unmapped, so skip.
+                continue;
+            }
+
+            var matchingCsvColumns = csv.HeaderRecord
+                .Select((hdr, idx) => new { hdr, idx })
+                .Where(x => x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
+                .ToArray();
+
+            if (fc.SkipRecordIfMissing && matchingCsvColumns.Length == 0)
+            {
+                AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' is marked as required (SkipRecordIfMissing) but is missing in the CSV header.  This file will not be imported.");
+                yield break;
+            }
+
+            if (matchingCsvColumns.Length > 1)
+            {
+                AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' appears multiple times in the CSV file.  This file will not be imported.");
+                yield break;
+            }
+
+            columnIndexToPropertyName.Add(matchingCsvColumns[0].idx, fc.SchemaPropertyName);
+        }
+
+        // Dump headers
+        AmbientErrorContext.Provider.LogDebug($"CsvToProps: {columnIndexToPropertyName.Select(x => $"({x.Key}:{x.Value})").Aggregate((c, n) => $"{c},{n}")}");
+
+        var rowCount = 0;
+        while (await csv.ReadAsync())
+        {
+            rowCount++;
+        }
+
+        AmbientErrorContext.Provider.LogDebug($"Row count: {rowCount}");
 
         yield break;
     }
