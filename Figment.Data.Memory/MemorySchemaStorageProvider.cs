@@ -87,7 +87,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
-        foreach (var schema in SchemaCache.Values.Where(e => string.Compare(e.Name, schemaName, StringComparison.CurrentCultureIgnoreCase) == 0))
+        foreach (var schema in SchemaCache.Values.Where(e => string.Equals(e.Name, schemaName, StringComparison.CurrentCultureIgnoreCase)))
             return Task.FromResult(new Reference
             {
                 Guid = schema.Guid,
@@ -119,17 +119,21 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
     }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public async IAsyncEnumerable<Reference> FindByPartialNameAsync(string schemaNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaNamePart, [EnumeratorCancellation] CancellationToken _)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaNamePart);
 
         foreach (var schema in SchemaCache.Values.Where(e => e.Name.StartsWith(schemaNamePart, StringComparison.CurrentCultureIgnoreCase)))
         {
-            yield return new Reference
+            yield return new PossibleNameMatch
             {
-                Type = Reference.ReferenceType.Schema,
-                Guid = schema.Guid
+                Name = schema.Name,
+                Reference = new Reference
+                {
+                    Type = Reference.ReferenceType.Schema,
+                    Guid = schema.Guid
+                },
             };
         }
     }
@@ -147,7 +151,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         ArgumentException.ThrowIfNullOrWhiteSpace(plural);
 
 
-        foreach (var schema in SchemaCache.Values.Where(e => string.Compare(e.Plural, plural, StringComparison.CurrentCultureIgnoreCase) == 0))
+        foreach (var schema in SchemaCache.Values.Where(e => string.Equals(e.Plural, plural, StringComparison.CurrentCultureIgnoreCase)))
         {
             yield return new Reference
             {

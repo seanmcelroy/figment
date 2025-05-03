@@ -30,7 +30,7 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
             return (int)tgs;
         }
 
-        if (schema!.ImportMaps.Any(i => string.Compare(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase) == 0))
+        if (schema!.ImportMaps.Any(i => string.Equals(i.Name, settings.ImportMapName, StringComparison.InvariantCultureIgnoreCase)))
         {
             AmbientErrorContext.Provider.LogError($"Schema '{schema.Name}' already has an import map named '{settings.ImportMapName}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;

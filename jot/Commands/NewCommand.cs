@@ -28,7 +28,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

@@ -67,7 +67,7 @@ public class DateDiff : FunctionBase
             return CalculationResult.Error(CalculationErrorType.BadValue, "End date parameter could not be interpreted as a date");
         }
 
-        if (string.Compare(interval, "yyyy", StringComparison.InvariantCultureIgnoreCase) == 0)
+        if (string.Equals(interval, "yyyy", StringComparison.InvariantCultureIgnoreCase))
         {
             var diff = (endDate - startDate).TotalDays / 365.25;
             return CalculationResult.Success(diff, CalculationResultType.FunctionResult);

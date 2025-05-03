@@ -2,22 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.0.6
+
+### Added
+
+- Setting the value of a `schema` field on a schema shows a chooser if the name, not the GUID, is provided. 
+
+### Modified
+
+- Changed built-in system schema `view` so it requires fields `for` and `displayColumns`.
+
 ## 0.0.5
 
 ### Added
 
-- 'pomo' command added to jot, whch implements Pomodoro timers
+- `pomodoro` (aka `pomo`) command added to jot, whch implements Pomodoro timers
+
+### Modified
+
+- Updated documentation, moved to `docs/` folder under `jot`
 
 ## 0.0.4
 
 ### Added
 
-- 'clear' command added to jot
+- `clear` command added to jot
 - Schemas can now have a version plan (see schema version command)
 
 ### Modified
 
-- 'delete' command can now take a named argument for ease of use
+- `delete` commands can now take a named argument for ease of use
 - Improved saved messages detailing what changed
 - Updated README.md
 - Updated licensing banners in jot

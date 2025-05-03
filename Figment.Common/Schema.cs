@@ -194,29 +194,38 @@ public class Schema(string Guid, string Name)
     /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> of schemas to match and return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An asynchronous enumerator for each <see cref="Schema"/>.</returns>
-    public static async IAsyncEnumerable<Reference> ResolveAsync(
+    public static async IAsyncEnumerable<PossibleNameMatch> ResolveAsync(
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
-        if (provider == null)
+        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        if (ssp == null)
         {
             yield break;
         }
 
         // Shortcut - See if it's a guid first of all.
-        if (await provider.GuidExists(guidOrNamePart, cancellationToken))
+        if (await ssp.GuidExists(guidOrNamePart, cancellationToken))
         {
-            yield return new Reference
+            var schema = await ssp.LoadAsync(guidOrNamePart, cancellationToken);
+            if (schema != null)
             {
-                Guid = guidOrNamePart,
-                Type = Reference.ReferenceType.Schema,
-            };
+                yield return new PossibleNameMatch
+                {
+                    Name = schema!.Name,
+                    Reference = new Reference
+                    {
+                        Guid = guidOrNamePart,
+                        Type = Reference.ReferenceType.Schema,
+                    },
+                };
+            }
+
             yield break;
         }
 
         // Nope, so name searching...
-        await foreach (var possible in provider.FindByPartialNameAsync(guidOrNamePart, cancellationToken))
+        await foreach (var possible in ssp.FindByPartialNameAsync(guidOrNamePart, cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
             {

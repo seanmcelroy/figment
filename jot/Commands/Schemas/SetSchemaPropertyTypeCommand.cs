@@ -49,7 +49,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
         if (string.IsNullOrWhiteSpace(settings.FieldType))
         {
             // Deletes a property.
-            var propToDelete = schema!.Properties.FirstOrDefault(p => string.Compare(p.Key, propName, StringComparison.OrdinalIgnoreCase) == 0);
+            var propToDelete = schema!.Properties.FirstOrDefault(p => string.Equals(p.Key, propName, StringComparison.OrdinalIgnoreCase));
             if (propToDelete.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
             {
                 AmbientErrorContext.Provider.LogError($"No property named '{propName}' found on schema '{schema.Name}'");

@@ -606,6 +606,12 @@ public class Thing(string Guid, string Name)
             }
         }
 
+        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        if (ssp == null)
+        {
+            return new ThingSetResult(false);
+        }
+
         var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
         if (tsp == null)
         {
@@ -664,10 +670,55 @@ public class Thing(string Guid, string Name)
 
                 if (!candidateProperties[0].Valid)
                 {
+                    // This is for name resolution of "schema" fields.
                     if (chooserHandler != null
+                        && candidateProperties[0].SchemaGuid != null
+                        && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaSchemaField.SCHEMA_FIELD_TYPE) ?? false))
+                    {
+                        var disambig = (massagedPropValue == null || massagedPropValue.ToString() == null)
+                            ? []
+                            : ssp.FindByPartialNameAsync(massagedPropValue.ToString()!, cancellationToken)
+                                .ToBlockingEnumerable(cancellationToken)
+                                .ToArray();
+
+                        if (disambig.Length == 1)
+                        {
+                            Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
+                            AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
+                            var saved = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved);
+                        }
+                        else if (disambig.Length > 1)
+                        {
+                            var which = chooserHandler(
+                                $"There was more than one schema matching '{propValue}'.  Which do you want to select?",
+                                disambig);
+
+                            Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
+                            var saved = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved);
+                        }
+                        else
+                        {
+                            if (massagedPropValue == null)
+                            {
+                                Properties.Remove(candidateProperties[0].TruePropertyName);
+                            }
+                            else
+                            {
+                                Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                            }
+
+                            AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
+                            var saved = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved);
+                        }
+                    }
+                    else if (chooserHandler != null
                         && candidateProperties[0].SchemaGuid != null
                         && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.SCHEMA_FIELD_TYPE) ?? false))
                     {
+                        // This is for name resolution of "ref" fields.
                         var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
 
                         var disambig = (massagedPropValue == null || massagedPropValue.ToString() == null)

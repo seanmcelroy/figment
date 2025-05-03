@@ -44,7 +44,7 @@ public class SetSchemaPropertyFormulaCommand : SchemaCancellableAsyncCommand<Set
         }
 
         var possibleProperties = schema!.Properties
-            .Where(p => string.Compare(p.Key, settings.PropertyName, StringComparison.CurrentCultureIgnoreCase) == 0)
+            .Where(p => string.Equals(p.Key, settings.PropertyName, StringComparison.CurrentCultureIgnoreCase))
             .ToList();
 
         SchemaFieldBase? selectedProperty;

@@ -118,7 +118,8 @@ public static class Parser
                 var quoted = formula[pos..nextDoubleQuotation];
                 pos = nextDoubleQuotation + 1;
 
-                // debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
+                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
+
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
                 {
@@ -143,7 +144,8 @@ public static class Parser
                 var quoted = formula[pos..nextSingleQuotation];
                 pos = nextSingleQuotation + 1;
 
-                // debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
+                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Quotation from {quotationStartPos} to {pos - 1}: {quoted}");
+
                 // Do not adjust depth, just return.
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
@@ -168,7 +170,6 @@ public static class Parser
                 var bracketed = formula[pos..nextBracket];
                 pos = nextBracket + 1;
 
-                // debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Bracketed expression from {closingBracketStartPos} to {pos - 1}: {bracketed}");
                 // Do not adjust depth, just return.
                 // Do not adjust depth unless we hit a right parenth after this.
                 if (formula.Length > pos && formula[pos] == ')')
@@ -184,14 +185,26 @@ public static class Parser
                 pos++;
 
                 // '-' is not included here since it cannot be the SECOND entry after the first.
-                char[] validNextNumberCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ','];
+                char[] validNextNumberCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'];
                 while (pos < formula.Length
-                    && validNextNumberCharacters.Contains(formula[pos]))
+                    && (
+
+                        // Either this is a comma but the following is a number (i.e. thousands separator is present, but this is not the start of a new parameter)
+                        (
+                            formula[pos] == ','
+                            && pos + 1 < formula.Length - 1
+                            && validNextNumberCharacters.Contains(formula[pos + 1])
+                        )
+
+                        // Or this simply isn't a comma and is a number.
+                        || validNextNumberCharacters.Contains(formula[pos])
+                    )
+                )
                 {
                     // A decimal can only appear once.
                     if (formula[pos] == '.')
                     {
-                        validNextNumberCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ','];
+                        validNextNumberCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
                     }
 
                     pos++;
@@ -244,8 +257,14 @@ public static class Parser
                         case "datediff(":
                             nextFunction = (t, p) => new DateDiff().Evaluate(p, t);
                             break;
+                        case "false(":
+                            nextFunction = (t, p) => new False().Evaluate(p, t);
+                            break;
                         case "floor(":
                             nextFunction = (t, p) => new Floor().Evaluate(p, t);
+                            break;
+                        case "if(":
+                            nextFunction = (t, p) => new If().Evaluate(p, t);
                             break;
                         case "len(":
                             nextFunction = (t, p) => new Len().Evaluate(p, t);
@@ -264,6 +283,9 @@ public static class Parser
                             break;
                         case "trim(":
                             nextFunction = (t, p) => new Trim().Evaluate(p, t);
+                            break;
+                        case "true(":
+                            nextFunction = (t, p) => new True().Evaluate(p, t);
                             break;
                         case "upper(":
                             nextFunction = (t, p) => new Upper().Evaluate(p, t);
@@ -284,14 +306,14 @@ public static class Parser
              && formula[pos + (nextToken?.Length ?? 0)] == ')')
             {
                 // End capture
-                // debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Captured {nextToken[..^1]}");
+                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Captured {nextToken[..^1]}");
                 pos += (nextToken?.Length - 1 ?? 0) + 2;
                 depth--;
                 return new(true, null, WhatToReturn);
             }
 
             // A nested function
-            // debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Starting capture {nextToken}");
+            Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Starting capture {nextToken}");
             pos += (nextToken?.Length - 1 ?? 0) + 1;
             depth++;
 
@@ -316,7 +338,7 @@ public static class Parser
             // Handle closing parenthesis
             if (pos < formula.Length && formula[pos] == ')')
             {
-                // debug Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Ending capture {nextToken}");
+                Console.Error.WriteLine($"formula: {formula}, pos:{pos}, depth:{depth} - Ending capture {nextToken}");
                 pos++;
                 depth--;
                 return new(true, null, WhatToReturn);

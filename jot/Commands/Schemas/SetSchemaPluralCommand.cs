@@ -23,7 +23,7 @@ public class SetSchemaPluralCommand : SchemaCancellableAsyncCommand<SetSchemaPlu
             ? null
             : settings.Plural.Trim();
 
-        if (string.Compare(oldPlural, schema.Plural, StringComparison.InvariantCultureIgnoreCase) == 0)
+        if (string.Equals(oldPlural, schema.Plural, StringComparison.InvariantCultureIgnoreCase))
         {
             AmbientErrorContext.Provider.LogWarning($"Plural for {schema.Name} is already '{schema.Plural}'. Nothing to do.");
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

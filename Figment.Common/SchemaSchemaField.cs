@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Text.Json.Serialization;
 using Figment.Common.Data;
 
 namespace Figment.Common;
@@ -37,6 +38,10 @@ public class SchemaSchemaField(string Name) : SchemaTextField(Name)
     /// schema fields and used for polymorphic type indication.
     /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "schema";
+
+    /// <inheritdoc/>
+    [JsonPropertyName("type")]
+    public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);

@@ -46,7 +46,14 @@ public interface ISchemaStorageProvider
     /// <returns>The schema, if it was found.  If the schema was not located, <see cref="Reference.EMPTY"/> is returned.</returns>
     public Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken);
 
-    public IAsyncEnumerable<Reference> FindByPartialNameAsync(string schemaNamePart, CancellationToken cancellationToken);
+    /// <summary>
+    /// Attempts to find <see cref="Schema"/> entities by a partial name match.
+    /// </summary>
+    /// <param name="schemaNamePart">The partial <see cref="Schema.Name"/> text that must match.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumerator for each <see cref="PossibleNameMatch"/> of each matching schema.</returns>
+
+    public IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaNamePart, CancellationToken cancellationToken);
 
     public IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, CancellationToken cancellationToken);
 

@@ -32,7 +32,7 @@ public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand
                     AmbientErrorContext.Provider.LogError("Nothing found with that name.");
                     return (Globals.GLOBAL_ERROR_CODES.NOT_FOUND, null, null);
                 case 1:
-                    selected = possibleSchemas[0];
+                    selected = possibleSchemas[0].Reference;
                     break;
                 default:
                     AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");

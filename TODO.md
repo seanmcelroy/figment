@@ -14,6 +14,8 @@
 - [x] IMPROVEMENT: Arrow key up in interactive mode to insert previous command
 - [x] Improved getting started documentation
 - [x] Built-in system schemas
+- [x] Pomodoro timer
+- [ ] tasks
 - [ ] Versioned things
 - [ ] default schema values
 - [ ] Schema inheritence
@@ -22,7 +24,6 @@
 - [ ] filtered views
 - [ ] merge thing command
 - [ ] diff command
-- [ ] tasks
 - [ ] events
 - [ ] today
 - [ ] calendar

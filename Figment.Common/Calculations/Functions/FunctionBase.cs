@@ -36,6 +36,63 @@ public abstract class FunctionBase
     public abstract CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets);
 
     /// <summary>
+    /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a boolean value.
+    /// </summary>
+    /// <param name="ordinal">The index of the <paramref name="parameters"/> array from which to attempt to parse the value.</param>
+    /// <param name="required">A value indicating whether or not the parameter is required.</param>
+    /// <param name="parameters">The array of parametes from which to parse a value.</param>
+    /// <param name="targets">The things over which the function parse tree should operate. </param>
+    /// <param name="calculationResult">The output result, which would either be a success if the parameter could be retrieved, or a failure with an error message.</param>
+    /// <param name="booleanResult">The boolean value that was retrieved, if successful.</param>
+    /// <returns>Whether or not the parameter could be retrieved.</returns>
+    public bool TryGetBooleanParameter(
+        int ordinal,
+        bool required,
+        CalculationResult[] parameters,
+        IEnumerable<Thing> targets,
+        out CalculationResult calculationResult,
+        out bool? booleanResult)
+    {
+        var res = TryGetParameter(ordinal, required, parameters, targets, out calculationResult);
+        if (!res)
+        {
+            booleanResult = null;
+            return false;
+        }
+
+        if (calculationResult.Result is bool pb1)
+        {
+            booleanResult = pb1;
+            return true;
+        }
+
+        var stringResult = calculationResult.Result?.ToString();
+        if (string.IsNullOrWhiteSpace(stringResult) && required)
+        {
+            calculationResult = CalculationResult.Error(CalculationErrorType.FormulaParse, $"Parameter {ordinal} is required.");
+            booleanResult = null;
+            return false;
+        }
+
+        // Not supplied and not required, technically success.
+        if (string.IsNullOrEmpty(stringResult) && !required)
+        {
+            booleanResult = null;
+            return true;
+        }
+
+        if (SchemaBooleanField.TryParseBoolean(stringResult, out bool pb))
+        {
+            booleanResult = pb;
+            return true;
+        }
+
+        calculationResult = CalculationResult.Error(CalculationErrorType.BadValue, $"Cannot parse {stringResult} as a boolean.");
+        booleanResult = null;
+        return false;
+    }
+
+    /// <summary>
     /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a date.
     /// </summary>
     /// <param name="ordinal">The index of the <paramref name="parameters"/> array from which to attempt to parse the value.</param>

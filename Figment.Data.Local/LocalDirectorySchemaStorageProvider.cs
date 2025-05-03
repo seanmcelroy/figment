@@ -369,8 +369,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
         await foreach (var entry in IndexManager.LookupAsync(
             indexFilePath
-            , e => string.Compare(e.Key, schemaName, StringComparison.CurrentCultureIgnoreCase) == 0
-            , cancellationToken))
+            , e => string.Equals(e.Key, schemaName, StringComparison.CurrentCultureIgnoreCase), cancellationToken))
         {
             var schemaFileName = entry.Value;
             var schemaGuid = schemaFileName.Split('.')[0];
@@ -416,7 +415,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         yield break;
     }
 
-    public async IAsyncEnumerable<Reference> FindByPartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingNamePart);
 
@@ -427,11 +426,20 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
         await foreach (var guid in IndexManager.ResolveGuidFromPartialNameAsync(indexFilePath, thingNamePart, cancellationToken))
         {
-            yield return new Reference
+            var schema = await LoadAsync(guid, cancellationToken);
+
+            if (schema != null)
             {
-                Type = Reference.ReferenceType.Schema,
-                Guid = guid
-            };
+                yield return new PossibleNameMatch
+                {
+                    Name = schema.Name,
+                    Reference = new Reference
+                    {
+                        Type = Reference.ReferenceType.Schema,
+                        Guid = guid
+                    },
+                };
+            }
         }
     }
 

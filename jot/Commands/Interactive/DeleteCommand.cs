@@ -69,6 +69,7 @@ public class DeleteCommand : CancellableAsyncCommand<DeleteCommandSettings>
         var possibilities =
             Schema.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
+                .Select(p => p.Reference)
                 .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)])
                 .Distinct()
                 .ToArray();

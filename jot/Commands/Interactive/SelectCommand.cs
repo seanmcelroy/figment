@@ -53,6 +53,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
         var possibilities =
             Schema.ResolveAsync(settings.Name, cancellationToken)
                 .ToBlockingEnumerable(cancellationToken)
+                .Select(p => p.Reference)
                 .Concat([.. Thing.ResolveAsync(settings.Name, cancellationToken).ToBlockingEnumerable(cancellationToken)])
                 .Distinct()
                 .ToArray();
@@ -70,7 +71,7 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                             var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                             if (provider == null)
                             {
-                                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
+                                AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
                                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
                             }
 

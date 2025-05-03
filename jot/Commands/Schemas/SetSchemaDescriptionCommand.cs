@@ -20,7 +20,7 @@ public class SetSchemaDescriptionCommand : SchemaCancellableAsyncCommand<SetSche
             ? null
             : settings.Description.Trim();
 
-        if (string.Compare(oldDescription, schema.Description, StringComparison.InvariantCultureIgnoreCase) == 0)
+        if (string.Equals(oldDescription, schema.Description, StringComparison.InvariantCultureIgnoreCase))
         {
             AmbientErrorContext.Provider.LogWarning($"Description for {schema.Name} is already the same value. Nothing to do.");
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;

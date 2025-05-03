@@ -86,7 +86,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaProvider == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -95,7 +95,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         {
             if (schemaProvider == null)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to load schema storage provider.");
+                AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 

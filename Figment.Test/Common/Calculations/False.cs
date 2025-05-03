@@ -21,30 +21,30 @@ using Figment.Common.Calculations;
 namespace Figment.Test.Common.Calculations;
 
 [TestClass]
-public sealed class Null
+public sealed class False
 {
     [TestMethod]
-    public void NullWithoutParameters()
+    public void FalseWithoutParameters()
     {
-        var calcResult = Parser.Calculate("=NULL()");
+        var calcResult = Parser.Calculate("=FALSE()");
         Assert.IsFalse(calcResult.IsError);
 
         var result = calcResult.Result;
-        Assert.IsNull(result);
+        Assert.IsFalse(result as bool?);
     }
 
     [TestMethod]
-    public void NullWithNonsenseParameters()
+    public void FalseWithNonsenseParameters()
     {
-        var calcResult = Parser.Calculate("=NULL(nope)");
+        var calcResult = Parser.Calculate("=FALSE(nope)");
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }
 
     [TestMethod]
-    public void NullWithActualParameters()
+    public void FalseWithActualParameters()
     {
-        var calcResult = Parser.Calculate("=NULL(1)");
+        var calcResult = Parser.Calculate("=FALSE(1)");
         Assert.IsTrue(calcResult.IsError);
         Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
     }

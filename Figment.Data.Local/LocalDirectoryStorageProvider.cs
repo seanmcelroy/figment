@@ -92,8 +92,7 @@ public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageP
 
         await foreach (var entry in IndexManager.LookupAsync(
             indexFile
-            , e => string.Compare(e.Key, name, StringComparison.CurrentCultureIgnoreCase) == 0
-            , cancellationToken
+            , e => string.Equals(e.Key, name, StringComparison.CurrentCultureIgnoreCase), cancellationToken
         ))
         {
             var fileName = entry.Value;
