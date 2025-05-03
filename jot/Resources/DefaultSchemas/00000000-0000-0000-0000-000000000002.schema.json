@@ -5,7 +5,10 @@
   "description": "System schema for views of objects",
   "$plural": "views",
   "type": "object",
-  "required": [],
+  "required": [
+    "for",
+    "displayColumns"
+  ],
   "properties": {
     "for": {
       "$type": "schema",
@@ -18,5 +21,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "importMaps": []
 }

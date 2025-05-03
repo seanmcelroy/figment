@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000004.schema.json",
+  "title": "task",
+  "description": "System schema for tasks",
+  "$plural": "tasks",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "complete": {
+      "$type": "bool",
+      "type": "bool"
+    },
+    "due": {
+      "$type": "date",
+      "type": "string",
+      "format": "date"
+    },
+    "assignee": {
+      "$type": "ref",
+      "ref": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000001.schema.json"
+    },
+    "notes": {
+      "$type": "text",
+      "type": "string"
+    }
+  },
+  "importMaps": []
+}
