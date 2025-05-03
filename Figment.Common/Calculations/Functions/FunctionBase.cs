@@ -126,7 +126,7 @@ public abstract class FunctionBase
         }
 
         // Unparsable and required - try parsing as a date like yyyy-mm-dd, etc.
-        if (DateTimeOffset.TryParseExact(stringResult, SchemaDateField._formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset resultAsDto))
+        if (DateTimeOffset.TryParseExact(stringResult, SchemaDateField._completeFormats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset resultAsDto))
         {
             calculationResult = CalculationResult.Success(resultAsDto.DateTime, parameters[ordinal - 1].ResultType);
             dateResult = resultAsDto.DateTime;

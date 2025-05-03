@@ -41,7 +41,7 @@ public class PrintSelectedCommand : CancellableAsyncCommand<PrintSelectedCommand
 
         bool? extraVerbose = null;
         if (context.Arguments.Count > 0
-            && string.CompareOrdinal(context.Arguments[0], "??") == 0)
+            && string.Equals(context.Arguments[0], "??", StringComparison.Ordinal))
         {
             extraVerbose = true;
         }

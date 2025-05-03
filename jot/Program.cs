@@ -64,10 +64,17 @@ internal class Program
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
         // Setup the providers. TODO: Allow CLI config
+        Queue<Action> postBannerActionQueue = new();
         AmbientErrorContext.Provider = new SpectreConsoleErrorProvider();
         {
-            var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider("/home/sean/src/figment/jot/db");
+            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "figment/db");
+            var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider(dataDir);
             await ldsp.InitializeAsync(cts.Token);
+            if (interactive)
+            {
+                postBannerActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogInfo($"Using local storage of database at {dataDir}"));
+            }
+
             AmbientStorageContext.StorageProvider = ldsp;
         }
 
@@ -105,20 +112,31 @@ internal class Program
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ImportSchemaThingsCommand>("import")
                         .WithDescription("Imports entities as things of this schema type");
-                    schema.AddBranch("import-map", map =>
+
+                    schema.AddCommand<ListImportMapsCommand>("import-maps")
+                        .WithDescription("Lists all import maps defined on the schema");
+                    schema.AddBranch<ImportMapCommandSettings>("import-map", map =>
                     {
                         map.AddCommand<NewImportMapCommand>("new")
                             .WithDescription("Creates a new import map to link file fields to schema properties");
-                        map.AddCommand<ListImportMapsCommand>("list")
-                            .WithDescription("Lists all import maps defined on the schema");
+                        map.AddCommand<PrintImportMapCommand>("view")
+                            .WithAlias("print")
+                            .WithAlias("show")
+                            .WithDescription("Views all fields on an import map on the schema");
+                        map.AddCommand<LinkFileFieldToPropertyCommand>("link")
+                            .WithDescription("Links a given source file field to a schema property for imports");
+                        map.AddCommand<ImportMapRenameCommand>("rename")
+                            .WithAlias("ren")
+                            .WithDescription("Changes the name of an import map");
                         map.AddCommand<DeleteImportMapCommand>("delete")
                             .WithDescription("Deletes an import map from the schema configuration");
-                    });
+                    }).WithAlias("import-maps");
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated with a schema");
                     schema.AddCommand<SetSchemaPluralCommand>("plural")
                         .WithDescription("Sets the plural name for the schema");
                     schema.AddCommand<SchemaRenameCommand>("rename")
+                        .WithAlias("ren")
                         .WithDescription("Changes the name of a schema");
                     schema.AddBranch<SchemaPropertyCommandSettings>("set", set =>
                     {
@@ -140,6 +158,7 @@ internal class Program
                         .WithDescription("Sets the versioning plan for the schema");
                     schema.AddCommand<PrintSchemaCommand>("view")
                         .WithAlias("print")
+                        .WithAlias("show")
                         .WithDescription("Views all fields on a schema");
                 });
             config.AddBranch<ThingCommandSettings>("thing", thing =>
@@ -151,6 +170,7 @@ internal class Program
                     thing.AddCommand<PromoteThingPropertyCommand>("promote")
                         .WithDescription("Promotes a property on one thing to become a property defined on a schema");
                     thing.AddCommand<ThingRenameCommand>("rename")
+                        .WithAlias("ren")
                         .WithDescription("Changes the name of a thing");
                     thing.AddCommand<SetThingPropertyCommand>("set")
                         .WithDescription("Sets the value of a property on a thing");
@@ -159,8 +179,34 @@ internal class Program
                         .WithDescription("Validates a thing is consistent with its schema");
                     thing.AddCommand<PrintThingCommand>("view")
                         .WithAlias("print")
+                        .WithAlias("show")
                         .WithDescription("Views the values of all properties on a thing");
                 });
+
+            config.AddBranch("configure", configure =>
+                {
+                    configure.AddBranch("initialize", reindex =>
+                        {
+                            reindex.AddCommand<InitSchemasCommand>("schemas")
+                                .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
+                        })
+                        .WithAlias("init");
+                    configure.AddBranch("reindex", reindex =>
+                        {
+                            reindex.AddCommand<ReindexSchemasCommand>("schemas")
+                                .WithDescription("Rebuilds the index files for schemas for consistency");
+                            reindex.AddCommand<ReindexThingsCommand>("things")
+                                .WithDescription("Rebuilds the index files for things for consistency");
+                        });
+
+                    if (interactive)
+                    {
+                        configure.AddCommand<VerboseCommand>("verbosity")
+                            .WithAlias("verbose")
+                            .WithDescription("Toggles verbosity.  When verbosity is on, '-v' is specified automatically with every supported command");
+                    }
+                })
+                .WithAlias("config");
 
             config.AddCommand<HelpCommand>("help")
                 .IsHidden();
@@ -214,6 +260,7 @@ internal class Program
                     .IsHidden();
 
                 config.AddCommand<RenameSelectedCommand>("rename")
+                    .WithAlias("ren")
                     .IsHidden();
 
                 config.AddCommand<SelectCommand>("select")
@@ -227,22 +274,6 @@ internal class Program
                 config.AddCommand<ValidateSelectedCommand>("validate")
                     .WithAlias("val")
                     .IsHidden();
-
-                config.AddCommand<VerboseCommand>("verbose")
-                    .WithDescription("Toggles verbosity.  When verbosity is on, '-v' is specified automatically with every supported command");
-
-                config.AddBranch("initialize", reindex =>
-                    {
-                        reindex.AddCommand<InitSchemasCommand>("schemas")
-                            .WithDescription("Creates built-in schemas from system defaults, overwriting any customizations.");
-                    });
-                config.AddBranch("reindex", reindex =>
-                    {
-                        reindex.AddCommand<ReindexSchemasCommand>("schemas")
-                            .WithDescription("Rebuilds the index files for schemas for consistency");
-                        reindex.AddCommand<ReindexThingsCommand>("things")
-                            .WithDescription("Rebuilds the index files for things for consistency");
-                    });
             }
         });
 
@@ -254,6 +285,13 @@ internal class Program
 
         // Interactive mode
         AnsiConsole.MarkupLine($"[bold fuchsia]jot[/] version {version}");
+
+        while (postBannerActionQueue.Count > 0)
+        {
+            var action = postBannerActionQueue.Dequeue();
+            action.Invoke();
+        }
+
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
 
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
@@ -377,19 +415,19 @@ internal class Program
                     var viewProps = viewInstance.GetProperties(cancellationToken).ToBlockingEnumerable(cancellationToken).ToArray();
 
                     var forSchemaGuidObject = viewProps
-                        .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.for") == 0)
+                        .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.for", StringComparison.Ordinal))
                         .Select(p => p.Value)
                         .FirstOrDefault();
 
                     if (forSchemaGuidObject != default
                         && forSchemaGuidObject is string forSchemaGuid
                         && !string.IsNullOrWhiteSpace(forSchemaGuid)
-                        && string.CompareOrdinal(forSchemaGuid, commonSchema.Guid) == 0
+                        && string.Equals(forSchemaGuid, commonSchema.Guid, StringComparison.Ordinal)
                         && await ssp.GuidExists(forSchemaGuid, cancellationToken))
                     {
                         // Found a matching view!
                         var viewColumnsObject = viewProps
-                            .Where(p => string.CompareOrdinal(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns") == 0)
+                            .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns", StringComparison.Ordinal))
                             .Select(p => p.Value)
                             .FirstOrDefault();
 

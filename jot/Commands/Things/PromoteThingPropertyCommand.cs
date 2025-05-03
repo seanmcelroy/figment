@@ -32,35 +32,35 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
     public override async Task<int> ExecuteAsync(CommandContext context, PromoteThingPropertyCommandSettings settings, CancellationToken cancellationToken)
     {
         // promote propertyname, like
-        var selected = Program.SelectedEntity;
-        if (selected.Equals(Reference.EMPTY))
+        Reference thingReference;
+        var thingResolution = settings.ResolveThingName(cancellationToken);
+        switch (thingResolution.Item1)
         {
-            if (string.IsNullOrWhiteSpace(settings.ThingName))
-            {
+            case Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR:
                 AmbientErrorContext.Provider.LogError("To promote a property on a thing, you must first 'select' a thing.");
                 return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
-            }
+            case Globals.GLOBAL_ERROR_CODES.NOT_FOUND:
+                AmbientErrorContext.Provider.LogError($"No thing found named '{settings.ThingName}'");
+                return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
+            case Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH:
+                AmbientErrorContext.Provider.LogError("Ambiguous match; more than one thing matches this name.");
+                return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
+            case Globals.GLOBAL_ERROR_CODES.SUCCESS:
+                thingReference = thingResolution.thing;
+                break;
+            default:
+                throw new NotImplementedException($"Unexpected return code {Enum.GetName(thingResolution.Item1)}");
+        }
 
-            var possibilities = Thing.ResolveAsync(settings.ThingName, cancellationToken)
-                .ToBlockingEnumerable(cancellationToken)
-                .ToArray();
-            switch (possibilities.Length)
-            {
-                case 0:
-                    AmbientErrorContext.Provider.LogError("Nothing found with that name");
-                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
-                case 1:
-                    selected = possibilities[0];
-                    break;
-                default:
-                    AmbientErrorContext.Provider.LogError("Ambiguous match; more than one entity matches this name.");
-                    return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
-            }
+        if (thingReference.Type != Reference.ReferenceType.Thing)
+        {
+            AmbientErrorContext.Provider.LogError($"This command does not support type '{Enum.GetName(thingReference.Type)}'.");
+            return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
         if (string.IsNullOrWhiteSpace(settings.PropertyName))
         {
-            AmbientErrorContext.Provider.LogError("To promote a property on a thing, you must first specify the property name.");
+            AmbientErrorContext.Provider.LogError("To promote a property on a thing, you must specify the property name.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -71,10 +71,10 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thingLoaded = await thingProvider.LoadAsync(selected.Guid, cancellationToken);
+        var thingLoaded = await thingProvider.LoadAsync(thingReference.Guid, cancellationToken);
         if (thingLoaded == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{selected.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to load thing with Guid '{thingReference.Guid}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.THING_LOAD_ERROR;
         }
 

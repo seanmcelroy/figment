@@ -50,18 +50,18 @@ public sealed class Thing
         Assert.IsTrue(tsr.Success);
 
         var props = thing.GetProperties(CancellationToken.None).ToBlockingEnumerable().ToArray();
-        Assert.IsTrue(props.Any(p => string.CompareOrdinal("random", p.SimpleDisplayName) == 0));
+        Assert.IsTrue(props.Any(p => string.Equals("random", p.SimpleDisplayName, StringComparison.Ordinal)));
 
         // Clear
         await thing.Set("random", null, CancellationToken.None);
         Assert.AreEqual(0, thing.GetPropertyByName("random", CancellationToken.None).ToBlockingEnumerable().Count());
         props = [.. thing.GetProperties(CancellationToken.None).ToBlockingEnumerable()];
-        Assert.IsFalse(props.Any(p => string.CompareOrdinal("random", p.SimpleDisplayName) == 0));
+        Assert.IsFalse(props.Any(p => string.Equals("random", p.SimpleDisplayName, StringComparison.Ordinal)));
 
         // Still clear after reload
         thing = await tsp.LoadAsync(thing.Guid, CancellationToken.None);
         Assert.IsNotNull(thing);
-        Assert.IsFalse(props.Any(p => string.CompareOrdinal("random", p.SimpleDisplayName) == 0));
+        Assert.IsFalse(props.Any(p => string.Equals("random", p.SimpleDisplayName, StringComparison.Ordinal)));
 
         var thing2 = await tsp.FindByNameAsync(nameof(ThingCrud), CancellationToken.None);
         Assert.AreNotEqual(Reference.EMPTY, thing2);

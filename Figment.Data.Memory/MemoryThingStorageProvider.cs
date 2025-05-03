@@ -115,7 +115,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
                 yield break;
 
             var thing = await LoadAsync(reference.Guid, cancellationToken);
-            if (thing != null && thing.SchemaGuids.Any(s => string.CompareOrdinal(s, schemaGuid) == 0))
+            if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
                 yield return reference;
         }
     }

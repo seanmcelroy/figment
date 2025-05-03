@@ -17,26 +17,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.ComponentModel;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace jot.Commands;
+namespace jot.Commands.Schemas.ImportMaps;
 
 /// <summary>
-/// The settings supplied to the <see cref="ListThingsCommand"/>.
+/// The settings supplied to the <see cref="ImportMapRenameCommand"/>.
 /// </summary>
-public class ListThingsCommandSettings : CommandSettings
+public class ImportMapRenameCommandSettings : ImportMapCommandSettings
 {
     /// <summary>
-    /// Gets an optional partial name match to filter results.
+    /// Gets the new name for the <see cref="SchemaImportMap"/>.
     /// </summary>
-    [Description("An optional partial name match to filter results")]
-    [CommandArgument(0, "[PARTIAL_NAME]")]
-    public string? PartialNameMatch { get; init; }
+    [Description("New name for the import map")]
+    [CommandArgument(0, "<NEW_NAME>")]
+    required public string NewName { get; init; }
 
-    /// <summary>
-    /// Gets a value indicating whether the command output should be in a human-readable tabular format.
-    /// </summary>
-    [Description("Outputs the list in a human-readable tabular format")]
-    [CommandOption("--as-table")]
-    public bool? AsTable { get; init; } = false;
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        return string.IsNullOrWhiteSpace(NewName)
+            ? ValidationResult.Error("New import map name must be provided and cannot be blank or only whitespaces")
+            : ValidationResult.Success();
+    }
 }

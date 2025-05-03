@@ -272,7 +272,7 @@ public class Thing(string Guid, string Name)
                 if (schema.Properties.TryGetValue(simpleDisplayName, out SchemaFieldBase? schemaField))
                 {
                     valid = schemaField == null || await schemaField.IsValidAsync(thingProp.Value, cancellationToken); // Valid if no schema.
-                    required = schemaField != null && schemaField.Required;
+                    required = schemaField?.Required == true;
                     schemaFieldType = schemaField?.Type;
                 }
             }
@@ -510,7 +510,7 @@ public class Thing(string Guid, string Name)
 
         // Massage values using schema field methods.
         var x = associatedSchemas.SelectMany(s =>
-            s.Properties.Where(p => string.CompareOrdinal(p.Key, propName) == 0)
+            s.Properties.Where(p => string.Equals(p.Key, propName, StringComparison.Ordinal))
             .Select(p => new { SchemaGuid = s.Guid, PropertyName = p.Key, Field = p.Value }))
             .ToArray();
         foreach (var y in x)
@@ -543,7 +543,7 @@ public class Thing(string Guid, string Name)
                 var candidatesMatch = false;
                 for (int i = 0; i < candidateProperties.Count; i++)
                 {
-                    if (string.CompareOrdinal(candidateProperties[i].TruePropertyName, truePropertyName) == 0)
+                    if (string.Equals(candidateProperties[i].TruePropertyName, truePropertyName, StringComparison.Ordinal))
                     {
                         candidateProperties[i] = new ThingProperty
                         {
@@ -555,7 +555,7 @@ public class Thing(string Guid, string Name)
                             Valid = wouldBeValid,
                             Required = schemaProperty.Value.Required,
                             SchemaFieldType =
-                                string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0
+                                string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
                                     ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                                     : schemaProperty.Value.Type,
                             SchemaName = candidateProperties[i].SchemaName,
@@ -582,7 +582,7 @@ public class Thing(string Guid, string Name)
                     Valid = wouldBeValid,
                     Required = schemaProperty.Value.Required,
                     SchemaFieldType =
-                        string.CompareOrdinal(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE) == 0
+                        string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
                             ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                             : schemaProperty.Value.Type,
                     SchemaName = schema.Name,
@@ -651,7 +651,7 @@ public class Thing(string Guid, string Name)
             case 1:
                 // Exactly one, we need to update:
                 var massagedPropValue = massagedPropValues
-                    .Where(m => string.CompareOrdinal(m.Key, candidateProperties[0].TruePropertyName) == 0)
+                    .Where(m => string.Equals(m.Key, candidateProperties[0].TruePropertyName, StringComparison.Ordinal))
                     .Select(m => m.Value)
                     .FirstOrDefault(propValue);
 

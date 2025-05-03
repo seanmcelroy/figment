@@ -65,7 +65,15 @@ public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSett
 
             foreach (var s in schemas)
             {
-                t.AddRow(s.Name, s.Description ?? string.Empty, s.Plural ?? string.Empty, s.Guid);
+                if (string.IsNullOrWhiteSpace(settings.PartialNameMatch)
+                    || (
+                        s.Name != null
+                        && s.Name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                )
+                {
+                    t.AddRow(s.Name ?? string.Empty, s.Description ?? string.Empty, s.Plural ?? string.Empty, s.Guid);
+                }
             }
 
             AnsiConsole.Write(t);
@@ -74,7 +82,15 @@ public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSett
         {
             foreach (var schema in schemas)
             {
-                Console.Out.WriteLine(schema.Name);
+                if (string.IsNullOrWhiteSpace(settings.PartialNameMatch)
+                    || (
+                        schema.Name != null
+                        && schema.Name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                )
+                {
+                    Console.Out.WriteLine(schema.Name);
+                }
             }
         }
 

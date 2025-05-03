@@ -7,10 +7,23 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Setting the value of a `schema` field on a schema shows a chooser if the name, not the GUID, is provided. 
+- 'jot' now includes commands to manage import-map field configurations
+- 'jot' now supports relative date parsing, such as setting a due date field to 'tomorrow' or 'next Tuesday'
 
 ### Modified
 
 - Changed built-in system schema `view` so it requires fields `for` and `displayColumns`.
+- 'jot' now uses the user's application directory for local storage provider
+- 'jot' commands 'things' and 'schemas' now take an optional name filter for searching
+- Updated 'jot' to TextPromptWithHistory 1.0.5, which now provides inline prompt editing
+- Improve the output of printing schemas and things
+- 'jot' commands 'initialize', 'verbose', and 'reindex' are now parented under a 'configure' branch.
+- 'jot' has additional hidden command aliases to make the CLI more intuitive
+- 'jot' import-maps and import-map command syntax updated
+
+### Fixed
+
+- Setting a month+date field now does not complain about an invalid value.
 
 ## 0.0.5
 

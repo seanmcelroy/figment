@@ -192,7 +192,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                 yield break;
 
             var thing = await LoadAsync(thingRef.reference.Guid, cancellationToken);
-            if (thing != null && thing.SchemaGuids.Any(s => string.CompareOrdinal(s, schemaGuid) == 0))
+            if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
                 yield return thingRef.reference;
         }
     }
@@ -305,10 +305,9 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                     return null;
 
                 if (
-                  string.CompareOrdinal(prop.Name, nameof(Thing.Name)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(Thing.Guid)) == 0
-                  || string.CompareOrdinal(prop.Name, nameof(Thing.SchemaGuids)) == 0
-                )
+                    string.Equals(prop.Name, nameof(Thing.Name), StringComparison.Ordinal)
+                    || string.Equals(prop.Name, nameof(Thing.Guid), StringComparison.Ordinal)
+                    || string.Equals(prop.Name, nameof(Thing.SchemaGuids), StringComparison.Ordinal))
                 {
                     // Ignore built-ins, as they're defined on root, not Properties
                     continue;
@@ -331,7 +330,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                         continue; // We don't load nulls
                     case JsonValueKind.Object:
                         {
-                            if (string.CompareOrdinal(prop.Name, "Properties") == 0)
+                            if (string.Equals(prop.Name, "Properties", StringComparison.Ordinal))
                             {
                                 foreach (var sub in prop.Value.EnumerateObject())
                                 {

@@ -13,11 +13,11 @@ public class SchemaImportMap(string Name, string Format)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
-    /// Gets the name of the import map.
+    /// Gets or sets the name of the import map.
     /// </summary>
     /// <example>Google Contacts CSV file export.</example>
     [JsonPropertyName("name")]
-    public string Name { get; init; } = Name;
+    public string Name { get; set; } = Name;
 
     /// <summary>
     /// Gets the format to which this import map applies.
@@ -31,4 +31,28 @@ public class SchemaImportMap(string Name, string Format)
     /// </summary>
     [JsonPropertyName("fields")]
     public List<SchemaImportField> FieldConfiguration { get; init; } = [];
+
+    /// <summary>
+    /// Ensures <see cref="Schema"/> metadata fields are present on the map.
+    /// </summary>
+    public void EnsureMetadataFields()
+    {
+        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.Name)}") == true))
+        {
+            FieldConfiguration.Add(new SchemaImportField($"${nameof(Thing.Name)}", null)
+            {
+                SkipRecordIfInvalid = true,
+                SkipRecordIfMissing = true,
+            });
+        }
+
+        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.CreatedOn)}") == true))
+        {
+            FieldConfiguration.Add(new SchemaImportField($"${nameof(Thing.CreatedOn)}", null)
+            {
+                SkipRecordIfInvalid = false,
+                SkipRecordIfMissing = false,
+            });
+        }
+    }
 }
