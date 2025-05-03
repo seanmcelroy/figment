@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Calculations.Parsing;
+
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
@@ -37,5 +39,27 @@ public class Len : FunctionBase
         }
 
         return CalculationResult.Success(text?.Length ?? 0, CalculationResultType.FunctionResult);
+    }
+
+    /// <inheritdoc/>
+    public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
+    {
+        if (arguments.Length != 1)
+        {
+            return ExpressionResult.Error(CalculationErrorType.FormulaParse, "LEN() takes one parameter");
+        }
+
+        var argumentResult = arguments[0].Evaluate(context);
+        if (!argumentResult.IsSuccess)
+        {
+            return argumentResult;
+        }
+
+        if (!argumentResult.TryConvertString(out string? stringResult))
+        {
+            return ExpressionResult.Error(CalculationErrorType.BadValue, $"Unable to convert '{argumentResult.Result}' to a string");
+        }
+
+        return ExpressionResult.Success(stringResult?.Length ?? 0);
     }
 }

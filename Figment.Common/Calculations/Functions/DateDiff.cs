@@ -75,4 +75,9 @@ public class DateDiff : FunctionBase
 
         return CalculationResult.Error(CalculationErrorType.BadValue, $"Unknown interval type {interval}");
     }
+
+    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
+    {
+        throw new NotImplementedException();
+    }
 }

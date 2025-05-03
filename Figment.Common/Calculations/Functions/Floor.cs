@@ -1,3 +1,5 @@
+using Figment.Common.Calculations.Parsing;
+
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
@@ -20,5 +22,27 @@ public class Floor : FunctionBase
         }
 
         return CalculationResult.Success(Math.Floor(dbl), CalculationResultType.FunctionResult);
+    }
+
+    /// <inheritdoc/>
+    public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
+    {
+        if (arguments.Length != 1)
+        {
+            return ExpressionResult.Error(CalculationErrorType.FormulaParse, "FLOOR() takes one parameter");
+        }
+
+        var argumentResult = arguments[0].Evaluate(context);
+        if (!argumentResult.IsSuccess)
+        {
+            return argumentResult;
+        }
+
+        if (!argumentResult.TryConvertDouble(out double doubleResult))
+        {
+            return ExpressionResult.Error(CalculationErrorType.BadValue, $"Unable to convert '{argumentResult.Result}' into a number");
+        }
+
+        return ExpressionResult.Success(Math.Floor(doubleResult));
     }
 }

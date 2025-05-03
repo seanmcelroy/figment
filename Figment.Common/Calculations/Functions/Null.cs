@@ -35,4 +35,9 @@ public class Null : FunctionBase
 
         return CalculationResult.Success(null, CalculationResultType.FunctionResult);
     }
+
+    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
+    {
+        throw new NotImplementedException();
+    }
 }

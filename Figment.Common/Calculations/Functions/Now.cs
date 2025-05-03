@@ -36,4 +36,9 @@ public class Now : FunctionBase
         TimeSpan ts = DateTime.UtcNow - DateUtility.TwentiethCentry;
         return CalculationResult.Success(ts.TotalDays + 1, CalculationResultType.FunctionResult);
     }
+
+    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
+    {
+        throw new NotImplementedException();
+    }
 }

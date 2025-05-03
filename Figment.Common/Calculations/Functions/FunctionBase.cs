@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Figment.Common.Calculations.Parsing;
 
 namespace Figment.Common.Calculations.Functions;
 
@@ -34,6 +35,14 @@ public abstract class FunctionBase
     /// <param name="targets">The targets over which the calculation should be preformed.</param>
     /// <returns>The outcome calculation result, whether a success or failure.</returns>
     public abstract CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets);
+
+    /// <summary>
+    /// Evaluates the function using the given input <paramref name="arguments"/> over the supplied <paramref name="targets"/>.
+    /// </summary>
+    /// <param name="context">The context for the evaluation.</param>
+    /// <param name="arguments">The arguments to provide for the funciton to perform its calculation.</param>
+    /// <returns>The outcome calculation result, whether a success or failure.</returns>
+    public abstract ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments);
 
     /// <summary>
     /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a date.
@@ -101,6 +110,40 @@ public abstract class FunctionBase
     /// <param name="doubleResult">The double that was retrieved, if successful.</param>
     /// <returns>Whether or not the parameter could be retrieved.</returns>
     public bool TryGetDoubleParameter(
+        int ordinal,
+        bool required,
+        CalculationResult[] parameters,
+        IEnumerable<Thing> targets,
+        out CalculationResult calculationResult,
+        out double doubleResult)
+    {
+        var res = TryGetStringParameter(ordinal, required, parameters, targets, out calculationResult, out string? stringResult);
+        if (!res)
+        {
+            doubleResult = 0;
+            return false;
+        }
+
+        // Not supplied and not required, technically success.
+        if (string.IsNullOrEmpty(stringResult) && !required)
+        {
+            calculationResult = CalculationResult.Success(null, parameters[ordinal - 1].ResultType);
+            doubleResult = 0;
+            return true;
+        }
+
+        // Unparsable and required - try parsing as a double.
+        if (double.TryParse(stringResult, out doubleResult))
+        {
+            calculationResult = CalculationResult.Success(doubleResult, parameters[ordinal - 1].ResultType);
+            return true;
+        }
+
+        calculationResult = CalculationResult.Error(CalculationErrorType.BadValue, $"Cannot parse {stringResult} as a double.");
+        return false;
+    }
+
+    public bool CoerceDouble(
         int ordinal,
         bool required,
         CalculationResult[] parameters,
