@@ -36,4 +36,9 @@ public class NoOp : FunctionBase
             _ => throw new InvalidOperationException("Cannot pass-thru multiple arguments"),
         };
     }
+
+    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
+    {
+        throw new NotImplementedException();
+    }
 }

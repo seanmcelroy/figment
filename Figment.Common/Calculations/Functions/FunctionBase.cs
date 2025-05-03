@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Figment.Common.Calculations.Parsing;
 
 namespace Figment.Common.Calculations.Functions;
 
@@ -34,6 +35,14 @@ public abstract class FunctionBase
     /// <param name="targets">The targets over which the calculation should be preformed.</param>
     /// <returns>The outcome calculation result, whether a success or failure.</returns>
     public abstract CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets);
+
+/// <summary>
+    /// Evaluates the function using the given input <paramref name="arguments"/> over the supplied <paramref name="targets"/>.
+    /// </summary>
+    /// <param name="context">The context for the evaluation.</param>
+    /// <param name="arguments">The arguments to provide for the funciton to perform its calculation.</param>
+    /// <returns>The outcome calculation result, whether a success or failure.</returns>
+    public abstract ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments);
 
     /// <summary>
     /// Attempts to retrieve a parameter from the <paramref name="parameters"/> array as a boolean value.
