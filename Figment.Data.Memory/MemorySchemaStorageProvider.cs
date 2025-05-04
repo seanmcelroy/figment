@@ -90,6 +90,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
 
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
 
+    /// <inheritdoc/>
     public Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);

@@ -4,6 +4,9 @@ using Figment.Common.Calculations.Functions;
 
 namespace Figment.Common.Calculations.Parsing;
 
+/// <summary>
+/// The result of a call to <see cref="ExpressionParser.Parse(string)"/>.
+/// </summary>
 public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
 {
     /// <summary>
@@ -16,12 +19,36 @@ public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
     /// </summary>
     public static readonly ExpressionResult FALSE = Success(false);
 
+    /// <summary>
+    /// Gets a value indicating whether the evaluation completed without throwing an error.
+    /// </summary>
     required public bool IsSuccess { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating the error, if one was encountered when attempting to evaluation an expression.
+    /// </summary>
     required public CalculationErrorType ErrorType { get; init; }
+
+    /// <summary>
+    /// Gets the optional message provided with the expression result.
+    /// </summary>
     required public string? Message { get; init; }
+
+    /// <summary>
+    /// Gets the resulting value of the evaluation, if successful.
+    /// </summary>
+    /// <remarks>
+    /// Some evaluations may return null.  For this reason, the value of <see cref="IsSuccess"/>
+    /// indicates whether an evaluation was successful, not solely a non-null result in this property.
+    /// </remarks>
     required public object? Result { get; init; }
 
-    public static ExpressionResult Success<T>(T result)
+    /// <summary>
+    /// A helper method that provides a successful <see cref="ExpressionResult"/> given the resulting value.
+    /// </summary>
+    /// <param name="result">The resulting value that was successfully evaluated.</param>
+    /// <returns>An <see cref="ExpressionResult"/> that sets <see cref="IsSuccess"/> to true and the <see cref="Result"/> to the <paramref name="result"/> value.</returns>
+    public static ExpressionResult Success(object? result)
         => new()
         {
             IsSuccess = true,
@@ -30,7 +57,13 @@ public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
             Result = result,
         };
 
-    public static ExpressionResult Error(CalculationErrorType errorType, string message) => new()
+    /// <summary>
+    /// A helper method that provides an error representation of a <see cref="ExpressionResult"/>.
+    /// </summary>
+    /// <param name="errorType">The type of error encountered.</param>
+    /// <param name="message">The human-readable reason the error was encountered.</param>
+    /// <returns>An <see cref="ExpressionResult"/> that sets <see cref="IsSuccess"/> to false and the <see cref="ErrorType"/> to the <paramref name="errorType"/> value.</returns>
+    public static ExpressionResult Error(CalculationErrorType errorType, string? message) => new()
     {
         IsSuccess = false,
         ErrorType = errorType,

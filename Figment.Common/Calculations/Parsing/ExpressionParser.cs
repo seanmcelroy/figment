@@ -1,11 +1,14 @@
-using System.Reflection.Metadata;
 using System.Text;
 
 namespace Figment.Common.Calculations.Parsing;
 
+/// <summary>
+/// A parser that converts a string expression into an abstract syntax tree
+/// that can be calculated using <see cref="NodeBase.Evaluate(EvaluationContext)"/>.
+/// </summary>
 public class ExpressionParser
 {
-    private string _input;
+    private string _input = string.Empty;
     private int _pos;
 
     private char Peek(int count = 1)
@@ -43,6 +46,12 @@ public class ExpressionParser
         }
     }
 
+    /// <summary>
+    /// Converts an expression into an abstract syntax tree, or throws a <see cref="ParseException"/>
+    /// if it could not be parsed.
+    /// </summary>
+    /// <param name="input">The expression to parse.</param>
+    /// <returns>A <see cref="NodeBase"/> implementation at the root of the abstract syntax tree.</returns>
     public NodeBase Parse(string input)
     {
         _input = input.StartsWith('=') ? input[1..] : input;

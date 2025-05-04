@@ -18,6 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common.Data;
 
+/// <summary>
+/// An interface for storage providers that can create, read, update, and delete schemas in a data store.
+/// </summary>
 public interface ISchemaStorageProvider
 {
     /// <summary>
@@ -52,9 +55,14 @@ public interface ISchemaStorageProvider
     /// <param name="schemaNamePart">The partial <see cref="Schema.Name"/> text that must match.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An asynchronous enumerator for each <see cref="PossibleNameMatch"/> of each matching schema.</returns>
-
     public IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaNamePart, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Finds schemas based on the plural names assigned to them.
+    /// </summary>
+    /// <param name="plural">The plural keyword on the schemas to return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumerator for each <see cref="Reference"/> of each matching schema.</returns>
     public IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, CancellationToken cancellationToken);
 
     /// <summary>
@@ -89,6 +97,11 @@ public interface ISchemaStorageProvider
     /// <returns>The deserliazed schema, or null if there was a serialization error.</returns>
     public Task<Schema?> LoadJsonContentAsync(string content, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Rebuilds the indexes in the underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the index rebuild was successful.</returns>
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken);
 
     /// <summary>

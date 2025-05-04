@@ -37,6 +37,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 #endif
     };
 
+    /// <inheritdoc/>
     public async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
         await foreach (var reference in FindByNameAsync(

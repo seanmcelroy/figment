@@ -26,6 +26,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
 {
     private static readonly Dictionary<string, Thing> ThingCache = [];
 
+    /// <inheritdoc/>
     public async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
         await foreach (var reference in FindByNameAsync(

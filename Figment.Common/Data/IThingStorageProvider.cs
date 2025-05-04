@@ -53,6 +53,13 @@ public interface IThingStorageProvider
 
     public IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Obtains a reference to a thing if it is located by its <paramref name="exactName"/>.
+    /// </summary>
+    /// <param name="exactName">The name of the thing to locate.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="comparisonType">The type of string comparison to use when finding things.</param>
+    /// <returns>The thing, if it was found.  If the thing was not located, <see cref="Reference.EMPTY"/> is returned.</returns>
     public Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase);
 
     /// <summary>
@@ -76,6 +83,11 @@ public interface IThingStorageProvider
     /// <returns>A value indicating whether or not the load attempt was successful.</returns>
     public Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Rebuilds the indexes in the underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the index rebuild was successful.</returns>
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken);
 
     /// <summary>

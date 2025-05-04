@@ -302,6 +302,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         }
     }
 
+    /// <inheritdoc/>
     public async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
     {
         var schemaDir = new DirectoryInfo(SchemaDirectoryPath);
@@ -358,6 +359,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         return true;
     }
 
+    /// <inheritdoc/>
     public async Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
@@ -469,6 +471,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         return Task.FromResult(true);
     }
 
+    /// <inheritdoc/>
     public async IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(plural);

@@ -22,9 +22,12 @@ namespace Figment.Data.Memory;
 
 public class MemoryStorageProvider() : IStorageProvider
 {
+    /// <inheritdoc/>
     public ISchemaStorageProvider? GetSchemaStorageProvider() => new MemorySchemaStorageProvider();
 
+    /// <inheritdoc/>
     public IThingStorageProvider? GetThingStorageProvider() => new MemoryThingStorageProvider();
 
+    /// <inheritdoc/>
     public Task<bool> InitializeAsync(CancellationToken cancellationToken) => Task.FromResult(true);
 }

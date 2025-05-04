@@ -1,9 +1,15 @@
 namespace Figment.Common.Calculations.Parsing;
 
-#pragma warning disable SA1600 // Elements should be documented
+/// <summary>
+/// A type of node that executes a bulit-in function registered by <see cref="FunctionRegistry"/>.
+/// </summary>
+/// <param name="FunctionName">The name of the function, such as UPPER.</param>
+/// <param name="Arguments">The arguments to supply to the function.</param>
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class FunctionNode(string FunctionName, List<NodeBase> Arguments) : NodeBase
-#pragma warning restore SA1600 // Elements should be documented
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
+    /// <inheritdoc/>
     public override ExpressionResult Evaluate(EvaluationContext context)
     {
         var evalArgs = Arguments.ConvertAll(a => a.Evaluate(context));

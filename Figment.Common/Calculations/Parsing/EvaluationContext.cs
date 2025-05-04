@@ -2,8 +2,14 @@ namespace Figment.Common.Calculations.Parsing;
 
 public readonly record struct EvaluationContext
 {
+    /// <summary>
+    /// A default context that contains no additional data.
+    /// </summary>
     public static readonly EvaluationContext EMPTY = new();
 
+    /// <summary>
+    /// Gets the context data provided for calls to <see cref="ExpressionParser.Parse(string)"/>.
+    /// </summary>
     private Dictionary<string, ExpressionResult> RowData { get; init; } = [];
 
     /// <summary>
@@ -38,6 +44,11 @@ public readonly record struct EvaluationContext
         RowData["LastModified"] = ExpressionResult.Success(thing.LastModified);
     }
 
+    /// <summary>
+    /// Retrieves a value from the context map.
+    /// </summary>
+    /// <param name="name">Name of the value to retrieve from the context.</param>
+    /// <returns>The value of the context, or an error if not found.</returns>
     public ExpressionResult GetField(string name)
     {
         if (!RowData.TryGetValue(name, out var val))
