@@ -6,7 +6,6 @@ namespace Figment.Test.Data.Memory;
 public sealed class Schema
 {
     [TestMethod]
-    [Ignore]
     public async Task SchemaCrud()
     {
         var storageProvider = new MemoryStorageProvider();
@@ -16,7 +15,7 @@ public sealed class Schema
 
         var allSchemas = ssp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allSchemas);
-        Assert.AreEqual(0, allSchemas.Count());
+        var beginSchemasCount = allSchemas.Count();
 
         var csr = await ssp.CreateAsync($"{nameof(SchemaCrud)}Schema", CancellationToken.None);
         Assert.IsTrue(csr.Success);
@@ -25,7 +24,6 @@ public sealed class Schema
 
         allSchemas = ssp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allSchemas);
-        Assert.AreEqual(1, allSchemas.Count());
-
+        Assert.AreEqual(beginSchemasCount + 1, allSchemas.Count());
     }
 }

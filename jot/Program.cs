@@ -301,7 +301,7 @@ internal class Program
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
@@ -396,8 +396,8 @@ internal class Program
         ArgumentNullException.ThrowIfNull(thingsToDisplay);
 
         // Is there a view for this schema?
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (ssp != null && tsp != null)
         {
             var viewSchemaRef = await ssp.FindByNameAsync("view", cancellationToken);

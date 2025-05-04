@@ -23,45 +23,31 @@ using Figment.Common.Calculations.Parsing;
 namespace Figment.Test.Common.Calculations.Parsing;
 
 [TestClass]
-public sealed class Trim
+public sealed class Len
 {
+    /// <summary>
+    /// Not enough parameters
+    /// </summary>
     [TestMethod]
-    public void TrimWithoutParameters()
+    public void LenWithoutParameters()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM()");
+        var ast = xp.Parse("=LEN()");
         Assert.IsNotNull(ast);
+
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsFalse(result.IsSuccess);
+        Assert.AreEqual(CalculationErrorType.FormulaParse, result.ErrorType);
     }
 
+    /// <summary>
+    /// Not enough parameters
+    /// </summary>
     [TestMethod]
-    public void TrimWithExtraParameters()
+    public void LenWithBadParameterTypeRecoverable()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\"a\",\"b\")");
-        Assert.IsNotNull(ast);
-        var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsFalse(result.IsSuccess);
-    }
-
-    [TestMethod]
-    public void TrimWithEmptyParameter()
-    {
-        var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\"\")");
-        Assert.IsNotNull(ast);
-        var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsTrue(result.IsSuccess);
-        Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual(string.Empty, (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
-    }
-
-    [TestMethod]
-    public void TrimWithBadParameterType()
-    {
-        var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(1.4)");
+        var ast = xp.Parse("=LEN(1.4)");
         Assert.IsNotNull(ast);
 
         var result = ast.Evaluate(EvaluationContext.EMPTY);
@@ -70,30 +56,46 @@ public sealed class Trim
     }
 
     [TestMethod]
-    public void TrimLiteral()
+    public void LenLiteral()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\" Sean \")");
+        var ast = xp.Parse("=LEN(\"Sean\")");
         Assert.IsNotNull(ast);
+
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
-        Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual("Sean", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
+        Assert.IsInstanceOfType<int>(result.Result);
+        Assert.AreEqual(4, (int)result.Result);
     }
 
     [TestMethod]
-    public void CalculateLowerThingProperty()
+    public void CalculateLenThingProperty()
     {
-        var sampleThing = new Thing(nameof(CalculateLowerThingProperty), " Asdf ");
+        var sampleThing = new Thing(nameof(CalculateLenThingProperty), nameof(CalculateLenThingProperty));
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM([Name])");
+        var ast = xp.Parse("=LEN([Name])");
         Assert.IsNotNull(ast);
 
         var ctx = new EvaluationContext(sampleThing);
         var result = ast.Evaluate(ctx);
         Assert.IsTrue(result.IsSuccess);
 
-        Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual("Asdf", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
+        Assert.IsInstanceOfType<int>(result.Result);
+        Assert.AreEqual(nameof(CalculateLenThingProperty).Length, result.Result);
+    }
+
+    /// <summary>
+    /// Tests on null, which is not valid
+    /// </summary>
+    [TestMethod]
+    public void CalculateLenNull()
+    {
+        var xp = new ExpressionParser();
+        var ast = xp.Parse("=LEN(NULL())");
+        Assert.IsNotNull(ast);
+
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsFalse(result.IsSuccess);
+        Assert.AreEqual(CalculationErrorType.BadValue, result.ErrorType);
     }
 }

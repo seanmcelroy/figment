@@ -51,7 +51,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                 throw new NotImplementedException($"Unexpected return code {Enum.GetName(thingResolution.Item1)}");
         }
 
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

@@ -1,15 +1,22 @@
 namespace Figment.Common.Calculations.Parsing;
 
-public class EvaluationContext
+public readonly record struct EvaluationContext
 {
     public static readonly EvaluationContext EMPTY = new();
 
-    public Dictionary<string, ExpressionResult> RowData { get; init; } = [];
+    private Dictionary<string, ExpressionResult> RowData { get; init; } = [];
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluationContext"/> class.
+    /// </summary>
     public EvaluationContext()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluationContext"/> class.
+    /// </summary>
+    /// <param name="thing">A <see cref="Thing"/> object that should be injected into the context, making its properties available.</param>
     public EvaluationContext(Thing thing)
     {
         // Add set properties.

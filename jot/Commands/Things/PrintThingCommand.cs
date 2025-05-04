@@ -58,7 +58,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 throw new NotImplementedException($"Unexpected return code {Enum.GetName(thingResolution.Item1)}");
         }
 
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
@@ -437,7 +437,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
             var thingGuid = str[(str.IndexOf('.') + 1)..];
 
-            var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+            var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
             if (tsp == null)
             {
                 return str;

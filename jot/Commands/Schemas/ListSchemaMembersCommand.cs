@@ -37,7 +37,7 @@ public class ListSchemaMembersCommand : SchemaCancellableAsyncCommand<ListSchema
             return (int)tgs;
         }
 
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

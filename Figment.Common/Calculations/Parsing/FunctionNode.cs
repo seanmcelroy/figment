@@ -12,7 +12,20 @@ public class FunctionNode(string FunctionName, List<NodeBase> Arguments) : NodeB
             return evalArgs.First(a => !a.IsSuccess);
         }
 
-        var nodeArgs = evalArgs.ConvertAll<NodeBase>(a => a.Result.GetType() != typeof(LiteralNode) ? new LiteralNode(a.Result) : (NodeBase)a.Result!).ToArray();
+        var nodeArgs = evalArgs.ConvertAll<NodeBase>(a =>
+        {
+            if (a.Result == null)
+            {
+                return LiteralNode.NULL;
+            }
+
+            if (a.Result is LiteralNode l)
+            {
+                return l;
+            }
+
+            return new LiteralNode(a.Result);
+        }).ToArray();
 
         return FunctionRegistry.Invoke(FunctionName, context, nodeArgs);
     }

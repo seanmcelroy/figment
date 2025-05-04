@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using Figment.Common;
+using Figment.Common.Calculations;
 using Figment.Common.Calculations.Parsing;
 
 namespace Figment.Test.Common.Calculations.Parsing;
@@ -40,6 +41,7 @@ public sealed class Lower
         var xp = new ExpressionParser();
         var ast = xp.Parse("=LOWER(\"\")");
         Assert.IsNotNull(ast);
+
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
         Assert.IsInstanceOfType<string>(result.Result);
@@ -50,7 +52,13 @@ public sealed class Lower
     public void LowerWithBadParameterType()
     {
         var xp = new ExpressionParser();
-        Assert.ThrowsExactly<ParseException>(() => xp.Parse("=LOWER(1.4)"));
+        var ast = xp.Parse("=LOWER(1.4)");
+        Assert.IsNotNull(ast);
+
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsInstanceOfType<string>(result.Result);
+        Assert.AreEqual("1.4", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
     }
 
     [TestMethod]
@@ -59,6 +67,7 @@ public sealed class Lower
         var xp = new ExpressionParser();
         var ast = xp.Parse("=LOWER(\"Sean\")");
         Assert.IsNotNull(ast);
+
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
         Assert.IsInstanceOfType<string>(result.Result);

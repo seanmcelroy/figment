@@ -64,7 +64,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

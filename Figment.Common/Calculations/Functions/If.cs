@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Calculations.Parsing;
+
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
@@ -25,26 +27,35 @@ namespace Figment.Common.Calculations.Functions;
 /// </summary>
 public class If : FunctionBase
 {
+    /// <summary>
+    /// The identifier of this function.
+    /// </summary>
+    public const string IDENTIFIER = "IF";
+
     /// <inheritdoc/>
-    public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
+    public override string Identifier => IDENTIFIER;
+
+    /// <inheritdoc/>
+    public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
     {
-        if (parameters.Length != 3)
+        if (arguments.Length != 3)
         {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "IF() takes three parameters");
+            return ExpressionResult.Error(CalculationErrorType.FormulaParse, "IF() takes three arguments");
         }
 
-        if (!TryGetBooleanParameter(1, true, parameters, targets, out CalculationResult _, out bool? condition))
+        var conditionResult = arguments[0].Evaluate(context);
+        if (!conditionResult.IsSuccess)
         {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "IF() requires the first (boolean) parameter");
+            return conditionResult;
         }
 
-        if (condition ?? false)
+        if (!conditionResult.TryConvertBoolean(out bool condition))
         {
-            return CalculationResult.Success(parameters[1].Result, CalculationResultType.FunctionResult);
+            return ExpressionResult.Error(CalculationErrorType.BadValue, $"Unable to convert '{conditionResult.Result}' into a boolean");
         }
-        else
-        {
-            return CalculationResult.Success(parameters[2].Result, CalculationResultType.FunctionResult);
-        }
+
+        return condition
+            ? arguments[1].Evaluate(context)
+            : arguments[2].Evaluate(context);
     }
 }

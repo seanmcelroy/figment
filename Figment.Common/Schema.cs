@@ -189,6 +189,50 @@ public class Schema(string Guid, string Name)
     }
 
     /// <summary>
+    /// Creates a new <see cref="SchemaDateField"/> and adds it as a field of this schema.
+    /// </summary>
+    /// <param name="name">The name of the new date field.</param>
+    /// <returns>The new date field.</returns>
+    /// <exception cref="ArgumentException">Thrown if the <paramref name="name"/> is null or if a field of this name already exists on the schema.</exception>
+    public SchemaDateField AddDateField(string name)
+    {
+        MarkAccessed();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        if (Properties.ContainsKey(name))
+        {
+            throw new ArgumentException($"A field named '{name}' already exists on this schema", nameof(name));
+        }
+
+        var sdf = new SchemaDateField(name);
+        Properties.Add(name, sdf);
+        return sdf;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="SchemaMonthDayField"/> and adds it as a field of this schema.
+    /// </summary>
+    /// <param name="name">The name of the new month+day field.</param>
+    /// <returns>The new month+day field.</returns>
+    /// <exception cref="ArgumentException">Thrown if the <paramref name="name"/> is null or if a field of this name already exists on the schema.</exception>
+    public SchemaMonthDayField AddMonthDayField(string name)
+    {
+        MarkAccessed();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        if (Properties.ContainsKey(name))
+        {
+            throw new ArgumentException($"A field named '{name}' already exists on this schema", nameof(name));
+        }
+
+        var smdf = new SchemaMonthDayField(name);
+        Properties.Add(name, smdf);
+        return smdf;
+    }
+
+    /// <summary>
     /// Attempts to find a schema by <paramref name="guidOrNamePart"/>.
     /// </summary>
     /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> of schemas to match and return.</param>

@@ -67,7 +67,7 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

@@ -16,8 +16,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Runtime;
 using System.Text.Json.Serialization;
 using Figment.Common.Calculations;
+using Figment.Common.Calculations.Parsing;
+using Figment.Common.Errors;
 
 namespace Figment.Common;
 
@@ -60,7 +63,17 @@ public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
             return Task.FromResult(false);
         }
 
-        var (success, _, _) = Parser.ParseFormula(Formula);
-        return Task.FromResult(success);
+        var parser = new ExpressionParser();
+        try
+        {
+            var ast = parser.Parse(Formula);
+        }
+        catch (ParseException pe)
+        {
+            AmbientErrorContext.Provider.LogDebug($"Could not parse formula '{Formula}': {pe.Message}");
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(true);
     }
 }

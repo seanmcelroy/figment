@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Calculations.Parsing;
+
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
@@ -23,22 +25,23 @@ namespace Figment.Common.Calculations.Functions;
 /// </summary>
 public class Now : FunctionBase
 {
+    /// <summary>
+    /// The identifier of this function.
+    /// </summary>
+    public const string IDENTIFIER = "NOW";
+
     /// <inheritdoc/>
-#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-    public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
-#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
+    public override string Identifier => IDENTIFIER;
+
+    /// <inheritdoc/>
+    public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
     {
-        if (parameters.Length != 0)
+        if (arguments.Length != 0)
         {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "NOW() takes no parameters");
+            return ExpressionResult.Error(CalculationErrorType.FormulaParse, "NOW() takes no parameters");
         }
 
         TimeSpan ts = DateTime.UtcNow - DateUtility.TwentiethCentry;
-        return CalculationResult.Success(ts.TotalDays + 1, CalculationResultType.FunctionResult);
-    }
-
-    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
-    {
-        throw new NotImplementedException();
+        return ExpressionResult.Success(ts.TotalDays + 1);
     }
 }

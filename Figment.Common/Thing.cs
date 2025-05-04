@@ -20,6 +20,7 @@ using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Figment.Common.Calculations;
+using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 
@@ -84,7 +85,7 @@ public class Thing(string Guid, string Name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(guidOrNamePart);
 
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
             yield break;
@@ -356,8 +357,12 @@ public class Thing(string Guid, string Name)
                 continue;
             }
 
-            var result = Parser.Calculate(calcField.Formula, this);
-            if (result.IsError)
+            var xp = new ExpressionParser();
+            var ast = xp.Parse(calcField.Formula);
+            var context = new EvaluationContext(this);
+            var result = ast.Evaluate(context);
+
+            if (!result.IsSuccess)
             {
                 var carved = CarvePropertyName(thingProp.Key, schema);
                 AmbientErrorContext.Provider.LogWarning($"Unable to calculate field {carved.fullDisplayName}: {result.Message}");
@@ -606,13 +611,13 @@ public class Thing(string Guid, string Name)
             }
         }
 
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
             return new ThingSetResult(false);
         }
 
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
             return new ThingSetResult(false);
@@ -804,7 +809,7 @@ public class Thing(string Guid, string Name)
     /// <returns>A value indicating whether or not the save attempt was successful.</returns>
     public async Task<bool> SaveAsync(CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (provider == null)
         {
             return false;
@@ -825,7 +830,7 @@ public class Thing(string Guid, string Name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
-        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (provider == null)
         {
             return (false, null);
@@ -846,7 +851,7 @@ public class Thing(string Guid, string Name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
-        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (provider == null)
         {
             return (false, null);
@@ -864,7 +869,7 @@ public class Thing(string Guid, string Name)
     /// <returns>A value indicating whether or not the delete attempt was successful.</returns>
     public async Task<bool> DeleteAsync(CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (provider == null)
         {
             return false;

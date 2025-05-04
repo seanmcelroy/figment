@@ -7,13 +7,40 @@ public static class FunctionRegistry
     private static readonly Dictionary<string, Func<EvaluationContext, NodeBase[], ExpressionResult>> Functions = new()
     {
         {
-            "LOWER", static (ctx, args) => new Lower().Evaluate(ctx, args)
+            DateDiff.IDENTIFIER, static (ctx, args) => new DateDiff().Evaluate(ctx, args)
         },
         {
-            "TRIM", static (ctx, args) => new Trim().Evaluate(ctx, args)
+            False.IDENTIFIER, static (ctx, args) => new False().Evaluate(ctx, args)
         },
         {
-            "UPPER", static (ctx, args) => new Upper().Evaluate(ctx, args)
+            Floor.IDENTIFIER, static (ctx, args) => new Floor().Evaluate(ctx, args)
+        },
+        {
+            If.IDENTIFIER, static (ctx, args) => new If().Evaluate(ctx, args)
+        },
+        {
+            Len.IDENTIFIER, static (ctx, args) => new Len().Evaluate(ctx, args)
+        },
+        {
+            Lower.IDENTIFIER, static (ctx, args) => new Lower().Evaluate(ctx, args)
+        },
+        {
+            Now.IDENTIFIER, static (ctx, args) => new Now().Evaluate(ctx, args)
+        },
+        {
+            Null.IDENTIFIER, static (ctx, args) => new Null().Evaluate(ctx, args)
+        },
+        {
+            Today.IDENTIFIER, static (ctx, args) => new Today().Evaluate(ctx, args)
+        },
+        {
+            Trim.IDENTIFIER, static (ctx, args) => new Trim().Evaluate(ctx, args)
+        },
+        {
+            True.IDENTIFIER, static (ctx, args) => new True().Evaluate(ctx, args)
+        },
+        {
+            Upper.IDENTIFIER, static (ctx, args) => new Upper().Evaluate(ctx, args)
         },/*
         {
             "IF", static (ctx, args) =>

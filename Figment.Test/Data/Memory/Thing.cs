@@ -23,19 +23,19 @@ public sealed class Thing
     [TestMethod]
     public async Task ThingCrud()
     {
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         Assert.IsNotNull(ssp);
         var csr = await ssp.CreateAsync($"{nameof(ThingCrud)}Schema", CancellationToken.None);
         Assert.IsTrue(csr.Success);
         Assert.IsNotNull(csr.NewGuid);
         Assert.IsTrue(await ssp.GuidExists(csr.NewGuid, CancellationToken.None));
 
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         Assert.IsNotNull(tsp);
 
         var allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allThings);
-        Assert.AreEqual(0, allThings.Count());
+        var beginThingsCount = allThings.Count();
 
         var thing = await tsp.CreateAsync(csr.NewGuid, nameof(ThingCrud), CancellationToken.None);
         Assert.IsNotNull(thing);
@@ -43,7 +43,7 @@ public sealed class Thing
 
         allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allThings);
-        Assert.AreEqual(1, allThings.Count());
+        Assert.AreEqual(beginThingsCount + 1, allThings.Count());
 
         // Set
         var tsr = await thing.Set("random", "value", CancellationToken.None);
@@ -80,7 +80,7 @@ public sealed class Thing
 
         allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allThings);
-        Assert.AreEqual(0, allThings.Count());
+        Assert.AreEqual(beginThingsCount, allThings.Count());
 
         thing2 = await tsp.FindByNameAsync(nameof(ThingCrud), CancellationToken.None);
         Assert.AreEqual(Reference.EMPTY, thing2);

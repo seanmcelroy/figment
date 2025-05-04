@@ -1,12 +1,7 @@
 namespace Figment.Common.Calculations.Parsing;
 
-/// <summary>
-/// This node combines the string representations of two evaluated <see cref="NodeBase"/> instances.
-/// </summary>
-/// <param name="Left">The first node to concatenate.</param>
-/// <param name="Right">The second node to concatenate.</param>
 #pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-public class ConcatNode(NodeBase Left, NodeBase Right) : NodeBase
+public class LogicalEqualsNode(NodeBase Left, NodeBase Right) : NodeBase
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <inheritdoc/>
@@ -26,8 +21,6 @@ public class ConcatNode(NodeBase Left, NodeBase Right) : NodeBase
             return re; // Propogate errors up
         }
 
-        var lhand = le.Result?.ToString() ?? string.Empty;
-        var rhand = re.Result?.ToString() ?? string.Empty;
-        return ExpressionResult.Success(new LiteralNode(lhand + rhand));
+        return le.Equals(re) ? ExpressionResult.TRUE : ExpressionResult.FALSE;
     }
 }

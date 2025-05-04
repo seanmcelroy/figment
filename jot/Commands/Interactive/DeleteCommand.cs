@@ -102,10 +102,10 @@ public class DeleteCommand : CancellableAsyncCommand<DeleteCommandSettings>
                     switch (reference.Type)
                     {
                         case Reference.ReferenceType.Schema:
-                            var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+                            var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
                             return ssp == null ? null : await ssp.LoadAsync(reference.Guid, cancellationToken1);
                         case Reference.ReferenceType.Thing:
-                            var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+                            var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
                             return tsp == null ? null : await tsp.LoadAsync(reference.Guid, cancellationToken1);
                         default:
                             return null;

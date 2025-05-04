@@ -65,7 +65,7 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
 
         if (!string.IsNullOrWhiteSpace(schema.VersionGuid))
         {
-            var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+            var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
             if (provider == null)
             {
                 AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

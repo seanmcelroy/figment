@@ -16,9 +16,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using Figment.Common.Calculations;
+using Figment.Common.Calculations.Parsing;
 
-namespace Figment.Test.Common.Calculations;
+namespace Figment.Test.Common.Calculations.Parsing;
 
 [TestClass]
 public sealed class False
@@ -26,26 +26,20 @@ public sealed class False
     [TestMethod]
     public void FalseWithoutParameters()
     {
-        var calcResult = Parser.Calculate("=FALSE()");
-        Assert.IsFalse(calcResult.IsError);
+        var xp = new ExpressionParser();
+        var ast = xp.Parse("=FALSE()");
+        Assert.IsNotNull(ast);
 
-        var result = calcResult.Result;
-        Assert.IsFalse(result as bool?);
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsInstanceOfType<bool>(result.Result);
+        Assert.IsFalse((bool)result.Result);
     }
 
     [TestMethod]
     public void FalseWithNonsenseParameters()
     {
-        var calcResult = Parser.Calculate("=FALSE(nope)");
-        Assert.IsTrue(calcResult.IsError);
-        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
-    }
-
-    [TestMethod]
-    public void FalseWithActualParameters()
-    {
-        var calcResult = Parser.Calculate("=FALSE(1)");
-        Assert.IsTrue(calcResult.IsError);
-        Assert.AreEqual(CalculationErrorType.FormulaParse, calcResult.ErrorType);
+        var xp = new ExpressionParser();
+        Assert.ThrowsExactly<ParseException>(() => xp.Parse("=FALSE(nope)"));
     }
 }

@@ -31,7 +31,7 @@ public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettin
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListThingsCommandSettings settings, CancellationToken cancellationToken)
     {
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

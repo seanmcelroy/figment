@@ -1,3 +1,4 @@
+using System.Reflection.Metadata;
 using System.Text;
 
 namespace Figment.Common.Calculations.Parsing;
@@ -7,7 +8,11 @@ public class ExpressionParser
     private string _input;
     private int _pos;
 
-    private char Peek() => _pos >= _input.Length ? '\0' : _input[_pos];
+    private char Peek(int count = 1)
+    {
+        var idx = _pos + count - 1;
+        return idx >= _input.Length ? '\0' : _input[idx];
+    }
 
     private char Next() => _input[_pos++];
 
@@ -18,6 +23,7 @@ public class ExpressionParser
             _pos++;
             return true;
         }
+
         return false;
     }
 
@@ -47,10 +53,24 @@ public class ExpressionParser
     private NodeBase ParseExpression()
     {
         var left = ParseTerm();
-        while (Match('&'))
+        SkipWhitespace();
+
+        var peeked = Peek();
+        if (peeked == '&')
         {
-            var right = ParseTerm();
-            left = new ConcatNode(left, right);
+            while (Match('&'))
+            {
+                var right = ParseTerm();
+                left = new ConcatNode(left, right);
+            }
+        }
+        else if (peeked == '=')
+        {
+            while (Match('='))
+            {
+                var right = ParseTerm();
+                left = new LogicalEqualsNode(left, right);
+            }
         }
 
         return left;
@@ -59,17 +79,38 @@ public class ExpressionParser
     private NodeBase ParseTerm()
     {
         SkipWhitespace();
-        if (Peek() == '[')
+
+        // Handle extraneous enclosing parenthesis.
+        if (Match('('))
+        {
+            var inner = ParseExpression();
+            Expect(')');
+            return inner;
+        }
+
+        char peeked = Peek();
+
+        if (peeked == '[')
         {
             return ParseField();
         }
 
-        if (Peek() == '"')
+        if (peeked == '\'')
         {
-            return ParseString();
+            return ParseSingleQuotedString();
         }
 
-        if (char.IsLetter(Peek()))
+        if (peeked == '"')
+        {
+            return ParseDoubleQuotedString();
+        }
+
+        if (peeked == '-' || char.IsNumber(peeked))
+        {
+            return ParseNumber();
+        }
+
+        if (char.IsLetter(peeked))
         {
             return ParseFunction();
         }
@@ -90,7 +131,20 @@ public class ExpressionParser
         return new FieldRefNode(sb.ToString());
     }
 
-    private LiteralNode ParseString()
+    private LiteralNode ParseSingleQuotedString()
+    {
+        Expect('\'');
+        var sb = new StringBuilder();
+        while (Peek() != '\'')
+        {
+            sb.Append(Next());
+        }
+
+        Expect('\'');
+        return new LiteralNode(sb.ToString());
+    }
+
+    private LiteralNode ParseDoubleQuotedString()
     {
         Expect('"');
         var sb = new StringBuilder();
@@ -103,7 +157,83 @@ public class ExpressionParser
         return new LiteralNode(sb.ToString());
     }
 
-    private NodeBase ParseFunction()
+    private LiteralNode ParseNumber()
+    {
+        var sb = new StringBuilder();
+        bool anySeen = false;
+        bool digitSeen = false;
+        bool decimalSeen = false;
+        while (true)
+        {
+            var peeked = Peek();
+
+            // Negative symbol
+            if (!anySeen)
+            {
+                anySeen = true;
+                if (peeked == '-')
+                {
+                    sb.Append(Next());
+                    continue;
+                }
+            }
+
+            // Thousands separator
+            if (peeked == ',')
+            {
+                if (!digitSeen)
+                {
+                    throw new ParseException("Digit separator seen before digit seen", _pos);
+                }
+
+                // The next 3 need to be numbers.
+                if (char.IsDigit(Peek(2))
+                    && char.IsDigit(Peek(3))
+                    && char.IsDigit(Peek(4)))
+                {
+                    Next();
+                    continue; // Skip over separators.
+                }
+
+                break; // Simply the end of the number, with a trailing comma (not a thousands separator).
+            }
+
+            if (peeked == '.')
+            {
+                if (decimalSeen)
+                {
+                    throw new ParseException("Decimal already observed in number", _pos);
+                }
+
+                decimalSeen = true;
+                sb.Append(Next());
+                continue;
+            }
+
+            if (char.IsDigit(peeked))
+            {
+                digitSeen = true;
+                sb.Append(Next());
+                continue;
+            }
+
+            break;
+        }
+
+        if (int.TryParse(sb.ToString(), out int i))
+        {
+            return new LiteralNode(i);
+        }
+
+        if (double.TryParse(sb.ToString(), out double d))
+        {
+            return new LiteralNode(d);
+        }
+
+        throw new ParseException("Unexpected termination of number", _pos);
+    }
+
+    private FunctionNode ParseFunction()
     {
         var name = ParseIdentifier();
         Expect('(');
@@ -112,10 +242,13 @@ public class ExpressionParser
         {
             do
             {
+                SkipWhitespace();
                 args.Add(ParseExpression());
+                SkipWhitespace();
             }
             while (Match(','));
         }
+
         Expect(')');
         return new FunctionNode(name, args);
     }

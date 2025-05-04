@@ -94,7 +94,7 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Dissocia
         }
 
         Thing? thing;
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

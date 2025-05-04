@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Calculations.Parsing;
+
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
@@ -24,60 +26,44 @@ namespace Figment.Common.Calculations.Functions;
 /// </summary>
 public class DateDiff : FunctionBase
 {
+    /// <summary>
+    /// The identifier of this function.
+    /// </summary>
+    public const string IDENTIFIER = "DATEDIFF";
+
     /// <inheritdoc/>
-    public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
+    public override string Identifier => IDENTIFIER;
+
+    /// <inheritdoc/>
+    public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
     {
-        if (parameters.Length != 3)
+        if (!ExpectArgumentCount(arguments, 3, out ExpressionResult? error))
         {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "DATEDIFF() takes three parameters");
+            return error.Value;
         }
 
-        if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? interval))
+        // Get argument 1
+        if (!arguments[0].Evaluate(context).TryConvertString(out string? interval))
         {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "DATEDIFF() requires the first (interval) parameter");
+            return ExpressionResult.Error(CalculationErrorType.BadValue, "DATEDIFF() requires the first (interval) string argument");
         }
 
-        if (!TryGetDateParameter(2, true, parameters, targets, out CalculationResult _, out DateTime? startDateParam))
+        if (!arguments[1].Evaluate(context).TryConvertDateTime(out DateTimeOffset? startDate))
         {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "DATEDIFF() requires the second (start date) parameter");
+            return ExpressionResult.Error(CalculationErrorType.BadValue, "DATEDIFF() requires the second (start date) date argument");
         }
 
-        if (!DateUtility.TryParseFunctionalDateValue(startDateParam!.Value, out double startFunctionalDate))
+        if (!arguments[2].Evaluate(context).TryConvertDateTime(out DateTimeOffset? endDate))
         {
-            return CalculationResult.Error(CalculationErrorType.BadValue, "Start date parameter could not be interpreted as a date");
-        }
-
-        if (!DateUtility.TryParseDate(startFunctionalDate, out DateTime startDate))
-        {
-            return CalculationResult.Error(CalculationErrorType.BadValue, "Start date parameter could not be interpreted as a date");
-        }
-
-        if (!TryGetDateParameter(3, true, parameters, targets, out CalculationResult _, out DateTime? endDateParam))
-        {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "DATEDIFF() requires the third (end date) parameter");
-        }
-
-        if (!DateUtility.TryParseFunctionalDateValue(endDateParam!.Value, out double endFunctionalDate))
-        {
-            return CalculationResult.Error(CalculationErrorType.BadValue, "End date parameter could not be interpreted as a date");
-        }
-
-        if (!DateUtility.TryParseDate(endFunctionalDate, out DateTime endDate))
-        {
-            return CalculationResult.Error(CalculationErrorType.BadValue, "End date parameter could not be interpreted as a date");
+            return ExpressionResult.Error(CalculationErrorType.BadValue, "DATEDIFF() requires the third (end date) date argument");
         }
 
         if (string.Equals(interval, "yyyy", StringComparison.InvariantCultureIgnoreCase))
         {
-            var diff = (endDate - startDate).TotalDays / 365.25;
-            return CalculationResult.Success(diff, CalculationResultType.FunctionResult);
+            var diff = (endDate.Value - startDate.Value).TotalDays / 365.25;
+            return ExpressionResult.Success(diff);
         }
 
-        return CalculationResult.Error(CalculationErrorType.BadValue, $"Unknown interval type {interval}");
-    }
-
-    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
-    {
-        throw new NotImplementedException();
+        return ExpressionResult.Error(CalculationErrorType.BadValue, $"Unknown interval type {interval}");
     }
 }

@@ -23,45 +23,32 @@ using Figment.Common.Calculations.Parsing;
 namespace Figment.Test.Common.Calculations.Parsing;
 
 [TestClass]
-public sealed class Trim
+public sealed class Now
 {
+    /// <summary>
+    /// Tests one function with no parameters
+    /// </summary>
     [TestMethod]
-    public void TrimWithoutParameters()
+    public void ParseNow()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM()");
+        var ast = xp.Parse("=NOW()");
         Assert.IsNotNull(ast);
-        var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsFalse(result.IsSuccess);
-    }
 
-    [TestMethod]
-    public void TrimWithExtraParameters()
-    {
-        var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\"a\",\"b\")");
-        Assert.IsNotNull(ast);
-        var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsFalse(result.IsSuccess);
-    }
-
-    [TestMethod]
-    public void TrimWithEmptyParameter()
-    {
-        var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\"\")");
-        Assert.IsNotNull(ast);
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
-        Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual(string.Empty, (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
+
+        Assert.IsInstanceOfType<double>(result.Result);
+        var dr = (double)result.Result;
+        Assert.IsTrue(dr >= 45718);
+        Assert.AreNotEqual(Math.Truncate(dr), dr);
     }
 
     [TestMethod]
-    public void TrimWithBadParameterType()
+    public void NowWithParameters()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(1.4)");
+        var ast = xp.Parse("=Now(12345)");
         Assert.IsNotNull(ast);
 
         var result = ast.Evaluate(EvaluationContext.EMPTY);
@@ -70,30 +57,50 @@ public sealed class Trim
     }
 
     [TestMethod]
-    public void TrimLiteral()
+    public void ParseNowExtraParenthesis()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\" Sean \")");
+        var ast = xp.Parse("=(NOW())");
         Assert.IsNotNull(ast);
+
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
-        Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual("Sean", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
     }
 
     [TestMethod]
-    public void CalculateLowerThingProperty()
+    public void ParseLowerNow()
     {
-        var sampleThing = new Thing(nameof(CalculateLowerThingProperty), " Asdf ");
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM([Name])");
+        var ast = xp.Parse("=LOWER(NOW())");
         Assert.IsNotNull(ast);
 
-        var ctx = new EvaluationContext(sampleThing);
-        var result = ast.Evaluate(ctx);
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
-
-        Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual("Asdf", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
     }
+
+    [TestMethod]
+    public void ParseLowerNowExtraParenthesis()
+    {
+        var xp = new ExpressionParser();
+        var ast = xp.Parse("=LOWER((NOW()))");
+        Assert.IsNotNull(ast);
+
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsTrue(result.IsSuccess);
+    }
+
+    /// <summary>
+    /// Tests two different functions with nesting and no parameters
+    /// </summary>
+    [TestMethod]
+    public void ParseLowerNowExtraParenthesis2()
+    {
+        var xp = new ExpressionParser();
+        var ast = xp.Parse("=LOWER((LOWER((NOW()))))");
+        Assert.IsNotNull(ast);
+
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsTrue(result.IsSuccess);
+    }
+
 }

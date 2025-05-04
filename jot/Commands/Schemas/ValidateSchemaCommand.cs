@@ -58,7 +58,7 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
 
         if (!string.IsNullOrWhiteSpace(schema.VersionGuid))
         {
-            var provider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+            var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
             if (provider == null)
             {
                 AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

@@ -86,7 +86,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
             return !Required;
         }
 
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
             return false;
@@ -97,7 +97,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
             return false;
         }
 
-        var tsp = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
             return false;

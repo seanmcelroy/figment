@@ -74,7 +74,7 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
             return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        var thingProvider = AmbientStorageContext.StorageProvider.GetThingStorageProvider();
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");

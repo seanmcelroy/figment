@@ -16,84 +16,88 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using Figment.Common;
-using Figment.Common.Calculations;
 using Figment.Common.Calculations.Parsing;
 
 namespace Figment.Test.Common.Calculations.Parsing;
 
 [TestClass]
-public sealed class Trim
+public sealed class If
 {
     [TestMethod]
-    public void TrimWithoutParameters()
+    public void IfTrueAsInteger()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM()");
+        var ast = xp.Parse("=IF(1, '1981-01-26', '2025-01-26')");
         Assert.IsNotNull(ast);
-        var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsFalse(result.IsSuccess);
-    }
 
-    [TestMethod]
-    public void TrimWithExtraParameters()
-    {
-        var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\"a\",\"b\")");
-        Assert.IsNotNull(ast);
-        var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsFalse(result.IsSuccess);
-    }
-
-    [TestMethod]
-    public void TrimWithEmptyParameter()
-    {
-        var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\"\")");
-        Assert.IsNotNull(ast);
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
         Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual(string.Empty, (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
+        Assert.AreEqual("1981-01-26", result.Result);
     }
 
     [TestMethod]
-    public void TrimWithBadParameterType()
+    public void IfFalseAsInteger()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(1.4)");
+        var ast = xp.Parse("=IF(0, '1981-01-26', '2025-01-26')");
         Assert.IsNotNull(ast);
 
         var result = ast.Evaluate(EvaluationContext.EMPTY);
-        Assert.IsFalse(result.IsSuccess);
-        Assert.AreEqual(CalculationErrorType.FormulaParse, result.ErrorType);
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsInstanceOfType<string>(result.Result);
+        Assert.AreEqual("2025-01-26", result.Result);
     }
 
     [TestMethod]
-    public void TrimLiteral()
+    public void IfTrueAsEquation()
     {
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM(\" Sean \")");
+        var ast = xp.Parse("=IF(1=1, '1981-01-26', '2025-01-26')");
         Assert.IsNotNull(ast);
+
         var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
         Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual("Sean", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
+        Assert.AreEqual("1981-01-26", result.Result);
     }
 
     [TestMethod]
-    public void CalculateLowerThingProperty()
+    public void IfFalseAsEquation()
     {
-        var sampleThing = new Thing(nameof(CalculateLowerThingProperty), " Asdf ");
         var xp = new ExpressionParser();
-        var ast = xp.Parse("=TRIM([Name])");
+        var ast = xp.Parse("=IF(1=2, '1981-01-26', '2025-01-26')");
         Assert.IsNotNull(ast);
 
-        var ctx = new EvaluationContext(sampleThing);
-        var result = ast.Evaluate(ctx);
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
         Assert.IsTrue(result.IsSuccess);
-
         Assert.IsInstanceOfType<string>(result.Result);
-        Assert.AreEqual("Asdf", (string)result.Result, StringComparer.InvariantCultureIgnoreCase);
+        Assert.AreEqual("2025-01-26", result.Result);
+    }
+
+    [TestMethod]
+    public void IfTrueAsFunction()
+    {
+        var xp = new ExpressionParser();
+        var ast = xp.Parse("=IF(TRUE(), '1981-01-26', '2025-01-26')");
+        Assert.IsNotNull(ast);
+
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsInstanceOfType<string>(result.Result);
+        Assert.AreEqual("1981-01-26", result.Result);
+    }
+
+    [TestMethod]
+    public void IfFalseAsFunction()
+    {
+        var xp = new ExpressionParser();
+        var ast = xp.Parse("=IF(FALSE(), '1981-01-26', '2025-01-26')");
+        Assert.IsNotNull(ast);
+
+        var result = ast.Evaluate(EvaluationContext.EMPTY);
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsInstanceOfType<string>(result.Result);
+        Assert.AreEqual("2025-01-26", result.Result);
     }
 }

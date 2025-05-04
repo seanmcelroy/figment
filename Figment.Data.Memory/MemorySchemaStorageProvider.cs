@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Figment.Common;
 using Figment.Common.Data;
@@ -24,7 +25,7 @@ namespace Figment.Data.Memory;
 
 public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaStorageProvider
 {
-    private static readonly Dictionary<string, Schema> SchemaCache = [];
+    private static readonly ConcurrentDictionary<string, Schema> SchemaCache = [];
 
     public Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken)
     {
@@ -32,15 +33,21 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
 
         var schemaGuid = Guid.NewGuid().ToString();
         var schema = new Schema(schemaGuid, schemaName);
-        SchemaCache.Add(schemaGuid, schema);
-        var csr = new CreateSchemaResult { Success = true, NewGuid = schemaGuid };
-        return Task.FromResult(csr);
+        var added = SchemaCache.TryAdd(schemaGuid, schema);
+        if (!added)
+        {
+            return Task.FromResult(new CreateSchemaResult { Success = false });
+        }
+
+        return Task.FromResult(new CreateSchemaResult { Success = true, NewGuid = schemaGuid });
     }
 
     public Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
-        return Task.FromResult(SchemaCache.Remove(schemaGuid));
+
+        var removed = SchemaCache.TryRemove(schemaGuid, out Schema? _);
+        return Task.FromResult(removed);
     }
 
     /// <summary>

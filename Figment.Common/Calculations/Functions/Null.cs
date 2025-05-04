@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Calculations.Parsing;
+
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
@@ -23,21 +25,17 @@ namespace Figment.Common.Calculations.Functions;
 /// </summary>
 public class Null : FunctionBase
 {
+    /// <summary>
+    /// The identifier of this function.
+    /// </summary>
+    public const string IDENTIFIER = "NULL";
+
     /// <inheritdoc/>
-#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-    public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> _)
-#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
-    {
-        if (parameters.Length != 0)
-        {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "NULL() takes no parameters");
-        }
+    public override string Identifier => IDENTIFIER;
 
-        return CalculationResult.Success(null, CalculationResultType.FunctionResult);
-    }
-
-    public override Parsing.ExpressionResult Evaluate(Parsing.EvaluationContext context, Parsing.NodeBase[] arguments)
+    /// <inheritdoc/>
+    public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
     {
-        throw new NotImplementedException();
+        return ExpressionResult.Success(default(object?));
     }
 }

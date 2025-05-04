@@ -25,21 +25,13 @@ namespace Figment.Common.Calculations.Functions;
 /// </summary>
 public class Trim : FunctionBase
 {
+    /// <summary>
+    /// The identifier of this function.
+    /// </summary>
+    public const string IDENTIFIER = "TRIM";
+
     /// <inheritdoc/>
-    public override CalculationResult Evaluate(CalculationResult[] parameters, IEnumerable<Thing> targets)
-    {
-        if (parameters.Length != 1)
-        {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "TRIM() takes one parameter");
-        }
-
-        if (!TryGetStringParameter(1, true, parameters, targets, out CalculationResult _, out string? text))
-        {
-            return CalculationResult.Error(CalculationErrorType.FormulaParse, "TRIM() takes one non-null parameter");
-        }
-
-        return CalculationResult.Success(text?.Trim() ?? string.Empty, CalculationResultType.FunctionResult);
-    }
+    public override string Identifier => IDENTIFIER;
 
     /// <inheritdoc/>
     public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
@@ -53,6 +45,11 @@ public class Trim : FunctionBase
         if (!argumentResult.IsSuccess)
         {
             return argumentResult;
+        }
+
+        if (argumentResult.Result is int || argumentResult.Result is double)
+        {
+            return ExpressionResult.Error(CalculationErrorType.FormulaParse, "TRIM() takes one string parameter, but a numeric was provided.");
         }
 
         if (!argumentResult.TryConvertString(out string? stringResult))
