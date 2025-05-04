@@ -69,6 +69,8 @@ public class PrintImportMapCommand : SchemaCancellableAsyncCommand<PrintImportMa
 
         if (importMap.FieldConfiguration != null && importMap.FieldConfiguration.Count > 0)
         {
+            importMap.EnsureMetadataFields();
+
             foreach (var fc in importMap.FieldConfiguration)
             {
                 // Is this field configuration actively mapped, that is, is the SchemaPropertyName not null?

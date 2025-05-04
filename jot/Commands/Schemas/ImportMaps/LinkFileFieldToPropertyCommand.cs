@@ -34,8 +34,21 @@ public class LinkFileFieldToPropertyCommand : SchemaCancellableAsyncCommand<Link
             return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
         }
 
+        importMap.EnsureMetadataFields();
+
         var configs = importMap.FieldConfiguration
-            .Where(fc => fc.ImportFieldName.Equals(settings.FileField, StringComparison.OrdinalIgnoreCase))
+            .Select((sif, idx) => new { SchemaImportField = sif, FieldConfigurationIndex = idx })
+            .Where(fc =>
+            {
+                // Normal file field case, like "csv header" -> "property name"
+                return (!string.IsNullOrWhiteSpace(fc.SchemaImportField.ImportFieldName)
+                    && fc.SchemaImportField.ImportFieldName.Equals(settings.FileField, StringComparison.OrdinalIgnoreCase)
+                    && (fc.SchemaImportField.SchemaPropertyName == null || !fc.SchemaImportField.SchemaPropertyName.StartsWith('$')))
+
+                // Assignment to metadata property use case, like "formula" -> $Name
+                || (!string.IsNullOrWhiteSpace(fc.SchemaImportField.SchemaPropertyName) && fc.SchemaImportField.SchemaPropertyName.StartsWith('$')
+                    && fc.SchemaImportField.SchemaPropertyName.Equals(settings.SchemaProperty, StringComparison.OrdinalIgnoreCase));
+            })
             .ToArray();
 
         if (configs.Length == 0)
@@ -47,32 +60,52 @@ public class LinkFileFieldToPropertyCommand : SchemaCancellableAsyncCommand<Link
             }
 
             AmbientErrorContext.Provider.LogWarning($"No file field named '{settings.FileField}' was found.  Creating the mapping anew.");
-            configs = [
-                new SchemaImportField(settings.SchemaProperty, settings.FileField)
-            ];
+            importMap.FieldConfiguration.Add(new SchemaImportField(settings.SchemaProperty, settings.FileField));
         }
         else if (string.IsNullOrEmpty(settings.SchemaProperty))
         {
             // Config found, but schema property is set to null.
             foreach (var config in configs)
             {
-                config.SchemaPropertyName = null;
+                importMap.FieldConfiguration[config.FieldConfigurationIndex].SchemaPropertyName = null;
             }
 
-            AmbientErrorContext.Provider.LogWarning($"Unmapping file field '{settings.FileField}'.");
+            AmbientErrorContext.Provider.LogWarning($"Unmapped file field '{settings.FileField}'.");
         }
         else
         {
-            var targetProperty = schema.Properties.FirstOrDefault(p => p.Key.Equals(settings.SchemaProperty, StringComparison.OrdinalIgnoreCase));
-            if (targetProperty.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
+            // Special case, handle metadata properties.
+            if (settings.SchemaProperty.StartsWith('$'))
             {
-                AmbientErrorContext.Provider.LogError($"No schema field named '{settings.SchemaProperty}' was found.");
-                return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
-            }
+                foreach (var config in configs)
+                {
+                    var replacementSif = new SchemaImportField(
+                        config.SchemaImportField.SchemaPropertyName,
+                        settings.FileField)
+                    {
+                        SkipRecordIfInvalid = config.SchemaImportField.SkipRecordIfInvalid,
+                        SkipRecordIfMissing = config.SchemaImportField.SkipRecordIfMissing,
+                        TransformFormula = config.SchemaImportField.TransformFormula,
+                        ValidationFormula = config.SchemaImportField.ValidationFormula,
+                    };
 
-            foreach (var config in configs)
+                    importMap.FieldConfiguration[config.FieldConfigurationIndex] = replacementSif;
+                }
+            }
+            else
             {
-                config.SchemaPropertyName = targetProperty.Key;
+                // Normal case.
+                var targetProperty = schema.Properties.FirstOrDefault(p => p.Key.Equals(settings.SchemaProperty, StringComparison.OrdinalIgnoreCase));
+                if (targetProperty.Equals(default(KeyValuePair<string, SchemaFieldBase>)))
+                {
+                    AmbientErrorContext.Provider.LogError($"No schema field named '{settings.SchemaProperty}' was found.");
+                    return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
+                }
+
+                foreach (var config in configs)
+                {
+                    importMap.FieldConfiguration[config.FieldConfigurationIndex].SchemaPropertyName = targetProperty.Key;
+                }
             }
         }
 
@@ -93,12 +126,13 @@ public class LinkFileFieldToPropertyCommand : SchemaCancellableAsyncCommand<Link
 
         if (configs.Length == 1)
         {
-            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Import map '{importMap.Name}' file field '{settings.FileField}' now saves to '{configs[0].SchemaPropertyName}' on '{schema.Name}'.");
+            AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Import map '{importMap.Name}' file field '{settings.FileField}' now saves to '{configs[0].SchemaImportField.SchemaPropertyName}' on '{schema.Name}'.");
         }
         else
         {
             AmbientErrorContext.Provider.LogDone($"{schema.Name} saved.  Import map '{importMap.Name}' file field '{settings.FileField}' now saves to {configs.Length} propertys on '{schema.Name}'.");
         }
+
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

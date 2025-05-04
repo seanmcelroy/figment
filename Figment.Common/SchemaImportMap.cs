@@ -37,21 +37,25 @@ public class SchemaImportMap(string Name, string Format)
     /// </summary>
     public void EnsureMetadataFields()
     {
-        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.Name)}") == true))
+        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.Name)}", StringComparison.OrdinalIgnoreCase) == true))
         {
             FieldConfiguration.Add(new SchemaImportField($"${nameof(Thing.Name)}", null)
             {
                 SkipRecordIfInvalid = true,
                 SkipRecordIfMissing = true,
+                TransformFormula = null,
+                ValidationFormula = null,
             });
         }
 
-        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.CreatedOn)}") == true))
+        if (!FieldConfiguration.Any(fc => fc.SchemaPropertyName?.Equals($"${nameof(Thing.CreatedOn)}", StringComparison.OrdinalIgnoreCase) == true))
         {
             FieldConfiguration.Add(new SchemaImportField($"${nameof(Thing.CreatedOn)}", null)
             {
                 SkipRecordIfInvalid = false,
                 SkipRecordIfMissing = false,
+                TransformFormula = null,
+                ValidationFormula = null,
             });
         }
     }
