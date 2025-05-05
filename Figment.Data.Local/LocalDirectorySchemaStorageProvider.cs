@@ -237,7 +237,15 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
                 AmbientErrorContext.Provider.LogError($"Unable to deserialize schema from {filePath}");
                 return null;
             }
-            return schemaDefinition.ToSchema(fileInfo);
+
+            var schema = schemaDefinition.ToSchema(fileInfo);
+            if (!Schema.IsSchemaNameValid(schema.Name))
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to load schema. Required property {nameof(Schema.Name)} is '{schema.Name}', which is not valid.");
+                return null;
+            }
+
+            return schema;
         }
         catch (JsonException je)
         {

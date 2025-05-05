@@ -24,22 +24,39 @@ namespace Figment.Common;
 /// <summary>
 /// A set of field definitions a thing can optionally implement.
 /// </summary>
-/// <param name="Guid">The immutable unique identifier of the schema.</param>
-/// <param name="Name">A display name for the schema.</param>
 /// <remarks>This class is not directly serialized to JSON, that is done by <see cref="SchemaDefinition"/>.</remarks>
 #pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-public class Schema(string Guid, string Name)
+public class Schema
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="Schema"/> class.
+    /// </summary>
+    /// <param name="guid">Globally unique identifier for the schema.</param>
+    /// <param name="name">Name of the schema.</param>
+    public Schema(string guid, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(guid, nameof(guid));
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+
+        if (!IsSchemaNameValid(name))
+        {
+            throw new ArgumentException($"Name '{name}' is not valid for schemas.", nameof(name));
+        }
+
+        Guid = guid;
+        Name = name;
+    }
+
+    /// <summary>
     /// Gets the globally unique identifier for the schema.
     /// </summary>
-    public string Guid { get; init; } = Guid;
+    public string Guid { get; init; }
 
     /// <summary>
     /// Gets or sets the name of the schema.
     /// </summary>
-    public string Name { get; set; } = Name;
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets a version of <see cref="Name"/> that is encased in brackets if the value contains spaces.
@@ -299,4 +316,32 @@ public class Schema(string Guid, string Name)
     /// </summary>
     /// <returns>The <see cref="Name"/> of this schema.</returns>
     public override string ToString() => Name;
+
+    /// <summary>
+    /// Determines whether a <see cref="Name"/> is considered valid when specified by a user.
+    /// </summary>
+    /// <param name="schemaName">The proposed schema name to analyze.</param>
+    /// <returns>A value indicating whether the schema name is valid when specified by a user.</returns>
+    public static bool IsSchemaNameValid(string schemaName)
+    {
+        // Cannot be null or empty.
+        if (string.IsNullOrWhiteSpace(schemaName))
+        {
+            return false;
+        }
+
+        // Cannot start with digit.
+        if (char.IsDigit(schemaName, 0))
+        {
+            return false;
+        }
+
+        // Cannot start with a symbol.
+        if (char.IsSymbol(schemaName, 0))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

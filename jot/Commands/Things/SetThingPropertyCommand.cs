@@ -67,6 +67,12 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
+        if (!ThingProperty.IsPropertyNameValid(propName))
+        {
+            AmbientErrorContext.Provider.LogError($"The property name '{propName}' is not valid.  Properties must not start with digits or symbols.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {

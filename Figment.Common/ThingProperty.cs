@@ -56,12 +56,60 @@ public readonly record struct ThingProperty
 
     /// <summary>
     /// Gets a value indicating whether the value of this property is valid, as
-    /// according to the associated <see cref="Schema">.
-    /// If no <see cref="Schema"> is associated, this is always true.
+    /// according to the associated <see cref="Schema">. If no <see cref="Schema">
+    /// is associated, this is always true.
     /// </summary>
     required public readonly bool Valid { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether this property is required by its associated schema.
+    /// </summary>
+    /// <remarks>
+    /// This is a derived property if the field is provided by an associated schema.
+    /// </remarks>
     required public readonly bool Required { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating the type of the field as specified by its associated schema.
+    /// </summary>
+    /// <remarks>
+    /// This is a derived property if the field is provided by an associated schema.
+    /// </remarks>
     required public readonly string? SchemaFieldType { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating the name of the associated schema, if applicable.
+    /// </summary>
+    /// <remarks>
+    /// This is a derived property if the field is provided by an associated schema.
+    /// </remarks>
     required public readonly string? SchemaName { get; init; }
+
+    /// <summary>
+    /// Determines whether a property name is considered valid when specified by a user.
+    /// </summary>
+    /// <param name="propertyName">The proposed property name to analyze.</param>
+    /// <returns>A value indicating whether the property is valid when specified by a user.</returns>
+    public static bool IsPropertyNameValid(string propertyName)
+    {
+        // Cannot be null or empty.
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            return false;
+        }
+
+        // Cannot start with digit.
+        if (char.IsDigit(propertyName, 0))
+        {
+            return false;
+        }
+
+        // Cannot start with a symbol.
+        if (char.IsSymbol(propertyName, 0))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

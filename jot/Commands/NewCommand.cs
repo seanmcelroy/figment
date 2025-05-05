@@ -24,6 +24,11 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
             AmbientErrorContext.Provider.LogError("To create a new thing, specify the type of thing and its name, like: new todo \"Call Jake\"");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
+        else if (!Schema.IsSchemaNameValid(settings.SchemaName))
+        {
+            AmbientErrorContext.Provider.LogError($"The name '{settings.SchemaName}' is not valid for a schema.  Schema names must not begin with a digit or a symbol.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
 
         var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (ssp == null)
@@ -94,6 +99,12 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
                     return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                 }
             }
+        }
+
+        if (!Thing.IsThingNameValid(settings.ThingName))
+        {
+            AmbientErrorContext.Provider.LogError($"The name '{settings.ThingName}' is not valid for a {schema.Name}.  Names must not begin with a digit or a symbol.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();

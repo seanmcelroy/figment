@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using Figment.Common.Calculations;
 using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -30,23 +29,36 @@ namespace Figment.Common;
 /// A thing is the core object of Figment, which represents an entity which implements
 /// one or more schemas.
 /// </summary>
-/// <param name="Guid">Globally unique identifier for the thing.</param>
-/// <param name="Name">Name of the thing.</param>
-#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-public class Thing(string Guid, string Name)
-#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
+public class Thing
 {
-    private const string NameIndexFileName = "_thing.names.csv";
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Thing"/> class.
+    /// </summary>
+    /// <param name="guid">Globally unique identifier for the thing.</param>
+    /// <param name="name">Name of the thing.</param>
+    public Thing(string guid, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(guid, nameof(guid));
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+
+        if (!IsThingNameValid(name))
+        {
+            throw new ArgumentException($"Name '{name}' is not valid for things.", nameof(name));
+        }
+
+        Guid = guid;
+        Name = name;
+    }
 
     /// <summary>
     /// Gets the globally unique identifier for the thing.
     /// </summary>
-    public string Guid { get; init; } = Guid;
+    public string Guid { get; init; }
 
     /// <summary>
     /// Gets or sets the name of the thing.
     /// </summary>
-    public string Name { get; set; } = Name;
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets or sets the unique identifiers of the <see cref="Schema"/> associated with this thing.
@@ -102,7 +114,7 @@ public class Thing(string Guid, string Name)
         }
 
         // Nope, so GLOBAL name searching...
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
             yield break;
@@ -495,6 +507,14 @@ public class Thing(string Guid, string Name)
         CancellationToken cancellationToken,
         Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propName, nameof(propName));
+
+        // Check if the property name is valid.
+        if (!ThingProperty.IsPropertyNameValid(propName))
+        {
+            return new ThingSetResult(false);
+        }
+
         MarkAccessed();
 
         // If prop name came in unescaped, and it should be escaped, then escape it here for comparisons.
@@ -899,4 +919,32 @@ public class Thing(string Guid, string Name)
     /// </summary>
     /// <returns>The <see cref="Name"/> of this thing.</returns>
     public override string ToString() => Name;
+
+    /// <summary>
+    /// Determines whether a <see cref="Name"/> is considered valid when specified by a user.
+    /// </summary>
+    /// <param name="thingName">The proposed thing name to analyze.</param>
+    /// <returns>A value indicating whether the thing name is valid when specified by a user.</returns>
+    public static bool IsThingNameValid(string thingName)
+    {
+        // Cannot be null or empty.
+        if (string.IsNullOrWhiteSpace(thingName))
+        {
+            return false;
+        }
+
+        // Cannot start with digit.
+        if (char.IsDigit(thingName, 0))
+        {
+            return false;
+        }
+
+        // Cannot start with a symbol.
+        if (char.IsSymbol(thingName, 0))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

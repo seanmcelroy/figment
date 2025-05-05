@@ -270,17 +270,28 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                 return null;
             }
 
-            var thingLoaded = new Thing(guid, "")
+            string thingName;
+            if (root.TryGetProperty(nameof(Thing.Name), out JsonElement nameProperty))
+            {
+                thingName = nameProperty.GetString() ?? "<UNDEFINED>";
+                if (!Thing.IsThingNameValid(thingName))
+                {
+                    AmbientErrorContext.Provider.LogError($"Unable to load thing. Required property {nameof(Thing.Name)} is '{thingName}', which is not valid.");
+                    return null;
+                }
+            }
+            else
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to load thing. Required property {nameof(Thing.Name)} was null or blank in file {filePath}");
+                return null;
+            }
+
+            var thingLoaded = new Thing(guid, thingName)
             {
                 CreatedOn = fileInfo.CreationTimeUtc,
                 LastModified = fileInfo.LastWriteTimeUtc,
                 LastAccessed = fileInfo.LastAccessTimeUtc
             };
-
-            if (root.TryGetProperty(nameof(Thing.Name), out JsonElement nameProperty))
-            {
-                thingLoaded.Name = nameProperty.GetString() ?? "<UNDEFINED>";
-            }
 
             // Legacy
             if (root.TryGetProperty("SchemaGuid", out JsonElement schemaGuidProperty))

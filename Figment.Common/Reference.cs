@@ -37,11 +37,13 @@ public readonly record struct Reference
         [Description("Unknown")]
         Unknown = 0,
 
+        /*
         /// <summary>
         /// A link between two entities.
         /// </summary>
         [Description("Link")]
         Link = 1,
+        */
 
         /// <summary>
         /// A page which represents a user interface grouping of entities.
@@ -79,7 +81,6 @@ public readonly record struct Reference
     [JsonPropertyName("Guid")]
     public readonly string Guid { get; init; }
 
-    public static implicit operator Reference(Link? l) => new() { Type = ReferenceType.Link, Guid = l?.Guid ?? string.Empty };
     public static implicit operator Reference(Schema? s) => new() { Type = ReferenceType.Schema, Guid = s?.Guid ?? string.Empty };
     public static implicit operator Reference(Thing? t) => new() { Type = ReferenceType.Thing, Guid = t?.Guid ?? string.Empty };
 }

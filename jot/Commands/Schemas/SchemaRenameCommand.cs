@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common;
 using Figment.Common.Errors;
 using Spectre.Console.Cli;
 
@@ -38,6 +39,12 @@ public class SchemaRenameCommand : SchemaCancellableAsyncCommand<SchemaRenameCom
         if (string.IsNullOrWhiteSpace(settings.NewName))
         {
             AmbientErrorContext.Provider.LogError("Name of a schema cannot be empty.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
+        if (!Schema.IsSchemaNameValid(settings.NewName))
+        {
+            AmbientErrorContext.Provider.LogError($"Name '{settings.NewName}' is not valid for schemas.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 

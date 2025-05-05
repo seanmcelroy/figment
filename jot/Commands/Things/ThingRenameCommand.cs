@@ -71,6 +71,12 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
+        if (!Thing.IsThingNameValid(settings.NewName))
+        {
+            AmbientErrorContext.Provider.LogError($"Name '{settings.NewName}' is not valid for things.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
         var oldName = thing.Name;
         thing.Name = settings.NewName.Trim();
         var saved = await thing.SaveAsync(cancellationToken);

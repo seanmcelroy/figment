@@ -120,6 +120,7 @@ internal class Program
                         map.AddCommand<NewImportMapCommand>("new")
                             .WithDescription("Creates a new import map to link file fields to schema properties");
                         map.AddCommand<PrintImportMapCommand>("view")
+                            .WithAlias("details")
                             .WithAlias("print")
                             .WithAlias("show")
                             .WithDescription("Views all fields on an import map on the schema");
@@ -157,6 +158,7 @@ internal class Program
                     schema.AddCommand<SetSchemaVersionCommand>("version")
                         .WithDescription("Sets the versioning plan for the schema");
                     schema.AddCommand<PrintSchemaCommand>("view")
+                        .WithAlias("details")
                         .WithAlias("print")
                         .WithAlias("show")
                         .WithDescription("Views all fields on a schema");
@@ -178,6 +180,7 @@ internal class Program
                         .WithAlias("val") // Have grace.
                         .WithDescription("Validates a thing is consistent with its schema");
                     thing.AddCommand<PrintThingCommand>("view")
+                        .WithAlias("details")
                         .WithAlias("print")
                         .WithAlias("show")
                         .WithDescription("Views the values of all properties on a thing");
@@ -248,6 +251,7 @@ internal class Program
                 config.AddCommand<PrintSelectedCommand>("print")
                     .WithAlias("details")
                     .WithAlias("view")
+                    .WithAlias("show")
                     .WithAlias("?")
                     .WithAlias("??")
                     .IsHidden();

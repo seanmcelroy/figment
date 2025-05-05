@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
@@ -46,6 +47,11 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
             AnsiConsole.WriteLine($"Validating schema {schema!.Name} ...");
         }
 
+        if (!Schema.IsSchemaNameValid(schema.Name))
+        {
+            AmbientErrorContext.Provider.LogWarning($"'{schema.Name}' is an invalid name for a schema.");
+        }
+
         if (string.IsNullOrWhiteSpace(schema.Description))
         {
             AmbientErrorContext.Provider.LogWarning("Description is not set, leading to an invalid JSON schema on disk.  Resolve with: describe \"Sample description\"");
@@ -70,6 +76,14 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
                 {
                     AmbientErrorContext.Provider.LogWarning($"Version is set to {schema.VersionGuid}, but unable to load it.");
                 }
+            }
+        }
+
+        foreach (var property in schema.Properties)
+        {
+            if (!ThingProperty.IsPropertyNameValid(property.Key))
+            {
+                AmbientErrorContext.Provider.LogWarning($"Property {property.Key} has an invalid name.");
             }
         }
 
