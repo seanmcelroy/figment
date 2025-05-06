@@ -38,7 +38,7 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
     /// This value is usually encoded into JSON serialized representations of
     /// schema fields and used for polymorphic type indication.
     /// </remarks>
-    public const string SCHEMA_FIELD_TYPE = "date";
+    public new const string SCHEMA_FIELD_TYPE = "date";
 
     /// <summary>
     /// Formats that this date field will attempt to parse exactly, such as RFC 3339 formats.

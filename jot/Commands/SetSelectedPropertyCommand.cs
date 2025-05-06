@@ -51,6 +51,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             DisplayName = context.Arguments.Count < 4 ? null : context.Arguments[3],
                             Culture = context.Arguments.Count < 5 ? null : context.Arguments[4],
                             Verbose = settings.Verbose,
+                            OverrideValidation = settings.OverrideValidation,
                         };
                         var cmd = new SetSchemaPropertyDisplayCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -64,6 +65,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             PropertyName = settings.PropertyName,
                             FieldType = context.Arguments.Count < 4 ? null : context.Arguments[3],
                             Verbose = settings.Verbose,
+                            OverrideValidation = settings.OverrideValidation,
                         };
                         var cmd = new SetSchemaPropertyTypeCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -84,6 +86,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             PropertyName = settings.PropertyName,
                             Required = required,
                             Verbose = settings.Verbose,
+                            OverrideValidation = settings.OverrideValidation,
                         };
                         var cmd = new SetSchemaPropertyRequiredCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -97,6 +100,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             PropertyName = settings.PropertyName,
                             Formula = context.Arguments.Count < 4 ? null : context.Arguments[3],
                             Verbose = settings.Verbose,
+                            OverrideValidation = settings.OverrideValidation,
                         };
                         var cmd = new SetSchemaPropertyFormulaCommand();
                         return await cmd.ExecuteAsync(context, subset, cancellationToken);
@@ -124,6 +128,7 @@ public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPro
                             PropertyName = settings.PropertyName,
                             Value = settings.Values?[0],
                             Verbose = settings.Verbose,
+                            OverrideValidation = settings.OverrideValidation,
                         },
                         cancellationToken);
                 }

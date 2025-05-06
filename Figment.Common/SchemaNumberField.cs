@@ -53,4 +53,24 @@ public class SchemaNumberField(string Name) : SchemaFieldBase(Name)
             ? Task.FromResult(!Required)
             : Task.FromResult(double.TryParse(value.ToString(), out double _));
     }
+
+    /// <inheritdoc/>
+    public override bool TryMassageInput(object? input, out object? output)
+    {
+        if (input != null)
+        {
+            if (input is double d)
+            {
+                output = d;
+                return true;
+            }
+            else if (double.TryParse(input.ToString(), out double d2))
+            {
+                output = d2;
+                return true;
+            }
+        }
+
+        return base.TryMassageInput(input, out output);
+    }
 }

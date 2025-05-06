@@ -50,16 +50,16 @@ public class SchemaRenameCommand : SchemaCancellableAsyncCommand<SchemaRenameCom
 
         var oldName = schema!.Name;
         schema.Name = settings.NewName.Trim();
-        var saved = await schema.SaveAsync(cancellationToken);
+        var (saved, saveMessage) = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
             if (settings.Verbose ?? false)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {saveMessage}");
             }
             else
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}': {saveMessage}");
             }
 
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;

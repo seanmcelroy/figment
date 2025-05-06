@@ -62,7 +62,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                     var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                     if (provider == null)
                     {
-                        AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+                        AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
                         return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
                     }
 
@@ -81,7 +81,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                 return (int)Globals.GLOBAL_ERROR_CODES.AMBIGUOUS_MATCH;
         }
 
-        IAsyncEnumerable<Thing> things;
+        IAsyncEnumerable<(Thing thing, int rowNumber)> things;
 
         // Try to determine file format
         var fileFormat = settings.Format;
@@ -114,15 +114,27 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        await foreach (var thing in things)
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
+        if (tsp == null)
         {
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
 
+        await foreach (var (thing, rowNumber) in things)
+        {
+            var (saved, saveMessage) = await tsp.SaveAsync(thing, cancellationToken);
+            if (!saved)
+            {
+                AmbientErrorContext.Provider.LogError($"Failed to save thing from row {rowNumber}: {saveMessage}");
+                continue;
+            }
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 
-    private static async IAsyncEnumerable<Thing> ImportCsv(
+    private static async IAsyncEnumerable<(Thing thing, int rowNumber)> ImportCsv(
         string filePath,
         Schema schema,
         SchemaImportMap[] possibleImportMaps,
@@ -199,7 +211,23 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
             var matchingCsvColumns = csv.HeaderRecord
                 .Select((hdr, idx) => new { hdr, idx })
-                .Where(x => x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
+                .Where(x =>
+                {
+                    // It could be a field name.
+                    if (!x.hdr.StartsWith('=') && x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    // Or it could be a formula.
+                    if (x.hdr.StartsWith('='))
+                    {
+                        // Are all fields part of CSV columns?
+                        return true; // for now.
+                    }
+
+                    return false;
+                })
                 .ToArray();
 
             if (fc.SkipRecordIfMissing && matchingCsvColumns.Length == 0)
@@ -224,10 +252,60 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         while (await csv.ReadAsync())
         {
             rowCount++;
+            var thingGuid = Guid.NewGuid().ToString();
+            var thing = new Thing(thingGuid, $"Imported {rowCount}");
+
+            // Process each mapped field
+            foreach (var mapping in columnIndexToPropertyName)
+            {
+                var fieldConfig = importMap.FieldConfiguration.First(fc => fc.SchemaPropertyName == mapping.Value);
+                var value = csv.GetField(mapping.Key);
+
+                // Skip if required field is missing and configured to skip
+                if (string.IsNullOrWhiteSpace(value) && fieldConfig.SkipRecordIfMissing)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Required field '{fieldConfig.ImportFieldName}' is missing.");
+                    continue;
+                }
+
+                // Try to set the property value
+                try
+                {
+                    var result = await thing.Set(mapping.Value, value, cancellationToken);
+                    if (!result.Success)
+                    {
+                        if (fieldConfig.SkipRecordIfInvalid)
+                        {
+                            AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                            continue;
+                        }
+                        else
+                        {
+                            AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                            yield break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (fieldConfig.SkipRecordIfInvalid)
+                    {
+                        AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Error setting field '{fieldConfig.ImportFieldName}': {ex.Message}");
+                        continue;
+                    }
+                    else
+                    {
+                        AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: {ex.Message}");
+                        yield break;
+                    }
+                }
+            }
+
+            // Save the thing if we have at least one property set
+            if (thing.Properties.Count > 0)
+            {
+                yield return (thing, rowCount);
+            }
         }
-
-        AmbientErrorContext.Provider.LogDebug($"Row count: {rowCount}");
-
-        yield break;
     }
 }

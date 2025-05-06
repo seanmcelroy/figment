@@ -50,6 +50,13 @@ public class SetSelectedPropertyCommandSettings : CommandSettings
     [CommandOption("-v|--verbose")]
     required public bool? Verbose { get; init; } = Program.Verbose;
 
+    /// <summary>
+    /// Gets a value indicating whether to instruct the command to ignore validation of the property name.
+    /// </summary>
+    [Description("Instructs the command to ignore validation of the property name")]
+    [CommandOption("--override-validation")]
+    required public bool OverrideValidation { get; init; } = false;
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {

@@ -54,7 +54,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -76,9 +76,9 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
         await foreach (var property in thing.GetProperties(cancellationToken))
         {
             thingProperties.Add(property);
-            if (!ThingProperty.IsPropertyNameValid(property.SimpleDisplayName))
+            if (!ThingProperty.IsPropertyNameValid(property.SimpleDisplayName, out string? message))
             {
-                AmbientErrorContext.Provider.LogWarning($"Property {property.SimpleDisplayName} has an invalid name.");
+                AmbientErrorContext.Provider.LogWarning($"Property name '{property.SimpleDisplayName}' is invalid: {message}");
             }
 
             if (!property.Valid)
@@ -99,7 +99,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
             if (provider == null)
             {
-                AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+                AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 

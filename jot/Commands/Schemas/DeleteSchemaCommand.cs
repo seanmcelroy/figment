@@ -51,7 +51,7 @@ public class DeleteSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSe
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

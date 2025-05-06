@@ -33,7 +33,7 @@ public class SchemaPhoneField(string Name) : SchemaTextField(Name)
     /// This value is usually encoded into JSON serialized representations of
     /// schema fields and used for polymorphic type indication.
     /// </remarks>
-    public const string SCHEMA_FIELD_TYPE = "phone";
+    public new const string SCHEMA_FIELD_TYPE = "phone";
 
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);

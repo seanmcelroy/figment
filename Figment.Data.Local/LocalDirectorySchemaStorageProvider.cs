@@ -274,7 +274,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         }
     }
 
-    public async Task<bool> SaveAsync(Schema schema, CancellationToken cancellationToken)
+    public async Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(schema);
 
@@ -297,16 +297,17 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             if (File.Exists(backupFileName))
                 File.Delete(backupFileName);
 
-            return true;
+            return (true, $"Schema {schema.Name} saved.");
         }
         catch (Exception je)
         {
-            AmbientErrorContext.Provider.LogException(je, $"Unable to serialize schema {schema.Guid} from {filePath}");
+            var errorMessage = $"Unable to serialize schema {schema.Guid} from {filePath}";
+            AmbientErrorContext.Provider.LogException(je, errorMessage);
 
             if (File.Exists(backupFileName))
                 File.Move(backupFileName, fileName);
 
-            return false;
+            return (false, errorMessage);
         }
     }
 

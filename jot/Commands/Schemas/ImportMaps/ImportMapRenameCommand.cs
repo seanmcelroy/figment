@@ -51,16 +51,16 @@ public class ImportMapRenameCommand : SchemaCancellableAsyncCommand<ImportMapRen
 
         var oldName = importMap!.Name;
         importMap.Name = settings.NewName.Trim();
-        var saved = await schema.SaveAsync(cancellationToken);
+        var (saved, saveMessage) = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
             if (settings.Verbose ?? false)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save import map '{importMap.Name}' on schema '{schema.Name}' ({schema.Guid}).");
+                AmbientErrorContext.Provider.LogError($"Unable to save import map '{importMap.Name}' on schema '{schema.Name}' ({schema.Guid}): {saveMessage}");
             }
             else
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save import map '{importMap.Name}' on schema '{schema.Name}'.");
+                AmbientErrorContext.Provider.LogError($"Unable to save import map '{importMap.Name}' on schema '{schema.Name}': {saveMessage}");
             }
 
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;

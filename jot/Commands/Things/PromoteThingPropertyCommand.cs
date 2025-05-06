@@ -67,7 +67,7 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -96,10 +96,10 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
 
         if (thingLoaded.SchemaGuids.Count > 0)
         {
-            var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+            var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
             if (provider == null)
             {
-                AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+                AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
@@ -130,16 +130,16 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
                     thingLoaded.TryAddProperty($"{schema.Guid}.{schemaProperty.Name}", property.Value);
                 }
 
-                var schemaSaved = await schema.SaveAsync(cancellationToken);
+                var (schemaSaved, schemaSavedMessage) = await schema.SaveAsync(cancellationToken);
                 if (!schemaSaved)
                 {
                     if (settings.Verbose ?? false)
                     {
-                        AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+                        AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {schemaSavedMessage}");
                     }
                     else
                     {
-                        AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+                        AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}': {schemaSavedMessage}");
                     }
 
                     return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
@@ -148,8 +148,8 @@ public class PromoteThingPropertyCommand : CancellableAsyncCommand<PromoteThingP
         }
 
         // But what field type?  Just assume text field for now.  Deal with anything different as a schema field type change.
-        var thingSaved = await thingLoaded.SaveAsync(cancellationToken);
-        if (!thingSaved)
+        var (saved, saveMessage) = await thingLoaded.SaveAsync(cancellationToken);
+        if (!saved)
         {
             return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
         }

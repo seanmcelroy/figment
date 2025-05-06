@@ -107,6 +107,8 @@ internal class Program
                     schema.AddCommand<SetSchemaDescriptionCommand>("describe")
                         .WithDescription("Changes the description of a schema");
                     schema.AddCommand<DeleteSchemaCommand>("delete")
+                        .WithAlias("del") // Have grace.
+                        .WithAlias("remove") // Have grace.
                         .WithDescription("Permanently deletes a schema");
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
@@ -130,7 +132,12 @@ internal class Program
                             .WithAlias("ren")
                             .WithDescription("Changes the name of an import map");
                         map.AddCommand<DeleteImportMapCommand>("delete")
+                            .WithAlias("del") // Have grace.
+                            .WithAlias("remove") // Have grace.
                             .WithDescription("Deletes an import map from the schema configuration");
+                        map.AddCommand<ValidateImportMapCommand>("validate")
+                            .WithAlias("val") // Have grace.
+                            .WithDescription("Validates an import map on the schema configuration");
                     }).WithAlias("import-maps");
                     schema.AddCommand<ListSchemaMembersCommand>("members")
                         .WithDescription("Lists all the things associated with a schema");
@@ -233,7 +240,8 @@ internal class Program
                     .IsHidden();
 
                 config.AddCommand<DeleteCommand>("delete")
-                    .WithAlias("del")
+                    .WithAlias("del") // Have grace.
+                    .WithAlias("remove") // Have grace.
                     .WithDescription("Deletes an entity by name or ID, or the selected entity if no name is provided.")
                     .IsHidden();
 
@@ -276,7 +284,7 @@ internal class Program
                     .IsHidden(); // TODO this is probably busted with the 'set' refactor
 
                 config.AddCommand<ValidateSelectedCommand>("validate")
-                    .WithAlias("val")
+                    .WithAlias("val") // Have grace.
                     .IsHidden();
             }
         });
@@ -301,14 +309,14 @@ internal class Program
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaProvider == null)
         {
-            AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

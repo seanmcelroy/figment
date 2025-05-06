@@ -420,11 +420,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
     }
 
-    public async Task<bool> SaveAsync(Thing thing, CancellationToken cancellationToken)
+    public async Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
         if (thingDir == null || !thingDir.Exists)
-            return false;
+        {
+            return (false, $"Directory '{ThingDirectoryPath}' not found.");
+        }
 
         var fileName = $"{thing.Guid}.thing.json";
         var filePath = Path.Combine(thingDir.FullName, fileName);
@@ -442,16 +444,17 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             if (File.Exists(backupFileName))
                 File.Delete(backupFileName);
 
-            return true;
+            return (true, $"{thing.Guid} saved to {filePath}.");
         }
         catch (Exception je)
         {
-            AmbientErrorContext.Provider.LogException(je, $"Unable to serialize thing {thing.Guid} from {filePath}");
+            var errorMessage = $"Unable to serialize thing {thing.Guid} from {filePath}";
+            AmbientErrorContext.Provider.LogException(je, errorMessage);
 
             if (File.Exists(backupFileName))
                 File.Move(backupFileName, fileName);
 
-            return false;
+            return (false, errorMessage);
         }
     }
 
@@ -530,7 +533,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         if (!thing.SchemaGuids.Contains(schemaGuid))
         {
             thing.SchemaGuids.Add(schemaGuid);
-            var saved = await thing.SaveAsync(cancellationToken);
+            var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
         }
@@ -573,7 +576,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         if (thing.SchemaGuids.Contains(schemaGuid))
         {
             thing.SchemaGuids.RemoveAll(new Predicate<string>(s => string.Equals(schemaGuid, s, StringComparison.InvariantCultureIgnoreCase)));
-            var saved = await thing.SaveAsync(cancellationToken);
+            var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
         }

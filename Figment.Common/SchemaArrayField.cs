@@ -205,6 +205,29 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
             return true;
         }
 
+        if (input is not string && input.GetType().IsArray)
+        {
+            var arr = new List<string>();
+            foreach (var ele in (Array)input)
+            {
+                if (ele is string s)
+                {
+                    arr.Add(s);
+                }
+                else
+                {
+                    var sx = ele?.ToString();
+                    if (!string.IsNullOrWhiteSpace(sx))
+                    {
+                        arr.Add(sx);
+                    }
+                }
+            }
+
+            output = arr.ToArray();
+            return true;
+        }
+
         var prov = input.ToString()!;
         if (prov.StartsWith('[') && prov.EndsWith(']'))
         {

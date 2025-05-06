@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Figment.Common.Calculations.Parsing;
@@ -57,6 +58,35 @@ public class ExpressionParser
         _input = input.StartsWith('=') ? input[1..] : input;
         _pos = 0;
         return ParseExpression();
+    }
+
+    /// <summary>
+    /// Attempts to convert an expression into an abstract syntax tree.
+    /// </summary>
+    /// <param name="input">The expression to parse.</param>
+    /// <param name="expression">The root of the abstract syntax tree, if the <paramref name="input"/> could be parsed.</returns>
+    /// <returns>A value indicating whether the expression could be parsed.</returns>
+    public static bool TryParse(string input, [NotNullWhen(true)] out NodeBase? expression)
+    {
+        var parser = new ExpressionParser();
+
+        if (string.IsNullOrEmpty(input))
+        {
+            expression = null;
+            return false;
+        }
+
+        try
+        {
+            expression = parser.Parse(input);
+        }
+        catch (ParseException)
+        {
+            expression = null;
+            return false;
+        }
+
+        return true;
     }
 
     private NodeBase ParseExpression()

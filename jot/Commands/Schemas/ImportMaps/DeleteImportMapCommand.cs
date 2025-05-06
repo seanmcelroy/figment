@@ -4,7 +4,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas.ImportMaps;
 
 /// <summary>
-/// Prints the details of an import map from a <see cref="Schema"/> configuration.
+/// Removes an import map from a <see cref="Schema"/> configuration.
 /// </summary>
 public class DeleteImportMapCommand : SchemaCancellableAsyncCommand<DeleteImportMapCommandSettings>
 {
@@ -32,16 +32,16 @@ public class DeleteImportMapCommand : SchemaCancellableAsyncCommand<DeleteImport
         }
 
         schema.ImportMaps.Remove(importMap);
-        var saved = await schema.SaveAsync(cancellationToken);
+        var (saved, saveMessage) = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
             if (settings.Verbose ?? false)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {saveMessage}");
             }
             else
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}': {saveMessage}");
             }
 
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;

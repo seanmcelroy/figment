@@ -30,9 +30,18 @@ namespace Figment.Common;
 public class SchemaTextField(string Name) : SchemaFieldBase(Name)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
+    public const string SCHEMA_FIELD_TYPE = "string";
+
     /// <inheritdoc/>
     [JsonPropertyName("type")]
-    public override string Type { get; } = "string";
+    public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
     /// <summary>
     /// Gets or sets the minimum number of characters the text must have, if any.

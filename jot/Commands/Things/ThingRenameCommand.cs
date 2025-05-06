@@ -54,7 +54,7 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
-            AmbientErrorContext.Provider.LogError("Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -79,10 +79,10 @@ public class ThingRenameCommand : CancellableAsyncCommand<ThingRenameCommandSett
 
         var oldName = thing.Name;
         thing.Name = settings.NewName.Trim();
-        var saved = await thing.SaveAsync(cancellationToken);
+        var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
         if (!saved)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to save thing with Guid '{thingReference.Guid}'.");
+            AmbientErrorContext.Provider.LogError($"Unable to save thing with Guid '{thingReference.Guid}': {saveMessage}");
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;
         }
 

@@ -35,7 +35,7 @@ public class InitSchemasCommand : CancellableAsyncCommand
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
         {
-            AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -62,27 +62,29 @@ public class InitSchemasCommand : CancellableAsyncCommand
 
             if (await provider.GuidExists(defaultSchema.Guid, cancellationToken))
             {
-                if (await defaultSchema.SaveAsync(cancellationToken))
+                var (saved, saveMessage) = await defaultSchema.SaveAsync(cancellationToken);
+                if (saved)
                 {
                     AmbientErrorContext.Provider.LogProgress($"Overwriting schema: {defaultSchema.Name}");
                     replaceCount++;
                 }
                 else
                 {
-                    AmbientErrorContext.Provider.LogError($"Unable to save created built-in schema '{defaultSchemaFileInfo.Name}'");
+                    AmbientErrorContext.Provider.LogError($"Unable to save created built-in schema '{defaultSchemaFileInfo.Name}': {saveMessage}");
                     errorCount++;
                 }
             }
             else
             {
-                if (await defaultSchema.SaveAsync(cancellationToken))
+                var (saved, saveMessage) = await defaultSchema.SaveAsync(cancellationToken);
+                if (saved)
                 {
                     AmbientErrorContext.Provider.LogProgress($"Initialized schema: {defaultSchema.Name}");
                     createCount++;
                 }
                 else
                 {
-                    AmbientErrorContext.Provider.LogError($"Unable to save created built-in schema '{defaultSchemaFileInfo.Name}'");
+                    AmbientErrorContext.Provider.LogError($"Unable to save created built-in schema '{defaultSchemaFileInfo.Name}': {saveMessage}");
                     errorCount++;
                 }
             }

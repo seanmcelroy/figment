@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Figment.Common;
 
 public readonly record struct ThingProperty
@@ -56,7 +58,7 @@ public readonly record struct ThingProperty
 
     /// <summary>
     /// Gets a value indicating whether the value of this property is valid, as
-    /// according to the associated <see cref="Schema">. If no <see cref="Schema">
+    /// according to the associated <see cref="Schema"/>. If no <see cref="Schema"/>
     /// is associated, this is always true.
     /// </summary>
     required public readonly bool Valid { get; init; }
@@ -89,27 +91,39 @@ public readonly record struct ThingProperty
     /// Determines whether a property name is considered valid when specified by a user.
     /// </summary>
     /// <param name="propertyName">The proposed property name to analyze.</param>
+    /// <param name="message">A validation error message that can be displayed to the end user why the name is invalid.</param>
     /// <returns>A value indicating whether the property is valid when specified by a user.</returns>
-    public static bool IsPropertyNameValid(string propertyName)
+    public static bool IsPropertyNameValid(string? propertyName, [NotNullWhen(false)] out string? message)
     {
         // Cannot be null or empty.
         if (string.IsNullOrWhiteSpace(propertyName))
         {
+            message = "Property name cannot be null or empty.";
             return false;
         }
 
         // Cannot start with digit.
         if (char.IsDigit(propertyName, 0))
         {
+            message = "Property name cannot start with a digit.";
             return false;
         }
 
         // Cannot start with a symbol.
         if (char.IsSymbol(propertyName, 0))
         {
+            message = "Property name cannot start with a symbol.";
             return false;
         }
 
+        // Cannot contain a space.
+        if (propertyName.StartsWith(' ') || propertyName.EndsWith(' ') || propertyName.Contains(' '))
+        {
+            message = "Property name cannot contain a space.";
+            return false;
+        }
+
+        message = null;
         return true;
     }
 }

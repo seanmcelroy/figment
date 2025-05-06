@@ -157,12 +157,12 @@ public class Schema
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value indicating whether or not the save attempt was successful.</returns>
-    public async Task<bool> SaveAsync(CancellationToken cancellationToken)
+    public async Task<(bool success, string? message)> SaveAsync(CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (provider == null)
         {
-            return false;
+            return (false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
         }
 
         var saved = await provider.SaveAsync(this, cancellationToken);

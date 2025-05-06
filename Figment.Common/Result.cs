@@ -16,15 +16,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Figment.Common;
 
-/// <summary>
-/// The result of the <see cref="Thing.Set"/> operation
-/// </summary>
-/// <param name="Success">True if the operation was successful, otherwise false</param>
-/// <param name="Message">An optional validation message indicating why the operation was or was not successful.</param>
-#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
-public readonly record struct ThingSetResult(bool Success, string? Message)
-#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
+public readonly record struct Result<TSuccess, TError>(TSuccess? Success, TError? Error)
 {
+    public bool IsSuccess => Success != null;
+
+    public Result<TSuccess, TError> Ok([DisallowNull] TSuccess value)
+    {
+        return new Result<TSuccess, TError>(value, default);
+    }
+
+    public Result<TSuccess, TError> Err([DisallowNull] TError error)
+    {
+        return new Result<TSuccess, TError>(default, error);
+    }
 }

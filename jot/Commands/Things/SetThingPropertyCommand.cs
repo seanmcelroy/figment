@@ -66,17 +66,16 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             AmbientErrorContext.Provider.LogError("To change a property on a thing, specify the property's name.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
-
-        if (!ThingProperty.IsPropertyNameValid(propName))
+        else if (!settings.OverrideValidation && !ThingProperty.IsPropertyNameValid(propName, out string? message))
         {
-            AmbientErrorContext.Provider.LogError($"The property name '{propName}' is not valid.  Properties must not start with digits or symbols.");
+            AmbientErrorContext.Provider.LogError($"Property name '{propName}' is invalid: {message}");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

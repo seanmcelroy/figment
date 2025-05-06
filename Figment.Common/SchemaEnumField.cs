@@ -30,9 +30,18 @@ namespace Figment.Common;
 public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Name)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
 {
+    /// <summary>
+    /// A constant string value representing schema fields of this type.
+    /// </summary>
+    /// <remarks>
+    /// This value is usually encoded into JSON serialized representations of
+    /// schema fields and used for polymorphic type indication.
+    /// </remarks>
+    public const string SCHEMA_FIELD_TYPE = "enum";
+
     /// <inheritdoc/>
     [JsonIgnore] // Only for enums.
-    public override string Type { get; } = "enum";
+    public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
     /// <summary>
     /// Gets or sets the allowable values for the enum.

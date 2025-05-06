@@ -11,4 +11,11 @@ public abstract class NodeBase
     /// <param name="context">The context given to the node to generate its result.</param>
     /// <returns>An expression result indicating whether the evaluation was functionally successful, and if so, the result.</returns>
     public abstract ExpressionResult Evaluate(EvaluationContext context);
+
+    public bool TryEvaluate(Schema schema, out ExpressionResult expressionResult)
+    {
+        var context = new EvaluationContext(schema);
+        expressionResult = Evaluate(context);
+        return expressionResult.IsSuccess;
+    }
 }

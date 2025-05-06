@@ -41,6 +41,13 @@ public class SetThingPropertyCommandSettings : ThingCommandSettings
     [CommandArgument(1, "[VALUE]")]
     public string? Value { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether to instruct the command to ignore validation of the property name.
+    /// </summary>
+    [Description("Instructs the command to ignore validation of the property name")]
+    [CommandOption("--override-validation")]
+    required public bool OverrideValidation { get; init; } = false;
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {

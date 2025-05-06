@@ -61,7 +61,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
@@ -77,19 +77,13 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
         if (schemaProvider == null)
         {
-            AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
         Dictionary<string, Schema> schemas = [];
         if (thing.SchemaGuids != null)
         {
-            if (schemaProvider == null)
-            {
-                AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
-                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
-            }
-
             foreach (var schemaGuid in thing.SchemaGuids)
             {
                 var schema = await schemaProvider.LoadAsync(schemaGuid, cancellationToken);

@@ -53,7 +53,7 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Dissocia
                     var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
                     if (provider == null)
                     {
-                        AmbientErrorContext.Provider.LogError("Unable to load schema storage provider.");
+                        AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
                         return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
                     }
 
@@ -97,7 +97,7 @@ public class DissociateSchemaFromThingCommand : CancellableAsyncCommand<Dissocia
         var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (thingProvider == null)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

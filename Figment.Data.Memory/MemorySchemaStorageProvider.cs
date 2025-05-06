@@ -74,6 +74,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         }
     }
 
+    /// <inheritdoc/>
     public Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -82,10 +83,11 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         return Task.FromResult(schema);
     }
 
-    public Task<bool> SaveAsync(Schema schema, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
     {
         SchemaCache[schema.Guid] = schema;
-        return Task.FromResult(true);
+        return Task.FromResult<(bool, string?)>((true, $"Schema {schema.Name} saved."));
     }
 
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);

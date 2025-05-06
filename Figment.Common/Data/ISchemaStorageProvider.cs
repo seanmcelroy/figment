@@ -110,5 +110,5 @@ public interface ISchemaStorageProvider
     /// <param name="schema">The <see cref="Schema"/> to save.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value indicating whether or not the save attempt was successful.</returns>
-    public Task<bool> SaveAsync(Schema schema, CancellationToken cancellationToken);
+    public Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken);
 }

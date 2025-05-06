@@ -135,10 +135,10 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return Task.FromResult(thing);
     }
 
-    public Task<bool> SaveAsync(Thing thing, CancellationToken cancellationToken)
+    public Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         ThingCache[thing.Guid] = thing;
-        return Task.FromResult(true);
+        return Task.FromResult<(bool, string?)>((true, $"Thing {thing.Name} saved."));
     }
 
     public async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
@@ -177,7 +177,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         if (!thing.SchemaGuids.Contains(schemaGuid))
         {
             thing.SchemaGuids.Add(schemaGuid);
-            var saved = await thing.SaveAsync(cancellationToken);
+            var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
         }
@@ -202,7 +202,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         if (thing.SchemaGuids.Contains(schemaGuid))
         {
             thing.SchemaGuids.RemoveAll(new Predicate<string>(s => string.Equals(schemaGuid, s, StringComparison.InvariantCultureIgnoreCase)));
-            var saved = await thing.SaveAsync(cancellationToken);
+            var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
         }

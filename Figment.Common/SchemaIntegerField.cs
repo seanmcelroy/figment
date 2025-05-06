@@ -53,4 +53,24 @@ public class SchemaIntegerField(string Name) : SchemaFieldBase(Name)
             ? Task.FromResult(!Required)
             : Task.FromResult(long.TryParse(value.ToString(), out long _));
     }
+
+    /// <inheritdoc/>
+    public override bool TryMassageInput(object? input, out object? output)
+    {
+        if (input != null)
+        {
+            if (input is long l)
+            {
+                output = l;
+                return true;
+            }
+            else if (long.TryParse(input.ToString(), out long l2))
+            {
+                output = l2;
+                return true;
+            }
+        }
+
+        return base.TryMassageInput(input, out output);
+    }
 }

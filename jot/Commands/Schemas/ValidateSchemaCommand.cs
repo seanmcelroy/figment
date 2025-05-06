@@ -67,7 +67,7 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
             var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
             if (provider == null)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to load thing storage provider.");
+                AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             }
             else
             {
@@ -81,9 +81,9 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
 
         foreach (var property in schema.Properties)
         {
-            if (!ThingProperty.IsPropertyNameValid(property.Key))
+            if (!ThingProperty.IsPropertyNameValid(property.Key, out string? message))
             {
-                AmbientErrorContext.Provider.LogWarning($"Property {property.Key} has an invalid name.");
+                AmbientErrorContext.Provider.LogWarning($"Property name '{property.Key}' is invalid: {message}");
             }
         }
 

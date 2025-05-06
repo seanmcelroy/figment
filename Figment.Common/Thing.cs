@@ -510,9 +510,9 @@ public class Thing
         ArgumentException.ThrowIfNullOrWhiteSpace(propName, nameof(propName));
 
         // Check if the property name is valid.
-        if (!ThingProperty.IsPropertyNameValid(propName))
+        if (!ThingProperty.IsPropertyNameValid(propName, out string? message))
         {
-            return new ThingSetResult(false);
+            return new ThingSetResult(false, message);
         }
 
         MarkAccessed();
@@ -552,7 +552,7 @@ public class Thing
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                return new ThingSetResult(false);
+                return new ThingSetResult(false, "Operation canceled.");
             }
 
             foreach (var schemaProperty in schema.Properties)
@@ -634,13 +634,13 @@ public class Thing
         var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
-            return new ThingSetResult(false);
+            return new ThingSetResult(false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
         }
 
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
-            return new ThingSetResult(false);
+            return new ThingSetResult(false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
         }
 
         switch (candidateProperties.Count)
@@ -663,14 +663,14 @@ public class Thing
                         if (propValue == null || string.IsNullOrWhiteSpace(propValue))
                         {
                             AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
-                            return new ThingSetResult(false);
+                            return new ThingSetResult(false, $"Value of {nameof(Name)} cannot be empty.");
                         }
 
                         Name = propValue;
                     }
 
-                    var saved = await SaveAsync(cancellationToken);
-                    return new ThingSetResult(saved);
+                    var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                    return new ThingSetResult(saved, saveMessage);
                 }
 
             case 1:
@@ -689,8 +689,8 @@ public class Thing
                         AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
                     }
 
-                    var saved = await SaveAsync(cancellationToken);
-                    return new ThingSetResult(saved);
+                    var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                    return new ThingSetResult(saved, saveMessage);
                 }
 
                 if (!candidateProperties[0].Valid)
@@ -710,8 +710,8 @@ public class Thing
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
                             AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
-                            var saved = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved);
+                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved, saveMessage);
                         }
                         else if (disambig.Length > 1)
                         {
@@ -720,8 +720,8 @@ public class Thing
                                 disambig);
 
                             Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            var saved = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved);
+                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved, saveMessage);
                         }
                         else
                         {
@@ -735,8 +735,8 @@ public class Thing
                             }
 
                             AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                            var saved = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved);
+                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved, saveMessage);
                         }
                     }
                     else if (chooserHandler != null
@@ -756,8 +756,8 @@ public class Thing
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
                             AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
-                            var saved = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved);
+                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved, saveMessage);
                         }
                         else if (disambig.Length > 1)
                         {
@@ -766,8 +766,8 @@ public class Thing
                                 disambig);
 
                             Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            var saved = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved);
+                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved, saveMessage);
                         }
                         else
                         {
@@ -781,16 +781,16 @@ public class Thing
                             }
 
                             AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                            var saved = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved);
+                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                            return new ThingSetResult(saved, saveMessage);
                         }
                     }
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
                         AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                        var saved = await SaveAsync(cancellationToken);
-                        return new ThingSetResult(saved);
+                        var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                        return new ThingSetResult(saved, saveMessage);
                     }
                 }
 
@@ -801,7 +801,7 @@ public class Thing
                         if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
                         {
                             AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
-                            return new ThingSetResult(false);
+                            return new ThingSetResult(false, $"Value of {nameof(Name)} cannot be empty.");
                         }
 
                         Name = massagedPropValue.ToString()!;
@@ -811,14 +811,15 @@ public class Thing
                         Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
                     }
 
-                    var saved = await SaveAsync(cancellationToken);
-                    return new ThingSetResult(saved);
+                    var (saved, saveMessage) = await SaveAsync(cancellationToken);
+                    return new ThingSetResult(saved, saveMessage);
                 }
 
             default:
                 // Ambiguous
-                AmbientErrorContext.Provider.LogError($"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.");
-                return new ThingSetResult(false);
+                var errorMessage = $"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.";
+                AmbientErrorContext.Provider.LogError(errorMessage);
+                return new ThingSetResult(false, errorMessage);
         }
     }
 
@@ -827,12 +828,12 @@ public class Thing
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value indicating whether or not the save attempt was successful.</returns>
-    public async Task<bool> SaveAsync(CancellationToken cancellationToken)
+    public async Task<(bool success, string? message)> SaveAsync(CancellationToken cancellationToken)
     {
         var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (provider == null)
         {
-            return false;
+            return (false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
         }
 
         var saved = await provider.SaveAsync(this, cancellationToken);

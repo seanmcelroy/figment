@@ -96,5 +96,5 @@ public interface IThingStorageProvider
     /// <param name="thing">The <see cref="Thing"/> to save.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value indicating whether or not the save attempt was successful.</returns>
-    public Task<bool> SaveAsync(Thing thing, CancellationToken cancellationToken);
+    public Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken);
 }

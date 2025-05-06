@@ -42,6 +42,11 @@ public class SetSchemaPropertyFormulaCommand : SchemaCancellableAsyncCommand<Set
             AmbientErrorContext.Provider.LogError("To change a property on a schema, specify the property's name.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
+        else if (!settings.OverrideValidation && !ThingProperty.IsPropertyNameValid(propName, out string? message))
+        {
+            AmbientErrorContext.Provider.LogError($"Property name '{propName}' is invalid: {message}");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
 
         var possibleProperties = schema!.Properties
             .Where(p => string.Equals(p.Key, settings.PropertyName, StringComparison.CurrentCultureIgnoreCase))
@@ -71,16 +76,16 @@ public class SetSchemaPropertyFormulaCommand : SchemaCancellableAsyncCommand<Set
         scf.Formula = settings.Formula;
         schema.Properties[propName] = scf;
 
-        var saved = await schema.SaveAsync(cancellationToken);
+        var (saved, saveMessage) = await schema.SaveAsync(cancellationToken);
         if (!saved)
         {
             if (settings.Verbose ?? false)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}).");
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {saveMessage}");
             }
             else
             {
-                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}'.");
+                AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}': {saveMessage}");
             }
 
             return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_SAVE_ERROR;

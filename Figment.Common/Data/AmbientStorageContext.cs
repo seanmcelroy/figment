@@ -23,6 +23,16 @@ namespace Figment.Common.Data;
 /// </summary>
 public static class AmbientStorageContext
 {
+    /// <summary>
+    /// A text resource for displaying an error to the user when the <see cref="ISchemaStorageProvider"/> cannot be loaded from the <see cref="IStorageProvider"/>.
+    /// </summary>
+    public const string RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER = "Unable to load schema storage provider.";
+
+    /// <summary>
+    /// A text resource for displaying an error to the user when the <see cref="IThingStorageProvider"/> cannot be loaded from the <see cref="IStorageProvider"/>.
+    /// </summary>
+    public const string RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER = "Unable to load thing storage provider.";
+
     private static readonly AsyncLocal<IStorageProvider> _StorageProvider = new();
 
     /// <summary>
