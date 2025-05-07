@@ -24,6 +24,10 @@ using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
+/// <summary>
+/// A <see cref="Thing"/> storage provider implementation that stores objects in files on a local file system.
+/// </summary>
+/// <param name="ThingDirectoryPath">The path to the <see cref="Thing"/> subdirectory under the root of the file system database.</param>
 public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : IThingStorageProvider
 {
     private const string NameIndexFileName = $"_thing.names.csv";
@@ -158,6 +162,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
     }
 
+    /// <inheritdoc/>
     public async IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -198,6 +203,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
     }
 
+    /// <inheritdoc/>
     public Task<bool> GuidExists(string thingGuid, CancellationToken _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
@@ -224,6 +230,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         return Task.FromResult(true);
     }
 
+    /// <inheritdoc/>
     public async Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
@@ -420,6 +427,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
     }
 
+    /// <inheritdoc/>
     public async Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
@@ -458,6 +466,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
     }
 
+    /// <inheritdoc/>
     public async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
@@ -553,6 +562,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         return (true, thing);
     }
 
+    /// <inheritdoc/>
     public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
@@ -600,6 +610,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         return (true, thing);
     }
 
+    /// <inheritdoc/>
     public async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);

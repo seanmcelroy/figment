@@ -53,4 +53,16 @@ public class FunctionNode(string FunctionName, List<NodeBase> Arguments) : NodeB
 
         return FunctionRegistry.Invoke(FunctionName, context, nodeArgs);
     }
+
+    /// <inheritdoc/>
+    protected internal override IEnumerable<string> WalkFieldNamesInternal()
+    {
+        foreach (var node in Arguments)
+        {
+            foreach (var x in node.WalkFieldNamesInternal())
+            {
+                yield return x;
+            }
+        }
+    }
 }

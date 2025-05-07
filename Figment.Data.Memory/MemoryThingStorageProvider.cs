@@ -22,6 +22,9 @@ using Figment.Common.Data;
 
 namespace Figment.Data.Memory;
 
+/// <summary>
+/// A <see cref="Thing"/> storage provider implementation that stores objects in memory.
+/// </summary>
 public class MemoryThingStorageProvider : IThingStorageProvider
 {
     private static readonly Dictionary<string, Thing> ThingCache = [];
@@ -61,6 +64,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+    /// <inheritdoc/>
     public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
@@ -107,6 +111,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         }
     }
 
+    /// <inheritdoc/>
     public async IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -121,12 +126,14 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         }
     }
 
+    /// <inheritdoc/>
     public Task<bool> GuidExists(string thingGuid, CancellationToken _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
         return Task.FromResult(ThingCache.ContainsKey(thingGuid));
     }
 
+    /// <inheritdoc/>
     public Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
@@ -135,12 +142,14 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return Task.FromResult(thing);
     }
 
+    /// <inheritdoc/>
     public Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         ThingCache[thing.Guid] = thing;
         return Task.FromResult<(bool, string?)>((true, $"Thing {thing.Name} saved."));
     }
 
+    /// <inheritdoc/>
     public async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
@@ -160,6 +169,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return await LoadAsync(thingGuid, cancellationToken);
     }
 
+    /// <inheritdoc/>
     public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
@@ -169,7 +179,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
     }
 
-    private async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
+    private static async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(thing);
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -177,7 +187,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         if (!thing.SchemaGuids.Contains(schemaGuid))
         {
             thing.SchemaGuids.Add(schemaGuid);
-            var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
+            var (saved, _) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
         }
@@ -185,6 +195,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return (true, thing);
     }
 
+    /// <inheritdoc/>
     public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
@@ -210,8 +221,10 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return (true, thing);
     }
 
+    /// <inheritdoc/>
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
 
+    /// <inheritdoc/>
     public Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);

@@ -38,6 +38,11 @@ public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
     public static readonly ExpressionResult FALSE = Success(false);
 
     /// <summary>
+    /// Null.
+    /// </summary>
+    public static readonly ExpressionResult NULL = Success(default);
+
+    /// <summary>
     /// Gets a value indicating whether the evaluation completed without throwing an error.
     /// </summary>
     required public bool IsSuccess { get; init; }
@@ -67,13 +72,32 @@ public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
     /// <param name="result">The resulting value that was successfully evaluated.</param>
     /// <returns>An <see cref="ExpressionResult"/> that sets <see cref="IsSuccess"/> to true and the <see cref="Result"/> to the <paramref name="result"/> value.</returns>
     public static ExpressionResult Success(object? result)
-        => new()
+    {
+        if (result == null)
+        {
+            return NULL;
+        }
+
+        if (result is ExpressionResult er)
+        {
+            // Do it this way so we don't ever wrap Success(Success())
+            return new()
+            {
+                IsSuccess = true,
+                ErrorType = CalculationErrorType.Success,
+                Message = er.Message,
+                Result = er.Result,
+            };
+        }
+
+        return new()
         {
             IsSuccess = true,
             ErrorType = CalculationErrorType.Success,
             Message = null,
             Result = result,
         };
+    }
 
     /// <summary>
     /// A helper method that provides an error representation of a <see cref="ExpressionResult"/>.
@@ -97,6 +121,7 @@ public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
             return false;
         }
 
+        // Null never equals null.
         if (Result == null || other.Result == null)
         {
             return false;

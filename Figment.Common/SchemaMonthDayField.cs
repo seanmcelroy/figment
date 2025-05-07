@@ -77,12 +77,29 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
             return true;
         }
 
-        if (value is int i && IsValid(i))
+        if (value is int i && i > 0 && IsValid(i))
         {
             return true;
         }
 
-        if (value is ulong l && IsValid((int)l))
+        if (value is uint ui
+            && ui <= 1231
+            && IsValid((int)ui))
+        {
+            return true;
+        }
+
+        if (value is long l
+            && l > 0
+            && l <= 1231
+            && IsValid((int)l))
+        {
+            return true;
+        }
+
+        if (value is ulong ul
+            && ul <= 1231
+            && IsValid((int)ul))
         {
             return true;
         }

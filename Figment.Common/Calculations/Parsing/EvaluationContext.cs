@@ -146,6 +146,61 @@ public readonly record struct EvaluationContext
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluationContext"/> class.
+    /// </summary>
+    /// <param name="arguments">The arguments to set in the context.</param>
+    public EvaluationContext(IEnumerable<KeyValuePair<string, ExpressionResult>> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        RowData = arguments.ToDictionary(k => k.Key.ToLowerInvariant(), v => v.Value);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluationContext"/> class.
+    /// </summary>
+    /// <param name="arguments">The arguments to set in the context.</param>
+    public EvaluationContext(IEnumerable<KeyValuePair<string, object?>> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        RowData = arguments.ToDictionary(k => k.Key.ToLowerInvariant(), v => ExpressionResult.Success(v.Value));
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluationContext"/> class.
+    /// </summary>
+    /// <param name="arguments">The arguments to set in the context.</param>
+    public EvaluationContext(IEnumerable<KeyValuePair<string, string?>> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        RowData = arguments.ToDictionary(k => k.Key.ToLowerInvariant(), v => ExpressionResult.Success(v.Value));
+    }
+
+    /// <summary>
+    /// Attempts to add the specified field name and expression to the context dictionary.
+    /// </summary>
+    /// <param name="name">The name of the row data to add.</param>
+    /// <param name="result">The expression result to add to the context.</param>
+    /// <returns>true if the key/value pair was added to the dictionary successfully; otherwise, false.</returns>
+    public bool TryAddField(string name, ExpressionResult result)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return RowData.TryAdd(name.ToLowerInvariant(), result);
+    }
+
+    /// <summary>
+    /// Attempts to add the specified field name and literal value to the context dictionary.
+    /// </summary>
+    /// <typeparam name="T">The type of the field value to add to the context.</typeparam>
+    /// <param name="name">The name of the row data to add.</param>
+    /// <param name="result">The expression result to add to the context.</param>
+    /// <returns>true if the key/value pair was added to the dictionary successfully; otherwise, false.</returns>
+    public bool TryAddField<T>(string name, T result)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return RowData.TryAdd(name.ToLowerInvariant(), ExpressionResult.Success(result));
+    }
+
+    /// <summary>
     /// Retrieves a value from the context map.
     /// </summary>
     /// <param name="name">Name of the value to retrieve from the context.</param>
@@ -153,7 +208,6 @@ public readonly record struct EvaluationContext
     public ExpressionResult GetField(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-
         if (!RowData.TryGetValue(name.ToLowerInvariant(), out var val))
         {
             return ExpressionResult.Error(CalculationErrorType.FormulaParse, $"Field '{name}' not found");

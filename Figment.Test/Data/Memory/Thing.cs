@@ -14,12 +14,6 @@ public sealed class Thing
         _ = AmbientStorageContext.StorageProvider.InitializeAsync(CancellationToken.None).Result;
     }
 
-    [TestCleanup]
-    public void Cleanup()
-    {
-        AmbientStorageContext.StorageProvider = null;
-    }
-
     [TestMethod]
     public async Task ThingCrud()
     {

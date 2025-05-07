@@ -20,6 +20,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using CsvHelper;
 using Figment.Common;
+using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
@@ -32,6 +33,8 @@ namespace jot.Commands.Schemas;
 /// </summary>
 public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThingsCommandSettings>
 {
+    private static readonly string TOMBSTONE = "$$$|🪦|TOMBSTONE";
+
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ImportSchemaThingsCommandSettings settings, CancellationToken cancellationToken)
     {
@@ -122,15 +125,69 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
+        var importedThings = new List<(Thing thing, int rowNumber)>();
         await foreach (var (thing, rowNumber) in things)
         {
+            importedThings.Add((thing, rowNumber));
+        }
+
+        // Are there duplicates in the import batch?  We can test this without touching the current data store.
+        var dupes = importedThings
+            .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+            .Where(i => i.Count() > 1)
+            .Select(i => new { name = i.Key, count = i.Count(), rows = i.Select(r => $"{r.rowNumber}").Aggregate((c, n) => $"{c},{n}") });
+
+        if (dupes.Any())
+        {
+            foreach (var dupe in dupes)
+            {
+                AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates for '{dupe.name}' on rows {dupe.rows}.");
+            }
+
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+        }
+
+        // Now check dupes against the data store.
+        var savedCount = 0;
+        await foreach (var (thing, rowNumber) in things)
+        {
+            // Before we save it, is there already an object with the same name?
+            var existing = await tsp.FindByNameAsync(thing.Name, cancellationToken);
+            if (existing != Reference.EMPTY)
+            {
+                AmbientErrorContext.Provider.LogError($"Failed to save thing from row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')");
+                continue;
+            }
+
             var (saved, saveMessage) = await tsp.SaveAsync(thing, cancellationToken);
             if (!saved)
             {
                 AmbientErrorContext.Provider.LogError($"Failed to save thing from row {rowNumber}: {saveMessage}");
                 continue;
             }
+            else
+            {
+                savedCount++;
+            }
         }
+
+        AmbientErrorContext.Provider.LogDone($"Imported {savedCount} rows from '{settings.FilePath}'.");
+
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("purple"))
+            .StartAsync("Rebuilding thing indexes...", async ctx =>
+            {
+                var success = await tsp.RebuildIndexes(cancellationToken);
+                if (success)
+                {
+                    ctx.Status("Success!");
+                }
+                else
+                {
+                    ctx.Status("Failed!");
+                }
+            });
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
@@ -201,53 +258,98 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         }
 
         // Build index map
-        Dictionary<int, string> columnIndexToPropertyName = [];
+        var propertyNamesHandler = new Dictionary<string, Func<CsvReader, object?>>();
         foreach (var fc in importMap.FieldConfiguration)
         {
-            if (string.IsNullOrWhiteSpace(fc.SchemaPropertyName))
+            if (string.IsNullOrWhiteSpace(fc.ImportFieldName)
+                || string.IsNullOrWhiteSpace(fc.SchemaPropertyName))
             {
                 // Field is unmapped, so skip.
                 continue;
             }
 
-            var matchingCsvColumns = csv.HeaderRecord
-                .Select((hdr, idx) => new { hdr, idx })
-                .Where(x =>
+            // If the import field name is a formula, parse it now as it might have multiple field references.
+#pragma warning disable SA1011 // Closing square brackets should be spaced correctly
+            string[]? formulaFieldReferences = null;
+#pragma warning restore SA1011 // Closing square brackets should be spaced correctly
+            if (fc.ImportFieldName.StartsWith('='))
+            {
+                // This property matches to a formula, which may reference zero to many CSV header columns.
+                if (!ExpressionParser.TryParse(fc.ImportFieldName, out NodeBase? nb))
                 {
-                    // It could be a field name.
-                    if (!x.hdr.StartsWith('=') && x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
+                    AmbientErrorContext.Provider.LogError($"Import map '{importMap.Name}' contains mapping '{fc.ImportFieldName}' which starts with an equals sign, but it could not be parsed as a formula.  This file will not be imported.");
+                    yield break;
+                }
+
+                formulaFieldReferences = [.. nb.WalkFieldNames()];
+
+                // Build argument parsers
+                var argHandlers = new Dictionary<string, Func<CsvReader, string?>>();
+                foreach (var formFieldRef in formulaFieldReferences)
+                {
+                    var matchingCsvColumns = csv.HeaderRecord
+                        .Select((hdr, idx) => new { hdr, idx })
+                        .Where(x => x.hdr.Equals(formFieldRef, StringComparison.InvariantCultureIgnoreCase))
+                        .ToArray();
+
+                    if (matchingCsvColumns.Length == 0)
                     {
-                        return true;
+                        if (fc.SkipRecordIfMissing)
+                        {
+                            AmbientErrorContext.Provider.LogError($"File column has formula '{fc.ImportFieldName}' and references field '{formFieldRef}' which was not found.  This property {fc.SchemaPropertyName} is marked as required (SkipRecordIfMissing=true).  This file will not be imported.");
+                            yield break;
+                        }
+
+                        argHandlers.Add(formFieldRef, cr => null);
+                    }
+                    else if (matchingCsvColumns.Length > 1)
+                    {
+                        AmbientErrorContext.Provider.LogError($"File column has formula '{fc.ImportFieldName}' and references field '{formFieldRef}' which appears multiple times in the CSV file.  This file will not be imported.");
+                        yield break;
+                    }
+                    else
+                    {
+                        argHandlers.Add(formFieldRef, cr => cr.GetField(matchingCsvColumns[0].idx));
+                    }
+                }
+
+                var bespokeHandler = new Func<CsvReader, object?>(csv =>
+                {
+                    var args = argHandlers.ToDictionary(k => k.Key, v => v.Value.Invoke(csv));
+                    var bespokeContext = new EvaluationContext(args);
+                    var expressionResult = nb.Evaluate(bespokeContext);
+                    if (expressionResult.IsSuccess)
+                    {
+                        return expressionResult.Result;
                     }
 
-                    // Or it could be a formula.
-                    if (x.hdr.StartsWith('='))
-                    {
-                        // Are all fields part of CSV columns?
-                        return true; // for now.
-                    }
-
-                    return false;
-                })
-                .ToArray();
-
-            if (fc.SkipRecordIfMissing && matchingCsvColumns.Length == 0)
-            {
-                AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' is marked as required (SkipRecordIfMissing) but is missing in the CSV header.  This file will not be imported.");
-                yield break;
+                    return TOMBSTONE;
+                });
+                propertyNamesHandler.Add(fc.SchemaPropertyName, bespokeHandler);
             }
-
-            if (matchingCsvColumns.Length > 1)
+            else
             {
-                AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' appears multiple times in the CSV file.  This file will not be imported.");
-                yield break;
-            }
+                // This property should match a single CSV header column.
+                var matchingCsvColumns = csv.HeaderRecord
+                    .Select((hdr, idx) => new { hdr, idx })
+                    .Where(x => x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
+                    .ToArray();
 
-            columnIndexToPropertyName.Add(matchingCsvColumns[0].idx, fc.SchemaPropertyName);
+                if (fc.SkipRecordIfMissing && matchingCsvColumns.Length == 0)
+                {
+                    AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' is marked as required (SkipRecordIfMissing=true) but is missing in the CSV header.  This file will not be imported.");
+                    yield break;
+                }
+
+                if (matchingCsvColumns.Length > 1)
+                {
+                    AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' appears multiple times in the CSV file.  This file will not be imported.");
+                    yield break;
+                }
+
+                propertyNamesHandler.Add(fc.SchemaPropertyName, new Func<CsvReader, object?>(csv => csv.GetField(matchingCsvColumns[0].idx)));
+            }
         }
-
-        // Dump headers
-        AmbientErrorContext.Provider.LogDebug($"CsvToProps: {columnIndexToPropertyName.Select(x => $"({x.Key}:{x.Value})").Aggregate((c, n) => $"{c},{n}")}");
 
         var rowCount = 0;
         while (await csv.ReadAsync())
@@ -256,34 +358,69 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             var thingGuid = Guid.NewGuid().ToString();
             var thing = new Thing(thingGuid, $"Imported {rowCount}");
 
-            // Process each mapped field
-            foreach (var mapping in columnIndexToPropertyName)
+            foreach (var (propertyName, handler) in propertyNamesHandler)
             {
-                var fieldConfig = importMap.FieldConfiguration.First(fc => fc.SchemaPropertyName == mapping.Value);
-                var value = csv.GetField(mapping.Key);
-
-                // Skip if required field is missing and configured to skip
-                if (string.IsNullOrWhiteSpace(value) && fieldConfig.SkipRecordIfMissing)
+                var fieldConfig = importMap.FieldConfiguration.First(fc => fc.SchemaPropertyName != null && fc.SchemaPropertyName.Equals(propertyName));
+                var value = handler.Invoke(csv);
+                if (TOMBSTONE.Equals(value))
                 {
-                    AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Required field '{fieldConfig.ImportFieldName}' is missing.");
-                    continue;
+                    if (fieldConfig.SkipRecordIfInvalid)
+                    {
+                        AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value for field '{fieldConfig.ImportFieldName}'->{fieldConfig.SchemaPropertyName}.");
+                        continue;
+                    }
+                    else
+                    {
+                        AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value for field mapping '{fieldConfig.ImportFieldName}'->{fieldConfig.SchemaPropertyName}.");
+                        yield break;
+                    }
                 }
 
                 // Try to set the property value
                 try
                 {
-                    var result = await thing.Set(mapping.Value, value, cancellationToken);
-                    if (!result.Success)
+                    string? inputValue;
+                    if (value == null)
                     {
-                        if (fieldConfig.SkipRecordIfInvalid)
+                        inputValue = null;
+                    }
+                    else if (value is string sv)
+                    {
+                        inputValue = sv;
+                    }
+                    else
+                    {
+                        inputValue = value.ToString();
+                    }
+
+                    // Handle reserved values.
+                    if (propertyName.Equals("$Name"))
+                    {
+                        if (!string.IsNullOrWhiteSpace(inputValue))
                         {
-                            AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
-                            continue;
+                            thing.Name = inputValue;
                         }
                         else
                         {
-                            AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                            AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for the name of the {schema.Name} instance.");
                             yield break;
+                        }
+                    }
+                    else
+                    {
+                        var tsr = await thing.Set(propertyName, inputValue, cancellationToken);
+                        if (!tsr.Success)
+                        {
+                            if (fieldConfig.SkipRecordIfInvalid)
+                            {
+                                AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                                continue;
+                            }
+                            else
+                            {
+                                AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                                yield break;
+                            }
                         }
                     }
                 }
@@ -303,7 +440,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             }
 
             // Save the thing if we have at least one property set
-            if (thing.Properties.Count > 0)
+            if (thing.IsDirty)
             {
                 yield return (thing, rowCount);
             }

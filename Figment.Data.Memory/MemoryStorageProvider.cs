@@ -20,6 +20,9 @@ using Figment.Common.Data;
 
 namespace Figment.Data.Memory;
 
+/// <summary>
+/// A storage provider implementation that stores objects in memory.
+/// </summary>
 public class MemoryStorageProvider() : IStorageProvider
 {
     /// <inheritdoc/>

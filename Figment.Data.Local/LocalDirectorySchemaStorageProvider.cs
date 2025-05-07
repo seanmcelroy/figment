@@ -25,6 +25,11 @@ using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
+/// <summary>
+/// A <see cref="Schema"/> storage provider implementation that stores objects in files on a local file system.
+/// </summary>
+/// <param name="SchemaDirectoryPath">The path to the <see cref="Schema"/> subdirectory under the root of the file system database.</param>
+/// <param name="ThingDirectoryPath">The path to the <see cref="Thing"/> subdirectory under the root of the file system database.</param>
 public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, string ThingDirectoryPath) : SchemaStorageProviderBase, ISchemaStorageProvider
 {
     private const string NameIndexFileName = $"_schema.names.csv";

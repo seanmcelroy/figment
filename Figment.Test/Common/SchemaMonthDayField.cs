@@ -57,6 +57,21 @@ public sealed class SchemaMonthDayField
         Assert.IsTrue(await f.IsValidAsync(0126, CancellationToken.None), "January 26 is a valid month+day");
 
         f.Required = true;
+        Assert.IsFalse(await f.IsValidAsync(0, CancellationToken.None), "0 is not a valid month+day");
+
+        f.Required = true;
+        Assert.IsFalse(await f.IsValidAsync(int.MaxValue, CancellationToken.None), "int.MaxValue is not a valid month+day");
+
+        f.Required = true;
+        Assert.IsTrue(await f.IsValidAsync(0126U, CancellationToken.None), "January 26 is a valid month+day");
+
+        f.Required = true;
+        Assert.IsTrue(await f.IsValidAsync(0126L, CancellationToken.None), "January 26 is a valid month+day");
+
+        f.Required = true;
+        Assert.IsTrue(await f.IsValidAsync(0126UL, CancellationToken.None), "January 26 is a valid month+day");
+
+        f.Required = true;
         Assert.IsFalse(await f.IsValidAsync(0200, CancellationToken.None), "Days cannot be zero in a month+day");
         Assert.IsFalse(await f.IsValidAsync(0231, CancellationToken.None), "February 31 is not a valid month+day");
         Assert.IsFalse(await f.IsValidAsync(0001, CancellationToken.None), "Months cannot be zero in a month+day");

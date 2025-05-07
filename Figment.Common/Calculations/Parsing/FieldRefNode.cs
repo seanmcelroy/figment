@@ -29,4 +29,10 @@ public class FieldRefNode(string FieldName) : NodeBase
     /// <inheritdoc/>
     public override ExpressionResult Evaluate(EvaluationContext context) =>
         context.GetField(FieldName);
+
+    /// <inheritdoc/>
+    protected internal override IEnumerable<string> WalkFieldNamesInternal()
+    {
+        yield return FieldName;
+    }
 }

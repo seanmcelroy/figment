@@ -22,10 +22,15 @@ using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
+/// <summary>
+/// A storage provider implementation that stores objects in files on a local file system.
+/// </summary>
+/// <param name="LocalDatabasePath">The path to the root of the file system database.</param>
 public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageProvider
 {
     private string DB_PATH { get; init; } = LocalDatabasePath;
 
+    /// <inheritdoc/>
     public ISchemaStorageProvider? GetSchemaStorageProvider()
     {
         var schemaDir = Path.Combine(DB_PATH, "schemas");
@@ -45,6 +50,7 @@ public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageP
         return new LocalDirectorySchemaStorageProvider(schemaDir, thingDir);
     }
 
+    /// <inheritdoc/>
     public IThingStorageProvider? GetThingStorageProvider()
     {
         var thingDir = Path.Combine(DB_PATH, "things");
@@ -55,6 +61,7 @@ public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageP
         return new LocalDirectoryThingStorageProvider(thingDir);
     }
 
+    /// <inheritdoc/>
     public Task<bool> InitializeAsync(CancellationToken cancellationToken)
     {
         var ready = EnsureDirectoryReady(DB_PATH);

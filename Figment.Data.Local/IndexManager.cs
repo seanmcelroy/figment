@@ -25,14 +25,36 @@ using Figment.Common.Errors;
 
 namespace Figment.Data.Local;
 
+/// <summary>
+/// A utility class for managing indexes for a local file system database.
+/// </summary>
 public static class IndexManager
 {
+    /// <summary>
+    /// An entry in a local file system index.
+    /// </summary>
+    /// <param name="Key">The key of the index.</param>
+    /// <param name="Value">The value at the index key.</param>
     public readonly record struct Entry(string Key, string Value)
     {
+        /// <summary>
+        /// The index key.
+        /// </summary>
         public string Key { get; init; } = Key;
+
+        /// <summary>
+        /// The index value.
+        /// </summary>
         public string Value { get; init; } = Value;
     }
 
+    /// <summary>
+    /// Finds entries in an index using a <paramref name="selector"/> match.
+    /// </summary>
+    /// <param name="indexFilePath">The file system path to the index to search.</param>
+    /// <param name="selector">The selector used to identify <see cref="Entry"/> instances to return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumeration of <see cref="Entry"/> instances in the index that the <paramref name="selector"/> matched.</returns>
     public static async IAsyncEnumerable<Entry> LookupAsync(string indexFilePath, Func<Entry, bool> selector, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
@@ -57,6 +79,14 @@ public static class IndexManager
         }
     }
 
+    /// <summary>
+    /// Adds an entry to an index.
+    /// </summary>
+    /// <param name="indexFilePath">The file system path to the index to edit.</param>
+    /// <param name="key">The index <see cref="Entry.Key"/>.</param>
+    /// <param name="value">The index <see cref="Entry.Value"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the operation was successful.</returns>
     public static async Task<bool> AddAsync(string indexFilePath, string key, string value, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
@@ -83,6 +113,13 @@ public static class IndexManager
         }
     }
 
+    /// <summary>
+    /// Adds an entry to an index.
+    /// </summary>
+    /// <param name="fs">The new file stream open for the index edit.</param>
+    /// <param name="entries">The entries to add.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the operation was successful.</returns>
     public static async Task<bool> AddAsync(FileStream fs, IEnumerable<KeyValuePair<string, string>> entries, CancellationToken cancellationToken)
     {
         try
@@ -105,6 +142,13 @@ public static class IndexManager
         }
     }
 
+    /// <summary>
+    /// Removes an entry from an index by its <see cref="Entry.Key"/>
+    /// </summary>
+    /// <param name="indexFilePath">The file system path to the index to edit.</param>
+    /// <param name="keyToRemove">The index <see cref="Entry.Key"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the operation was successful.</returns>
     public static async Task<bool> RemoveByKeyAsync(string indexFilePath, string keyToRemove, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
@@ -113,6 +157,13 @@ public static class IndexManager
         return await RemoveAsync(indexFilePath, entry => string.Equals(entry.Key, keyToRemove, StringComparison.Ordinal), cancellationToken);
     }
 
+    /// <summary>
+    /// Removes an entry from an index by its <see cref="Entry.Value"/>
+    /// </summary>
+    /// <param name="indexFilePath">The file system path to the index to edit.</param>
+    /// <param name="valueToRemove">The index <see cref="Entry.Value"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the operation was successful.</returns>
     public static async Task<bool> RemoveByValueAsync(string indexFilePath, string valueToRemove, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);

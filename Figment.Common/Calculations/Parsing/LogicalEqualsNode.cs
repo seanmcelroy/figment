@@ -47,4 +47,18 @@ public class LogicalEqualsNode(NodeBase Left, NodeBase Right) : NodeBase
 
         return le.Equals(re) ? ExpressionResult.TRUE : ExpressionResult.FALSE;
     }
+
+    /// <inheritdoc/>
+    protected internal override IEnumerable<string> WalkFieldNamesInternal()
+    {
+        foreach (var x in Left.WalkFieldNamesInternal())
+        {
+            yield return x;
+        }
+
+        foreach (var x in Right.WalkFieldNamesInternal())
+        {
+            yield return x;
+        }
+    }
 }

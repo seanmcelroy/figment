@@ -1,3 +1,5 @@
+using Figment.Common;
+using Figment.Common.Data;
 using Figment.Data.Memory;
 
 namespace Figment.Test.Data.Memory;
@@ -5,6 +7,13 @@ namespace Figment.Test.Data.Memory;
 [TestClass]
 public sealed class Schema
 {
+    [TestInitialize]
+    public void Initialize()
+    {
+        AmbientStorageContext.StorageProvider = new MemoryStorageProvider();
+        _ = AmbientStorageContext.StorageProvider.InitializeAsync(CancellationToken.None).Result;
+    }
+
     [TestMethod]
     public async Task SchemaCrud()
     {
@@ -25,5 +34,22 @@ public sealed class Schema
         allSchemas = ssp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allSchemas);
         Assert.AreEqual(beginSchemasCount + 1, allSchemas.Count());
+
+        var schema = await ssp.LoadAsync(csr.NewGuid, CancellationToken.None);
+        Assert.IsNotNull(schema);
+
+        // Set
+        var stf = schema.AddTextField("random");
+        Assert.IsNotNull(stf);
+
+        var deleted = await schema.DeleteAsync(CancellationToken.None);
+        Assert.IsTrue(deleted);
+
+        allSchemas = ssp.GetAll(CancellationToken.None).ToBlockingEnumerable();
+        Assert.IsNotNull(allSchemas);
+        Assert.AreEqual(beginSchemasCount, allSchemas.Count());
+
+        var schema2 = await ssp.FindByNameAsync($"{nameof(SchemaCrud)}Schema", CancellationToken.None);
+        Assert.AreEqual(Reference.EMPTY, schema2);
     }
 }

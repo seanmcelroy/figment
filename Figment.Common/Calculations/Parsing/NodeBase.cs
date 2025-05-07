@@ -45,4 +45,24 @@ public abstract class NodeBase
         expressionResult = Evaluate(context);
         return expressionResult.IsSuccess;
     }
+
+    /// <summary>
+    /// Walks the abstract syntax tree at this node, depth first, and yields
+    /// each field name contained in any <see cref="FieldRefNode"/>.
+    /// </summary>
+    /// <returns>An enumeration of field names.</returns>
+    public IEnumerable<string> WalkFieldNames()
+    {
+        return WalkFieldNamesInternal().Distinct();
+    }
+
+    /// <summary>
+    /// Walks the abstract syntax tree at this node, depth first, and yields
+    /// each field name contained in any <see cref="FieldRefNode"/>.
+    /// </summary>
+    /// <returns>An enumeration of field names.</returns>
+    protected internal virtual IEnumerable<string> WalkFieldNamesInternal()
+    {
+        yield break;
+    }
 }

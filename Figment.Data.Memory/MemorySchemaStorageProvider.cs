@@ -23,6 +23,9 @@ using Figment.Common.Data;
 
 namespace Figment.Data.Memory;
 
+/// <summary>
+/// A <see cref="Schema"/> storage provider implementation that stores objects in memory.
+/// </summary>
 public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaStorageProvider
 {
     private static readonly ConcurrentDictionary<string, Schema> SchemaCache = [];
@@ -92,6 +95,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         return Task.FromResult<(bool, string?)>((true, $"Schema {schema.Name} saved."));
     }
 
+    /// <inheritdoc/>
     public override Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
 
     /// <inheritdoc/>

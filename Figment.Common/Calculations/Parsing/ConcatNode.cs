@@ -48,4 +48,18 @@ public class ConcatNode(NodeBase Left, NodeBase Right) : NodeBase
         var rhand = re.Result?.ToString() ?? string.Empty;
         return ExpressionResult.Success(new LiteralNode(lhand + rhand));
     }
+
+    /// <inheritdoc/>
+    protected internal override IEnumerable<string> WalkFieldNamesInternal()
+    {
+        foreach (var x in Left.WalkFieldNamesInternal())
+        {
+            yield return x;
+        }
+
+        foreach (var x in Right.WalkFieldNamesInternal())
+        {
+            yield return x;
+        }
+    }
 }

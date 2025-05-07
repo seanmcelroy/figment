@@ -25,9 +25,10 @@ public sealed class SchemaDateField
     public async Task IsValidAsync()
     {
         var f = new Figment.Common.SchemaDateField(nameof(IsValidAsync));
+        Assert.AreEqual("date", f.Format);
+        Assert.AreEqual("string", f.Type);
 
         var s = await f.GetReadableFieldTypeAsync(CancellationToken.None);
-
         Assert.IsNotNull(s);
         Assert.AreEqual("date", s, StringComparer.Ordinal);
         Assert.AreEqual("string", f.Type, StringComparer.Ordinal);
@@ -61,12 +62,93 @@ public sealed class SchemaDateField
     }
 
     [TestMethod]
-    public void TryParseDate()
+    public void TryParseDateYYYYMMDD()
     {
         Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate("1981-01-26", out DateTimeOffset d));
         Assert.AreEqual(1981, d.Year);
         Assert.AreEqual(01, d.Month);
         Assert.AreEqual(26, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateImpossibleLeapDate()
+    {
+        Assert.IsFalse(Figment.Common.SchemaDateField.TryParseDate("February 29, 2001", out DateTimeOffset _));
+    }
+
+    [TestMethod]
+    public void TryParseDatePossibleLeapDate()
+    {
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate("February 29, 2024", out DateTimeOffset d));
+        Assert.AreEqual(2024, d.Year);
+        Assert.AreEqual(02, d.Month);
+        Assert.AreEqual(29, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateMMMDDYesterday()
+    {
+        var yesterday = DateTime.Now.AddDays(-1);
+        var yesterdayText = yesterday.ToString("MMMM dd");
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate(yesterdayText, out DateTimeOffset d));
+        Assert.AreEqual(yesterday.Year + 1, d.Year); // Future.
+        Assert.AreEqual(yesterday.Month, d.Month);
+        Assert.AreEqual(yesterday.Day, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateMMMDDToday()
+    {
+        var today = DateTime.Now;
+        var todayText = today.ToString("MMMM dd");
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate(todayText, out DateTimeOffset d));
+        Assert.AreEqual(today.Year, d.Year);
+        Assert.AreEqual(today.Month, d.Month);
+        Assert.AreEqual(today.Day, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateMMMDDTomorrow()
+    {
+        var tomorrow = DateTime.Now.AddDays(1);
+        var tomorrowText = tomorrow.ToString("MMMM dd");
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate(tomorrowText, out DateTimeOffset d));
+        Assert.AreEqual(tomorrow.Year, d.Year);
+        Assert.AreEqual(tomorrow.Month, d.Month);
+        Assert.AreEqual(tomorrow.Day, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateToday()
+    {
+        var target = DateTimeOffset.Now.Date;
+
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate("today", out DateTimeOffset d));
+        Assert.AreEqual(target.Year, d.Year);
+        Assert.AreEqual(target.Month, d.Month);
+        Assert.AreEqual(target.Day, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateYesterday()
+    {
+        var target = DateTimeOffset.Now.Date.AddDays(-1);
+
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate("yesterday", out DateTimeOffset d));
+        Assert.AreEqual(target.Year, d.Year);
+        Assert.AreEqual(target.Month, d.Month);
+        Assert.AreEqual(target.Day, d.Day);
+    }
+
+    [TestMethod]
+    public void TryParseDateTomorrow()
+    {
+        var target = DateTimeOffset.Now.Date.AddDays(1);
+
+        Assert.IsTrue(Figment.Common.SchemaDateField.TryParseDate("tomorrow", out DateTimeOffset d));
+        Assert.AreEqual(target.Year, d.Year);
+        Assert.AreEqual(target.Month, d.Month);
+        Assert.AreEqual(target.Day, d.Day);
     }
 
     [TestMethod]

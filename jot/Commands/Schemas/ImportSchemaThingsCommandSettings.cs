@@ -52,7 +52,7 @@ public class ImportSchemaThingsCommandSettings : SchemaCommandSettings
 
         if (!File.Exists(FilePath))
         {
-            return ValidationResult.Error("File path does not exist");
+            return ValidationResult.Error($"File path '{FilePath}' does not exist");
         }
 
         return ValidationResult.Success();

@@ -31,23 +31,25 @@ namespace Figment.Common;
 /// </summary>
 public class Thing
 {
+    private string name;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Thing"/> class.
     /// </summary>
     /// <param name="guid">Globally unique identifier for the thing.</param>
-    /// <param name="name">Name of the thing.</param>
-    public Thing(string guid, string name)
+    /// <param name="newName">Name of the thing.</param>
+    public Thing(string guid, string newName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(guid, nameof(guid));
-        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName, nameof(name));
 
-        if (!IsThingNameValid(name))
+        if (!IsThingNameValid(newName))
         {
-            throw new ArgumentException($"Name '{name}' is not valid for things.", nameof(name));
+            throw new ArgumentException($"Name '{newName}' is not valid for things.", nameof(newName));
         }
 
         Guid = guid;
-        Name = name;
+        name = newName;
     }
 
     /// <summary>
@@ -58,7 +60,15 @@ public class Thing
     /// <summary>
     /// Gets or sets the name of the thing.
     /// </summary>
-    public string Name { get; set; }
+    public string Name
+    {
+        get => name;
+        set
+        {
+            MarkDirty();
+            name = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the unique identifiers of the <see cref="Schema"/> associated with this thing.
@@ -90,6 +100,11 @@ public class Thing
     /// </summary>
     [JsonIgnore]
     public DateTime LastAccessed { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether this object has been changed since it was loaded.
+    /// </summary>
+    public bool IsDirty { get; private set; } = false;
 
     /// <summary>
     /// Retrieves an enumeration of references for <see cref="Thing"/> instances that have a
@@ -248,6 +263,7 @@ public class Thing
     public bool TryAddProperty(string propertyyName, object value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
+        MarkDirty();
         return Properties.TryAdd(propertyyName, value);
     }
 
@@ -259,6 +275,7 @@ public class Thing
     public bool TryRemoveProperty(string propertyyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
+        MarkDirty();
         return Properties.Remove(propertyyName);
     }
 
@@ -396,6 +413,7 @@ public class Thing
                 || (thingProp.Value?.Equals(result.Result) == false))
             {
                 changedProperties.Add(thingProp.Key, result.Result);
+                MarkDirty();
             }
         }
 
@@ -656,6 +674,8 @@ public class Thing
             return new ThingSetResult(false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
         }
 
+        MarkDirty();
+
         switch (candidateProperties.Count)
         {
             case 0:
@@ -851,6 +871,12 @@ public class Thing
 
         var saved = await provider.SaveAsync(this, cancellationToken);
         MarkModified();
+
+        if (saved.success)
+        {
+            IsDirty = false;
+        }
+
         return saved;
     }
 
@@ -869,6 +895,8 @@ public class Thing
         {
             return (false, null);
         }
+
+        MarkDirty();
 
         var success = await provider.AssociateWithSchemaAsync(Guid, schemaGuid, cancellationToken);
         MarkModified();
@@ -891,6 +919,8 @@ public class Thing
             return (false, null);
         }
 
+        MarkDirty();
+
         var success = await provider.DissociateFromSchemaAsync(Guid, schemaGuid, cancellationToken);
         MarkModified();
         return success;
@@ -909,9 +939,21 @@ public class Thing
             return false;
         }
 
+        MarkDirty();
+
         var success = await provider.DeleteAsync(Guid, cancellationToken);
         MarkModified();
         return success;
+    }
+
+    /// <summary>
+    /// Marks the thing as as dirty, that is, any changes to it since it was loaded.
+    /// Once this thing is saved the dirty flag is cleared.  This is different than modified,
+    /// which indicates an object is changed at all since it was last loaded.
+    /// </summary>
+    public void MarkDirty()
+    {
+        IsDirty = true;
     }
 
     /// <summary>
