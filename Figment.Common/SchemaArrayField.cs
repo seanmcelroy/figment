@@ -16,7 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Figment.Common;
@@ -121,66 +121,6 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
         return Task.FromResult(true);
     }
 
-    /// <summary>
-    /// Deserializes a <see cref="JsonElement"/> from a <see cref="SchemaDefinition"/>'s representation
-    /// of a <see cref="Schema"/> into a native schema field.
-    /// </summary>
-    /// <param name="name">The name of the schema field.</param>
-    /// <param name="prop">The property to deserialize.</param>
-    /// <param name="required">A value indicating whether the field is required.</param>
-    /// <returns>A native schema field.</returns>
-    /// <exception cref="ArgumentException">A value indicating the <paramref name="prop"/> could not be converted into this schema field type.</exception>
-    public static SchemaArrayField FromSchemaDefinitionProperty(
-        string name,
-        JsonElement prop,
-        bool required)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        if (prop.Equals(default(JsonElement)))
-        {
-            throw new ArgumentException("Default struct value is invalid", nameof(prop));
-        }
-
-        var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
-        ushort? minItems = null, maxItems = null;
-        string? minItemsString = null, maxItemsString = null, uniqueItemString;
-        bool? uniqueItems = null;
-        if (subs.TryGetValue("minItems", out JsonElement typeMinItems))
-        {
-            minItemsString = typeMinItems.ToString();
-            if (ushort.TryParse(minItemsString, out ushort ml))
-            {
-                minItems = ml;
-            }
-        }
-
-        if (subs.TryGetValue("maxItems", out JsonElement typeMaxItems))
-        {
-            maxItemsString = typeMaxItems.ToString();
-            if (ushort.TryParse(maxItemsString, out ushort ml))
-            {
-                maxItems = ml;
-            }
-        }
-
-        if (subs.TryGetValue("uniqueItems", out JsonElement typeUniqueItems))
-        {
-            uniqueItemString = typeUniqueItems.ToString();
-            if (bool.TryParse(uniqueItemString, out bool ui))
-            {
-                uniqueItems = ui;
-            }
-        }
-
-        return new SchemaArrayField(name)
-        {
-            MinItems = minItems,
-            MaxItems = maxItems,
-            UniqueItems = uniqueItems,
-            Required = required,
-        };
-    }
-
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
@@ -189,7 +129,7 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
     }
 
     /// <inheritdoc/>
-    public override bool TryMassageInput(object? input, out object? output)
+    public override bool TryMassageInput(object? input, [NotNullWhen(true)] out object? output)
     {
         if (input != null
             && input.GetType() != typeof(string)

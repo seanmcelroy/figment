@@ -99,46 +99,6 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
         throw new InvalidOperationException();
     }
 
-    public static SchemaEnumField FromToSchemaDefinitionProperty(string name, JsonElement prop, bool required)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        if (prop.Equals(default(JsonElement)))
-        {
-            throw new ArgumentException("Default struct value is invalid", nameof(prop));
-        }
-
-        var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
-        List<object?> vals = [];
-        if (subs.TryGetValue("enum", out JsonElement typeEnum))
-        {
-            foreach (var element in typeEnum.EnumerateArray())
-            {
-                switch (element.ValueKind)
-                {
-                    case JsonValueKind.String:
-                        vals.Add(element.GetString());
-                        continue;
-                    case JsonValueKind.True:
-                        vals.Add(true);
-                        continue;
-                    case JsonValueKind.False:
-                        vals.Add(false);
-                        continue;
-                    case JsonValueKind.Null:
-                        vals.Add(null);
-                        continue; // We don't load nulls
-                    default:
-                        throw new NotSupportedException($"Unsupported element value kind '{element.ValueKind}'");
-                }
-            }
-        }
-
-        return new SchemaEnumField(name, [.. vals])
-        {
-            Required = required,
-        };
-    }
-
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {

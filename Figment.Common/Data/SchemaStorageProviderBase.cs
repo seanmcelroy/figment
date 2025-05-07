@@ -25,7 +25,7 @@ namespace Figment.Common.Data;
 /// <summary>
 /// An optional base provider that provides some common methods for <see cref="ISchemaStorageProvider"/> implementations.
 /// </summary>
-public abstract class SchemaStorageProviderBase
+public abstract class SchemaStorageProviderBase : ISchemaStorageProvider
 {
     /// <summary>
     /// Gets the Json serialization options to use when serializing and deserializing content.
@@ -38,6 +38,30 @@ public abstract class SchemaStorageProviderBase
         WriteIndented = true,
 #endif
     };
+
+    /// <inheritdoc/>
+    public abstract Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaNamePart, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract IAsyncEnumerable<PossibleNameMatch> GetAll(CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken);
 
     /// <summary>
     /// Loads schema from a serialized Json string.
@@ -66,4 +90,10 @@ public abstract class SchemaStorageProviderBase
             return null;
         }
     }
+
+    /// <inheritdoc/>
+    public abstract Task<bool> RebuildIndexes(CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken);
 }

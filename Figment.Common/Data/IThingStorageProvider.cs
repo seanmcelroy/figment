@@ -32,6 +32,13 @@ public interface IThingStorageProvider
     /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
     public Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Creates a new <see cref="Thing"/> in its underlying data store.
+    /// </summary>
+    /// <param name="schemaGuid">The identifier of a <see cref="Schema"/> to which this thing belongs.</param>
+    /// <param name="thingName">The name of the thing.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The newly created thing if the operation was successful; otherwise, <c>null</c>.</returns>
     public Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken);
 
     /// <summary>
@@ -51,6 +58,12 @@ public interface IThingStorageProvider
     /// <returns>A value indicating whether the operation was successful, and an updated <see cref="Thing"/> if it was successful.</returns>
     public Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Retrieves an enumeration of references to every <see cref="Thing"/> that adheres to the specified <paramref name="schemaGuid"/>.
+    /// </summary>
+    /// <param name="schemaGuid">Unique identiifer of the schema for which references to things are retrieved.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An enumeration of references to every <see cref="Thing"/> that adheres to the specified <paramref name="schemaGuid"/>.</returns>
     public IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
 
     /// <summary>
@@ -63,7 +76,7 @@ public interface IThingStorageProvider
     public Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase);
 
     /// <summary>
-    /// Attempts to find <see cref="Thing"/> entities by a partial name match.
+    /// Attempts to find <see cref="Thing"/> entities by a partial name match in the data store.
     /// </summary>
     /// <param name="schemaGuid">The <see cref="Schema"/> to which matches must adhere.</param>
     /// <param name="thingNamePart">The partial <see cref="Thing.Name"/> text that must match.</param>
@@ -71,8 +84,19 @@ public interface IThingStorageProvider
     /// <returns>An asynchronous enumerator for each <see cref="PossibleNameMatch"/> of each matching thing.</returns>
     public IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Retrieves an enumeration of every <see cref="Thing"/> in the underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asychronous enumerator for each <see cref="Thing"/> in the underlying data store.</returns>
     public IAsyncEnumerable<(Reference reference, string? name)> GetAll(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Determines whether a <see cref="Thing"/> with the specified unique identifier exists in the data store.
+    /// </summary>
+    /// <param name="thingGuid">The unique identiifer of the <see cref="Thing"/> to find in the data store.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether a <see cref="Thing"/> with the matching <paramref name="thingGuid"/> exists.</returns>
     public Task<bool> GuidExists(string thingGuid, CancellationToken cancellationToken);
 
     /// <summary>

@@ -91,7 +91,7 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
     }
 
     /// <inheritdoc/>
-    public override bool TryMassageInput(object? input, out object? output)
+    public override bool TryMassageInput(object? input, [MaybeNullWhen(true)] out object? output)
     {
         if (input == null)
         {
@@ -116,7 +116,17 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
         return false;
     }
 
-    public static bool TryParseMonthDay([NotNullWhen(true)] string? input, out int output)
+    /// <summary>
+    /// Attempts to parse a string month+day field into the underlying type.
+    /// </summary>
+    /// <param name="input">The input to attempt to parse.</param>
+    /// <param name="output">The output value, if the value could be parsed.</param>
+    /// <returns>A value indicating whether the <paramref name="input"/> could be parsed.</returns>
+    /// <remarks>
+    /// This method supports both a string version of the underlying type, such as <c>"126"</c> or
+    /// <c>"January 26"</c>.
+    /// </remarks>
+    public static bool TryParseMonthDay(string? input, [NotNullWhen(true)] out int output)
     {
         if (input != null && int.TryParse(input, out int i) && IsValid(i))
         {

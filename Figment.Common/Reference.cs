@@ -81,6 +81,15 @@ public readonly record struct Reference
     [JsonPropertyName("Guid")]
     public readonly string Guid { get; init; }
 
+    /// <summary>
+    /// Converts a <see cref="Schema"/> into a <see cref="Reference"/>.
+    /// </summary>
+    /// <param name="s">The schema to convert.</param>
     public static implicit operator Reference(Schema? s) => new() { Type = ReferenceType.Schema, Guid = s?.Guid ?? string.Empty };
+
+    /// <summary>
+    /// Converts a <see cref="Thing"/> into a <see cref="Reference"/>.
+    /// </summary>
+    /// <param name="t">The schema to convert.</param>
     public static implicit operator Reference(Thing? t) => new() { Type = ReferenceType.Thing, Guid = t?.Guid ?? string.Empty };
 }

@@ -91,6 +91,14 @@ public class Thing
     [JsonIgnore]
     public DateTime LastAccessed { get; set; }
 
+    /// <summary>
+    /// Retrieves an enumeration of references for <see cref="Thing"/> instances that have a
+    /// <see cref="Guid"/> or <see cref="Name"/> matching <paramref name="guidOrNamePart"/>.
+    /// </summary>
+    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> to search for.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumeration of <see cref="Thing"/> instances with a matching
+    /// <see cref="Guid"/> or <see cref="Name"/>.</returns>
     public static async IAsyncEnumerable<Reference> ResolveAsync(
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -142,6 +150,11 @@ public class Thing
         }
     }
 
+    /// <summary>
+    /// An enumeration of <see cref="Schema"/> instances that are associated with this <see cref="Thing"/>.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asychronous enumeration of <see cref="Schema"/> instances associated with this thing.</returns>
     public async IAsyncEnumerable<Schema> GetAssociatedSchemas([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Does this thing adhere to any schemas?

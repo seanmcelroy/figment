@@ -71,7 +71,8 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
             var schemaRef = await ssp.FindByNameAsync(settings.SchemaName, cancellationToken);
             if (schemaRef == Reference.EMPTY)
             {
-                if (settings.AutoCreateSchema ?? true) // This is the key difference from the part above.  Auto-gen only matters for schema+name
+                // This is the key difference from the part above.  Auto-gen only matters for schema+name
+                if (settings.AutoCreateSchema ?? true)
                 {
                     schema = await Schema.Create(settings.SchemaName, cancellationToken);
                     if (schema == null)

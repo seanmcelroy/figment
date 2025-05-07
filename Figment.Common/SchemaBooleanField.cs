@@ -112,7 +112,7 @@ public class SchemaBooleanField(string Name) : SchemaFieldBase(Name)
     }
 
     /// <inheritdoc/>
-    public override bool TryMassageInput(object? input, out object? output)
+    public override bool TryMassageInput(object? input, [NotNullWhen(false), MaybeNullWhen(true)] out object? output)
     {
         if (input == null || input.GetType() == typeof(bool))
         {

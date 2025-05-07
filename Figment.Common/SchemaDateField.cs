@@ -181,7 +181,7 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
     }
 
     /// <inheritdoc/>
-    public override bool TryMassageInput(object? input, out object? output)
+    public override bool TryMassageInput(object? input, [MaybeNullWhen(true)] out object? output)
     {
         if (input == null || input.GetType() == typeof(DateTimeOffset))
         {

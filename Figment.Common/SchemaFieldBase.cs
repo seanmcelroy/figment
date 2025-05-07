@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Figment.Common;
@@ -90,7 +91,7 @@ public abstract class SchemaFieldBase(string Name)
     /// <param name="input">The original input value, usually a string.</param>
     /// <param name="output">The massaged input value formatted as the field prefers it to be provided.</param>
     /// <returns>Whether the value could be massaged or did not need to be massaged.  Otherwise, false.</returns>
-    public virtual bool TryMassageInput(object? input, out object? output)
+    public virtual bool TryMassageInput(object? input, [MaybeNullWhen(true)] out object? output)
     {
         output = input;
         return true;

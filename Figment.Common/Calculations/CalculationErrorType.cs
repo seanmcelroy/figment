@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace Figment.Common.Calculations;
 
 /// <summary>
-/// Reasons that a <see cref="CalculationResult"/> terminated.
+/// Reasons that a <see cref="Parsing.ExpressionResult"/> terminated.
 /// </summary>
 public enum CalculationErrorType
 {

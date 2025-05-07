@@ -16,15 +16,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using Figment.Common.Calculations.Parsing;
 
 namespace Figment.Common.Calculations.Functions;
 
 /// <summary>
-/// The abstract base class from which all functions usable in formulas by the <see cref="Parser"/> derive.
+/// The abstract base class from which all functions usable in formulas by the <see cref="ExpressionParser"/> derive.
 /// </summary>
 public abstract class FunctionBase
 {
@@ -34,7 +32,7 @@ public abstract class FunctionBase
     public abstract string Identifier { get; }
 
     /// <summary>
-    /// Evaluates the function using the given input <paramref name="arguments"/> over the supplied <paramref name="targets"/>.
+    /// Evaluates the function using the given input <paramref name="arguments"/>.
     /// </summary>
     /// <param name="context">The context for the evaluation.</param>
     /// <param name="arguments">The arguments to provide for the funciton to perform its calculation.</param>
@@ -46,7 +44,7 @@ public abstract class FunctionBase
     /// </summary>
     /// <param name="arguments">The actual arguments.</param>
     /// <param name="expectedCount">The expected number of arguments.</param>
-    /// <param name="errorResult">The error result, if the expected number of arguments is not found in <see cref="arguments"/>.</param>
+    /// <param name="errorResult">The error result, if the expected number of arguments is not found in <paramref name="arguments"/>.</param>
     /// <returns>False if the count is unexpected, otherwise true.</returns>
     protected bool ExpectArgumentCount(NodeBase[] arguments, int expectedCount, [NotNullWhen(false)] out ExpressionResult? errorResult)
     {

@@ -21,8 +21,8 @@ using System.Text.Json.Serialization;
 namespace Figment.Common.Data;
 
 /// <summary>
-/// This is the definition of a <see cref="Figment.Schema"/> when it is persisted
-/// to local storage, such as via <see cref="LocalDirectoryStorageProvider"/>
+/// This is the definition of a <see cref="Common.Schema"/> when it is persisted
+/// to local storage.
 /// </summary>
 /// <param name="Guid">The unique identiifer of the schema</param>
 /// <param name="Name">The name of the schema</param>
@@ -84,9 +84,16 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
     [JsonPropertyName("$plural")]
     public string? Plural { get; set; } = Plural;
 
+    /// <summary>
+    /// Gets or sets the Json schema type.
+    /// </summary>
+    /// <remarks>This is always <c>"object"</c>.</remarks>
     [JsonPropertyName("type")]
     public string Type { get; set; } = "object";
 
+    /// <summary>
+    /// Gets or sets the properties enumerated in <see cref="Properties"/> that are required to be specified on this Json schema.
+    /// </summary>
     [JsonPropertyName("required")]
 #pragma warning disable SA1011 // Closing square brackets should be spaced correctly
     public string[]? RequiredProperties { get; set; }
@@ -137,7 +144,14 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
         ImportMaps = schema.ImportMaps;
     }
 
-    public Schema ToSchema()
+    /// <summary>
+    /// Converts this Json schema definition into a native <see cref="Schema"/> instance.
+    /// </summary>
+    /// <param name="createdOn">The date the schema was created, per the underlying data store.  If not specified, it is defaulted to the Unix epoch.</param>
+    /// <param name="lastModified">The date the schema was last modified, per the underlying data store.  If not specified, it is defaulted to the Unix epoch.</param>
+    /// <param name="lastAccessed">The date the schema was last accessed, per the underlying data store.  If not specified, it is defaulted to the Unix epoch.</param>
+    /// <returns>The native schema instance representation.</returns>
+    public Schema ToSchema(DateTime? createdOn = null, DateTime? lastModified = null, DateTime? lastAccessed = null)
     {
         var schema = new Schema(Guid, Name)
         {
@@ -145,33 +159,9 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
             Description = Description,
             Plural = Plural,
             VersionGuid = VersionGuid,
-            CreatedOn = DateTime.UnixEpoch,
-            LastModified = DateTime.UnixEpoch,
-            LastAccessed = DateTime.UnixEpoch,
-        };
-
-        foreach (var prop in Properties)
-        {
-            prop.Value.Required = RequiredProperties?.Any(sdr => string.Equals(sdr, prop.Key, StringComparison.Ordinal)) == true;
-            schema.Properties.Add(prop.Key, prop.Value);
-        }
-
-        schema.ImportMaps.AddRange(ImportMaps);
-
-        return schema;
-    }
-
-    public Schema ToSchema(FileInfo schemaFileInfo)
-    {
-        var schema = new Schema(Guid, Name)
-        {
-            // Optional built-ins
-            Description = Description,
-            Plural = Plural,
-            VersionGuid = VersionGuid,
-            CreatedOn = schemaFileInfo.CreationTimeUtc,
-            LastModified = schemaFileInfo.LastWriteTimeUtc,
-            LastAccessed = schemaFileInfo.LastAccessTimeUtc,
+            CreatedOn = createdOn ?? DateTime.UnixEpoch,
+            LastModified = lastModified ?? DateTime.UnixEpoch,
+            LastAccessed = lastAccessed ?? DateTime.UnixEpoch,
         };
 
         foreach (var prop in Properties)

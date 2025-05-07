@@ -38,9 +38,13 @@ public static class AmbientStorageContext
     /// <summary>
     /// Gets or sets the ambient <see cref="IStorageProvider"/> instance that clients can use to interact with entities.
     /// </summary>
-    public static IStorageProvider StorageProvider
+    public static IStorageProvider? StorageProvider
     {
         get => _StorageProvider.Value;
-        set => _StorageProvider.Value = value;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _StorageProvider.Value = value;
+        }
     }
 }

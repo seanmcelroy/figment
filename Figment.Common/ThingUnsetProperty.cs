@@ -18,13 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Figment.Common;
 
+/// <summary>
+/// A property of a <see cref="Thing"/> that is not actually set but is defined in a <see cref="Schema"/> schema associated
+/// with it.
+/// </summary>
+/// <seealso cref="ThingProperty"/>
 public readonly record struct ThingUnsetProperty
 {
     /// <summary>
-    /// Gets the property name rendered for display with any accompanying <see cref="Schema">.
+    /// Gets the property name rendered for display with any accompanying <see cref="Schema"/>.
     /// </summary>
     /// <remarks>
-    /// Such as Person.email
+    /// Such as <c>Person.email</c>.
     /// </remarks>
     required public readonly string FullDisplayName { get; init; }
 
@@ -32,17 +37,17 @@ public readonly record struct ThingUnsetProperty
     /// Gets the property name rendered for display.
     /// </summary>
     /// <remarks>
-    /// Such as email.
+    /// Such as <c>email</c>.
     /// </remarks>
     required public readonly string SimpleDisplayName { get; init; }
 
     /// <summary>
-    /// Gets the Guid of the <see cref="Schema"> to which this property is associated.
+    /// Gets the Guid of the <see cref="Schema"/> to which this property is associated.
     /// </summary>
     required public readonly string SchemaGuid { get; init; }
 
     /// <summary>
-    /// Gets the name of the <see cref="Schema"> to which this property is associated.
+    /// Gets the name of the <see cref="Schema"/> to which this property is associated.
     /// </summary>
     required public readonly string SchemaName { get; init; }
 

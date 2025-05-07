@@ -94,49 +94,6 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
         return Task.FromResult(true);
     }
 
-    public static SchemaTextField FromSchemaDefinitionProperty(string name, JsonElement prop, bool required)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        if (prop.Equals(default(JsonElement)))
-        {
-            throw new ArgumentException("Default struct value is invalid", nameof(prop));
-        }
-
-        var subs = prop.EnumerateObject().ToDictionary(k => k.Name, v => v.Value);
-        ushort? minLength = null, maxLength = null;
-        string? minLengthString = null, maxLengthString = null, pattern = null;
-        if (subs.TryGetValue("minLength", out JsonElement typeMinLength))
-        {
-            minLengthString = typeMinLength.ToString();
-            if (ushort.TryParse(minLengthString, out ushort ml))
-            {
-                minLength = ml;
-            }
-        }
-
-        if (subs.TryGetValue("maxLength", out JsonElement typeMaxLength))
-        {
-            maxLengthString = typeMinLength.ToString();
-            if (ushort.TryParse(maxLengthString, out ushort ml))
-            {
-                maxLength = ml;
-            }
-        }
-
-        if (subs.TryGetValue("pattern", out JsonElement typePattern))
-        {
-            pattern = typePattern.ToString();
-        }
-
-        return new SchemaTextField(name)
-        {
-            MinLength = minLength,
-            MaxLength = maxLength,
-            Pattern = pattern,
-            Required = required,
-        };
-    }
-
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("text");
 }

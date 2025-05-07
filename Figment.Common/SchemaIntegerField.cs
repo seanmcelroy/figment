@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Figment.Common;
@@ -55,7 +56,7 @@ public class SchemaIntegerField(string Name) : SchemaFieldBase(Name)
     }
 
     /// <inheritdoc/>
-    public override bool TryMassageInput(object? input, out object? output)
+    public override bool TryMassageInput(object? input, [MaybeNullWhen(true)] out object? output)
     {
         if (input != null)
         {

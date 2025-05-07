@@ -24,7 +24,7 @@ namespace Figment.Common;
 /// <summary>
 /// A set of field definitions a thing can optionally implement.
 /// </summary>
-/// <remarks>This class is not directly serialized to JSON, that is done by <see cref="SchemaDefinition"/>.</remarks>
+/// <remarks>This class is not directly serialized to JSON, that is done by <see cref="JsonSchemaDefinition"/>.</remarks>
 #pragma warning disable SA1313 // Parameter names should begin with lower-case letter
 public class Schema
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter

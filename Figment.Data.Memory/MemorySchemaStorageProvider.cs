@@ -27,7 +27,8 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
 {
     private static readonly ConcurrentDictionary<string, Schema> SchemaCache = [];
 
-    public Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
@@ -42,7 +43,8 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         return Task.FromResult(new CreateSchemaResult { Success = true, NewGuid = schemaGuid });
     }
 
-    public Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
@@ -57,7 +59,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
     /// <returns>Each schema</returns>
     /// <remarks>This may be a very expensive operation</remarks>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         foreach (var schema in SchemaCache.Values)
@@ -75,7 +77,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
     }
 
     /// <inheritdoc/>
-    public Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken)
+    public override Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
@@ -84,16 +86,16 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
     }
 
     /// <inheritdoc/>
-    public Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
+    public override Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
     {
         SchemaCache[schema.Guid] = schema;
         return Task.FromResult<(bool, string?)>((true, $"Schema {schema.Name} saved."));
     }
 
-    public Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
+    public override Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
 
     /// <inheritdoc/>
-    public Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken)
+    public override Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
@@ -107,29 +109,9 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         return Task.FromResult(Reference.EMPTY);
     }
 
+    /// <inheritdoc/>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-#pragma warning disable CA1822 // Mark members as static
-    private async IAsyncEnumerable<(Reference reference, string name)> FindByNameAsync(Func<string, bool> nameSelector, [EnumeratorCancellation] CancellationToken cancellationToken)
-#pragma warning restore CA1822 // Mark members as static
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-    {
-        ArgumentNullException.ThrowIfNull(nameSelector);
-
-        foreach (var schema in SchemaCache.Values.Where(e => nameSelector(e.Name)))
-        {
-            if (schema != null)
-                yield return (new Reference
-                {
-                    Guid = schema.Guid,
-                    Type = Reference.ReferenceType.Schema
-                }, schema.Name);
-        }
-
-        yield break;
-    }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaNamePart, [EnumeratorCancellation] CancellationToken _)
+    public override async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaNamePart, [EnumeratorCancellation] CancellationToken _)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaNamePart);
@@ -148,14 +130,16 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         }
     }
 
-    public Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
         return Task.FromResult(SchemaCache.ContainsKey(schemaGuid));
     }
 
+    /// <inheritdoc/>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public async IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(plural);

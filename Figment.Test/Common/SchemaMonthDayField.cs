@@ -72,7 +72,10 @@ public sealed class SchemaMonthDayField
     [TestMethod]
     public void TryParseMonthDay()
     {
-        Assert.IsTrue(Figment.Common.SchemaMonthDayField.TryParseMonthDay("1/26", out int i));
+        Assert.IsTrue(Figment.Common.SchemaMonthDayField.TryParseMonthDay("126", out int i));
+        Assert.AreEqual(0126, i);
+
+        Assert.IsTrue(Figment.Common.SchemaMonthDayField.TryParseMonthDay("1/26", out i));
         Assert.AreEqual(0126, i);
 
         Assert.IsTrue(Figment.Common.SchemaMonthDayField.TryParseMonthDay("01-26", out i));

@@ -31,7 +31,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
     private const string PluralIndexFileName = $"_schema.plurals.csv";
 
-    public async Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async Task<CreateSchemaResult> CreateAsync(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
@@ -68,7 +69,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         return new CreateSchemaResult { Success = true, NewGuid = schemaGuid };
     }
 
-    public async Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async Task<bool> DeleteAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
@@ -155,7 +157,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
     /// <param name="cancellationToken">A cancellation token to abort the enumerator</param>
     /// <returns>Each schema</returns>
     /// <remarks>This may be a very expensive operation</remarks>
-    public async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Shortcut - try to get them by name index first.
         var indexFilePath = Path.Combine(SchemaDirectoryPath, NameIndexFileName);
@@ -201,7 +203,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         }
     }
 
-    public async Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
@@ -238,7 +241,11 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
                 return null;
             }
 
-            var schema = schemaDefinition.ToSchema(fileInfo);
+            var schema = schemaDefinition.ToSchema(
+                fileInfo.CreationTimeUtc,
+                fileInfo.LastWriteTimeUtc,
+                fileInfo.LastAccessTimeUtc
+                );
             if (!Schema.IsSchemaNameValid(schema.Name))
             {
                 AmbientErrorContext.Provider.LogError($"Unable to load schema. Required property {nameof(Schema.Name)} is '{schema.Name}', which is not valid.");
@@ -274,7 +281,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         }
     }
 
-    public async Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(schema);
 
@@ -312,7 +320,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
     }
 
     /// <inheritdoc/>
-    public async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
+    public override async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
     {
         var schemaDir = new DirectoryInfo(SchemaDirectoryPath);
         if (schemaDir == null || !schemaDir.Exists)
@@ -369,7 +377,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
     }
 
     /// <inheritdoc/>
-    public async Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken)
+    public override async Task<Reference> FindByNameAsync(string schemaName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
@@ -426,7 +434,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         yield break;
     }
 
-    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingNamePart);
 
@@ -454,7 +463,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         }
     }
 
-    public Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
@@ -481,7 +491,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<Reference> FindByPluralNameAsync(string plural, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(plural);
 

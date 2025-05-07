@@ -20,13 +20,18 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Figment.Common;
 
+/// <summary>
+/// A property of a <see cref="Thing"/> that is actually set but is defined in a <see cref="Schema"/> schema associated
+/// with it.
+/// </summary>
+/// <seealso cref="ThingUnsetProperty"/>
 public readonly record struct ThingProperty
 {
     /// <summary>
     /// Gets the property name serialized in a JSON file on a Thing.
     /// </summary>
     /// <remarks>
-    /// Such as b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.email.
+    /// Such as <c>b0c1592e-5d79-4fe4-8814-aa6e534d2b7f.email</c>.
     /// </remarks>
     required public readonly string TruePropertyName { get; init; }
 
@@ -34,7 +39,7 @@ public readonly record struct ThingProperty
     /// Gets the property name rendered for display with any accompanying Schema.
     /// </summary>
     /// <remarks>
-    /// Such as Person.email.
+    /// Such as <c>Person.email</c>.
     /// </remarks>
     required public readonly string FullDisplayName { get; init; }
 
@@ -42,7 +47,7 @@ public readonly record struct ThingProperty
     /// Gets the property name rendered for display.
     /// </summary>
     /// <remarks>
-    /// Such as email.
+    /// Such as <c>email</c>.
     /// </remarks>
     required public readonly string SimpleDisplayName { get; init; }
 

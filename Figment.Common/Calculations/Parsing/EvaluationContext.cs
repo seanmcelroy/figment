@@ -1,7 +1,28 @@
+/*
+Figment
+Copyright (C) 2025  Sean McElroy
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 using Figment.Common.Errors;
 
 namespace Figment.Common.Calculations.Parsing;
 
+/// <summary>
+/// The context used to evalutae an abstract syntax tree using <see cref="NodeBase.Evaluate(EvaluationContext)"/>.
+/// </summary>
 public readonly record struct EvaluationContext
 {
     /// <summary>
@@ -25,7 +46,7 @@ public readonly record struct EvaluationContext
     /// Initializes a new instance of the <see cref="EvaluationContext"/> class.
     /// </summary>
     /// <param name="schema">A <see cref="Schema"/> object that should be injected into the context, mocking its properties as prototypes for an evaluation.</param>
-    /// <remarks>The purpose of this method is to support <see cref="EvaluationContext(Schema)"/> and <see cref="ValidateImportMapCommnad"/>.</remarks>
+    /// <remarks>The purpose of this method is to support <see cref="EvaluationContext(Schema)"/>.</remarks>
     public EvaluationContext(Schema schema)
     {
         foreach (var prop in schema.Properties)
