@@ -123,6 +123,15 @@ public readonly record struct ThingProperty
             return false;
         }
 
+        // Cannot be a system property
+        if (propertyName.Equals("createdon", StringComparison.InvariantCultureIgnoreCase)
+            || propertyName.Equals("lastaccessed", StringComparison.InvariantCultureIgnoreCase)
+            || propertyName.Equals("lastmodified", StringComparison.InvariantCultureIgnoreCase))
+        {
+            message = "Property name cannot be a reserved word.";
+            return false;
+        }
+
         message = null;
         return true;
     }

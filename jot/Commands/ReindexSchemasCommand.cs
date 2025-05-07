@@ -31,7 +31,7 @@ public class ReindexSchemasCommand : CancellableAsyncCommand
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (provider == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);

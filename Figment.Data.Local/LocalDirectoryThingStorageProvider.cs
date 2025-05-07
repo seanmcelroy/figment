@@ -610,7 +610,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingIndexes = [];
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingNames = [];
 
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp != null)
             await foreach (var (reference, name) in ssp.GetAll(cancellationToken))
             {

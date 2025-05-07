@@ -119,7 +119,7 @@ public class Schema
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (provider == null)
         {
             return null;
@@ -141,7 +141,7 @@ public class Schema
     /// <returns>True, if the operation was successful.  Otherwise, false.</returns>
     public async Task<bool> DeleteAsync(CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (provider == null)
         {
             return false;
@@ -159,7 +159,7 @@ public class Schema
     /// <returns>A value indicating whether or not the save attempt was successful.</returns>
     public async Task<(bool success, string? message)> SaveAsync(CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (provider == null)
         {
             return (false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
@@ -259,7 +259,7 @@ public class Schema
         string guidOrNamePart,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
             yield break;

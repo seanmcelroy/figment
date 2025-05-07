@@ -147,7 +147,7 @@ public class Thing
         // Does this thing adhere to any schemas?
         if (SchemaGuids?.Count > 0)
         {
-            var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+            var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
             if (ssp == null)
             {
                 yield break;

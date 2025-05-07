@@ -37,7 +37,7 @@ public class SchemaSchemaField(string Name) : SchemaTextField(Name)
     /// This value is usually encoded into JSON serialized representations of
     /// schema fields and used for polymorphic type indication.
     /// </remarks>
-    public const string SCHEMA_FIELD_TYPE = "schema";
+    public new const string SCHEMA_FIELD_TYPE = "schema";
 
     /// <inheritdoc/>
     [JsonPropertyName("type")]
@@ -60,7 +60,7 @@ public class SchemaSchemaField(string Name) : SchemaTextField(Name)
             return false;
         }
 
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
             return true; // Assume.

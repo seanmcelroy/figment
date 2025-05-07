@@ -46,7 +46,7 @@ public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand
             return (Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE, null, null);
         }
 
-        var ssp = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);

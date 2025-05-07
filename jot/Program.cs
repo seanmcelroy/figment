@@ -306,7 +306,7 @@ internal class Program
 
         AnsiConsole.MarkupLine("\r\njot is running in [bold underline white]interactive mode[/].  Press ctrl-C to exit or type '[purple bold]quit[/]'.");
 
-        var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var schemaProvider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (schemaProvider == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);

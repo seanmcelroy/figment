@@ -32,7 +32,7 @@ public class ListSchemasCommand : CancellableAsyncCommand<ListSchemasCommandSett
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListSchemasCommandSettings settings, CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (provider == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);

@@ -118,10 +118,10 @@ public readonly record struct EvaluationContext
         }
 
         // Populate meta properties always override.
-        RowData["Name"] = ExpressionResult.Success(thing.Name);
-        RowData["CreatedOn"] = ExpressionResult.Success(thing.CreatedOn);
-        RowData["LastAccessed"] = ExpressionResult.Success(thing.LastAccessed);
-        RowData["LastModified"] = ExpressionResult.Success(thing.LastModified);
+        RowData["name"] = ExpressionResult.Success(thing.Name);
+        RowData["createdon"] = ExpressionResult.Success(thing.CreatedOn);
+        RowData["lastaccessed"] = ExpressionResult.Success(thing.LastAccessed);
+        RowData["lastmodified"] = ExpressionResult.Success(thing.LastModified);
     }
 
     /// <summary>

@@ -10,7 +10,7 @@ public sealed class Schema
     {
         var storageProvider = new MemoryStorageProvider();
 
-        var ssp = storageProvider.GetSchemaStorageProvider();
+        var ssp = storageProvider?.GetSchemaStorageProvider();
         Assert.IsNotNull(ssp);
 
         var allSchemas = ssp.GetAll(CancellationToken.None).ToBlockingEnumerable();

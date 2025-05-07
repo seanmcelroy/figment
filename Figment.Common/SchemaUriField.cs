@@ -35,7 +35,7 @@ public class SchemaUriField(string Name) : SchemaTextField(Name)
     /// This value is usually encoded into JSON serialized representations of
     /// schema fields and used for polymorphic type indication.
     /// </remarks>
-    public const string SCHEMA_FIELD_TYPE = "uri";
+    public new const string SCHEMA_FIELD_TYPE = "uri";
 
     /// <inheritdoc/>
     [JsonPropertyName("type")]

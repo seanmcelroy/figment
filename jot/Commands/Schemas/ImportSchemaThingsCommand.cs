@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using CsvHelper;
 using Figment.Common;
 using Figment.Common.Data;
@@ -59,7 +60,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                 return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
             case 1:
                 {
-                    var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+                    var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
                     if (provider == null)
                     {
                         AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
@@ -138,7 +139,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         string filePath,
         Schema schema,
         SchemaImportMap[] possibleImportMaps,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(schema);

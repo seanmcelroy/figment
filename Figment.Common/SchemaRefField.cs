@@ -114,7 +114,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
     /// <inheritdoc/>
     public override async Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (provider == null)
         {
             return "???";

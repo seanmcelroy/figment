@@ -64,7 +64,7 @@ public class DissociateSchemaFromSelectedThingCommand : CancellableAsyncCommand<
                 return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
             case 1:
                 {
-                    var provider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+                    var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
                     if (provider == null)
                     {
                         AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);

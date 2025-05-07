@@ -123,11 +123,11 @@ public sealed class DateDiff
 
         var sampleSchema = new Schema($"schema-{nameof(DateDiffPropertyExistsButNotSet)}", $"schema-{nameof(DateDiffPropertyExistsButNotSet)}");
         var stf = sampleSchema.AddDateField("birthdate");
-        var schemaSaved = await sampleSchema.SaveAsync(CancellationToken.None);
+        var (schemaSaved, _) = await sampleSchema.SaveAsync(CancellationToken.None);
         Assert.IsTrue(schemaSaved);
 
         var sampleThing = new Thing(nameof(DateDiffPropertyExistsButNotSet), nameof(DateDiffPropertyExistsButNotSet));
-        var thingSaved = await sampleThing.SaveAsync(CancellationToken.None);
+        var (thingSaved, _) = await sampleThing.SaveAsync(CancellationToken.None);
         Assert.IsTrue(thingSaved);
         var assocResult = await sampleThing.AssociateWithSchemaAsync(sampleSchema.Name, CancellationToken.None);
         Assert.IsTrue(assocResult.Item1);
@@ -153,11 +153,11 @@ public sealed class DateDiff
 
         var sampleSchema = new Schema($"schema-{nameof(DateDiffPropertyExistsButNotSet)}", $"schema-{nameof(DateDiffPropertyExistsButNotSet)}");
         var stf = sampleSchema.AddMonthDayField("birthdate");
-        var schemaSaved = await sampleSchema.SaveAsync(CancellationToken.None);
+        var (schemaSaved, _) = await sampleSchema.SaveAsync(CancellationToken.None);
         Assert.IsTrue(schemaSaved);
 
         var sampleThing = new Thing(nameof(DateDiffPropertyExistsButNotSet), nameof(DateDiffPropertyExistsButNotSet));
-        var thingSaved = await sampleThing.SaveAsync(CancellationToken.None);
+        var (thingSaved, _) = await sampleThing.SaveAsync(CancellationToken.None);
         Assert.IsTrue(thingSaved);
         var assocResult = await sampleThing.AssociateWithSchemaAsync($"schema-{nameof(DateDiffPropertyExistsButNotSet)}", CancellationToken.None);
         Assert.IsTrue(assocResult.Item1);

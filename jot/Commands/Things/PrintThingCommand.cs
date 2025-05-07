@@ -74,7 +74,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
         await thing.ComputeCalculatedProperties(cancellationToken);
 
-        var schemaProvider = AmbientStorageContext.StorageProvider.GetSchemaStorageProvider();
+        var schemaProvider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (schemaProvider == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);

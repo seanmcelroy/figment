@@ -14,7 +14,7 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
     public override async Task<int> ExecuteAsync(CommandContext context, SchemaCommandSettings settings, CancellationToken cancellationToken)
     {
         var (tgs, schema, _) = await TryGetSchema(settings, cancellationToken);
-        if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS)
+        if (tgs != Globals.GLOBAL_ERROR_CODES.SUCCESS || schema == null)
         {
             return (int)tgs;
         }

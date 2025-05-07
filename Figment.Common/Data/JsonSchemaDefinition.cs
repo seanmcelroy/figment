@@ -88,7 +88,9 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
     public string Type { get; set; } = "object";
 
     [JsonPropertyName("required")]
+#pragma warning disable SA1011 // Closing square brackets should be spaced correctly
     public string[]? RequiredProperties { get; set; }
+#pragma warning restore SA1011 // Closing square brackets should be spaced correctly
 
     /// <summary>
     /// Gets or sets the list of fields, keyed by name, defined for this schema.
@@ -115,6 +117,10 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
     [JsonIgnore]
     public string Guid { get; set; } = Guid;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonSchemaDefinition"/> class.
+    /// </summary>
+    /// <param name="schema">The Json schema $schema metadata property.</param>
     public JsonSchemaDefinition(Schema schema)
         : this(schema.Guid, schema.Name, schema.Description, schema.Plural, schema.VersionGuid)
     {
