@@ -36,6 +36,6 @@ public class Null : FunctionBase
     /// <inheritdoc/>
     public override ExpressionResult Evaluate(EvaluationContext context, NodeBase[] arguments)
     {
-        return ExpressionResult.Success(default(object?));
+        return ExpressionResult.NULL;
     }
 }

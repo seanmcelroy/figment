@@ -30,17 +30,35 @@ public readonly record struct ExpressionResult : IEquatable<ExpressionResult>
     /// <summary>
     /// True.
     /// </summary>
-    public static readonly ExpressionResult TRUE = Success(true);
+    public static readonly ExpressionResult TRUE = new()
+    {
+        IsSuccess = true,
+        ErrorType = CalculationErrorType.Success,
+        Message = "TRUE",
+        Result = true,
+    };
 
     /// <summary>
     /// False.
     /// </summary>
-    public static readonly ExpressionResult FALSE = Success(false);
+    public static readonly ExpressionResult FALSE = new()
+    {
+        IsSuccess = true,
+        ErrorType = CalculationErrorType.Success,
+        Message = "FALSE",
+        Result = false,
+    };
 
     /// <summary>
     /// Null.
     /// </summary>
-    public static readonly ExpressionResult NULL = Success(default);
+    public static readonly ExpressionResult NULL = new()
+    {
+        IsSuccess = true,
+        ErrorType = CalculationErrorType.Success,
+        Message = "NULL",
+        Result = null,
+    };
 
     /// <summary>
     /// Gets a value indicating whether the evaluation completed without throwing an error.
