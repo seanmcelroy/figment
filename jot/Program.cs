@@ -113,7 +113,8 @@ internal class Program
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
                         .WithDescription("Dissociates a thing from a schema");
                     schema.AddCommand<ImportSchemaThingsCommand>("import")
-                        .WithDescription("Imports entities as things of this schema type");
+                        .WithDescription("Imports entities as things of this schema type")
+                        .WithExample("schema", "person", "import", "~/Downloads/contacts.csv", "csv");
 
                     schema.AddCommand<ListImportMapsCommand>("import-maps")
                         .WithDescription("Lists all import maps defined on the schema");
@@ -170,6 +171,7 @@ internal class Program
                         .WithAlias("show")
                         .WithDescription("Views all fields on a schema");
                 });
+
             config.AddBranch<ThingCommandSettings>("thing", thing =>
                 {
                     thing.AddCommand<DeleteThingCommand>("delete")

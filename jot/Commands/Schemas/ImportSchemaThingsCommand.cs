@@ -38,10 +38,16 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ImportSchemaThingsCommandSettings settings, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(settings.FilePath)
-            || !File.Exists(settings.FilePath))
+        if (string.IsNullOrWhiteSpace(settings.FilePath))
         {
-            AmbientErrorContext.Provider.LogError($"File path '{settings.FilePath}' was not found.");
+            AmbientErrorContext.Provider.LogError($"File path not specified.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
+        var expandedPath = FileUtility.ExpandRelativePaths(settings.FilePath);
+        if (!File.Exists(expandedPath))
+        {
+            AmbientErrorContext.Provider.LogError($"File path '{expandedPath}' was not found.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -92,7 +98,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         if (string.IsNullOrWhiteSpace(settings.Format))
         {
             // Extension
-            if (string.Equals(Path.GetExtension(settings.FilePath), "csv", StringComparison.InvariantCultureIgnoreCase))
+            if (string.Equals(Path.GetExtension(expandedPath), "csv", StringComparison.InvariantCultureIgnoreCase))
             {
                 fileFormat = "csv";
             }
@@ -110,7 +116,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
         if (string.Equals(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase))
         {
-            things = ImportCsv(settings.FilePath, schema, possibleImportMaps, cancellationToken);
+            things = ImportCsv(expandedPath, schema, possibleImportMaps, cancellationToken);
         }
         else
         {
@@ -171,7 +177,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             }
         }
 
-        AmbientErrorContext.Provider.LogDone($"Imported {savedCount} rows from '{settings.FilePath}'.");
+        AmbientErrorContext.Provider.LogDone($"Imported {savedCount} rows from '{expandedPath}'.");
 
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)

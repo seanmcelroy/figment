@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Figment.Common;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -41,9 +42,10 @@ public class NewImportMapCommandSettings : ImportMapCommandSettings
             return ValidationResult.Error("Sample file must be specified");
         }
 
-        if (string.IsNullOrWhiteSpace(SampleFilePath))
+        var expandedPath = FileUtility.ExpandRelativePaths(SampleFilePath);
+        if (!File.Exists(expandedPath))
         {
-            return ValidationResult.Error($"File path '{SampleFilePath}' was not found.");
+            return ValidationResult.Error($"File path '{expandedPath}' does not exist");
         }
 
         // Because we inherit from a non-base class of settings, call down to the base class validation.

@@ -26,10 +26,16 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        if (string.IsNullOrWhiteSpace(settings.SampleFilePath)
-            || !File.Exists(settings.SampleFilePath))
+        if (string.IsNullOrWhiteSpace(settings.SampleFilePath))
         {
-            AmbientErrorContext.Provider.LogError($"File path '{settings.SampleFilePath}' was not found.");
+            AmbientErrorContext.Provider.LogError($"File path not specified.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
+        var expandedPath = FileUtility.ExpandRelativePaths(settings.SampleFilePath);
+        if (!File.Exists(expandedPath))
+        {
+            AmbientErrorContext.Provider.LogError($"File path '{expandedPath}' was not found.");
             return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
@@ -50,7 +56,7 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
         switch (settings.FileType.ToLowerInvariant())
         {
             case "csv":
-                var csvFields = InferImportMapFieldsFromCsv(settings.SampleFilePath)
+                var csvFields = InferImportMapFieldsFromCsv(expandedPath)
                     .ToBlockingEnumerable(cancellationToken);
                 importMap.FieldConfiguration.AddRange(csvFields);
                 break;
@@ -82,7 +88,7 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
     /// </summary>
     /// <param name="filePath">Comma-separated value file with headers to read.</param>
     /// <returns>An asynchronous enumerator that returns each read file field with no property mapped.</returns>
-    public static async IAsyncEnumerable<SchemaImportField> InferImportMapFieldsFromCsv(string filePath)
+    private static async IAsyncEnumerable<SchemaImportField> InferImportMapFieldsFromCsv(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 

@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.ComponentModel;
+using Figment.Common;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -50,9 +51,10 @@ public class ImportSchemaThingsCommandSettings : SchemaCommandSettings
             return ValidationResult.Error("File path must be set");
         }
 
-        if (!File.Exists(FilePath))
+        var expandedPath = FileUtility.ExpandRelativePaths(FilePath);
+        if (!File.Exists(expandedPath))
         {
-            return ValidationResult.Error($"File path '{FilePath}' does not exist");
+            return ValidationResult.Error($"File path '{expandedPath}' does not exist");
         }
 
         return ValidationResult.Success();

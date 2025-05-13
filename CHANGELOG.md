@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Setting the value of a `schema` field on a schema shows a chooser if the name, not the GUID, is provided. 
 - 'jot' now includes commands to manage import-map field configurations
 - 'jot' now supports relative date parsing, such as setting a due date field to 'tomorrow' or 'next Tuesday'
+- Home-rooted paths, like "~/Downloads/example.txt" in arguments are now expanded when processed.
 
 ### Modified
 
