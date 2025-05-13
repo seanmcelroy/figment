@@ -19,28 +19,46 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Runtime.CompilerServices;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using Figment.Common;
 
 namespace Figment.Data.Local;
 
 /// <summary>
 /// A storage provider implementation that stores objects in files on a local file system.
 /// </summary>
-/// <param name="LocalDatabasePath">The path to the root of the file system database.</param>
-public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageProvider
+public class LocalDirectoryStorageProvider() : IStorageProvider
 {
-    private string DB_PATH { get; init; } = LocalDatabasePath;
+    /// <summary>
+    /// The type of this provider, used to specify it in configurations.
+    /// </summary>
+    public const string PROVIDER_TYPE = "Local";
+
+    /// <summary>
+    /// The settings key for the path to the local directory where the database is located.
+    /// </summary>
+    public const string SETTINGS_KEY_DB_PATH = "DatabasePath";
+
+    /// <summary>
+    /// The path to the root of the file system database.
+    /// </summary>
+    public string? DatabasePath { get; private set; }
 
     /// <inheritdoc/>
     public ISchemaStorageProvider? GetSchemaStorageProvider()
     {
-        var schemaDir = Path.Combine(DB_PATH, "schemas");
+        if (string.IsNullOrWhiteSpace(DatabasePath))
+        {
+            throw new InvalidOperationException("Provider is not initialized.");
+        }
+
+        var schemaDir = Path.Combine(DatabasePath, "schemas");
         {
             var ready = EnsureDirectoryReady(schemaDir);
             if (!ready)
                 return null;
         }
 
-        var thingDir = Path.Combine(DB_PATH, "things");
+        var thingDir = Path.Combine(DatabasePath, "things");
         {
             var ready = EnsureDirectoryReady(thingDir);
             if (!ready)
@@ -53,7 +71,12 @@ public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageP
     /// <inheritdoc/>
     public IThingStorageProvider? GetThingStorageProvider()
     {
-        var thingDir = Path.Combine(DB_PATH, "things");
+        if (string.IsNullOrWhiteSpace(DatabasePath))
+        {
+            throw new InvalidOperationException("Provider is not initialized.");
+        }
+
+        var thingDir = Path.Combine(DatabasePath, "things");
         var ready = EnsureDirectoryReady(thingDir);
         if (!ready)
             return null;
@@ -62,9 +85,26 @@ public class LocalDirectoryStorageProvider(string LocalDatabasePath) : IStorageP
     }
 
     /// <inheritdoc/>
-    public Task<bool> InitializeAsync(CancellationToken cancellationToken)
+    public Task<bool> InitializeAsync(IDictionary<string, string> settings, CancellationToken cancellationToken)
     {
-        var ready = EnsureDirectoryReady(DB_PATH);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        if (!settings.ContainsKey(SETTINGS_KEY_DB_PATH))
+        {
+            throw new ArgumentException($"Settings do not contain required key {SETTINGS_KEY_DB_PATH}", nameof(settings));
+        }
+
+        var tentative = settings[SETTINGS_KEY_DB_PATH];
+        if (string.IsNullOrWhiteSpace(tentative))
+        {
+            throw new ArgumentException($"Setting {SETTINGS_KEY_DB_PATH} must be specified.", nameof(settings));
+        }
+
+        DatabasePath = tentative
+            .ExpandRelativePaths("~/", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            .ExpandRelativePaths("[APPDATA]/", Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+
+        var ready = EnsureDirectoryReady(DatabasePath);
         return Task.FromResult(ready);
     }
 

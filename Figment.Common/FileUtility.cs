@@ -30,20 +30,30 @@ public static class FileUtility
     /// <returns>A full file path with the user profle / home directory expanded where a beginning tilde is present, or the same <paramref name="filePath"/> value otherwise.</returns>
     public static string ExpandRelativePaths(string filePath)
     {
+        return ExpandRelativePaths(filePath, "~/", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+    }
+
+    /// <summary>
+    /// Expands a file path that starts with a tilde into a full path.
+    /// </summary>
+    /// <param name="filePath">Original file path which may or may not begin with a tilde.</param>
+    /// <param name="token">The value to search for at the beginning of the <paramref name="filePath"/>.</param>
+    /// <param name="replacement">The value to replace the <paramref name="token"/> when found.</param>
+    /// <returns>A full file path with the user profle / home directory expanded where a beginning tilde is present, or the same <paramref name="filePath"/> value otherwise.</returns>
+    public static string ExpandRelativePaths(this string filePath, string token, string replacement)
+    {
         ArgumentNullException.ThrowIfNull(filePath);
 
-        var prefix = $"~{Path.DirectorySeparatorChar}";
-        if (!filePath.StartsWith(prefix))
+        if (!filePath.StartsWith(token))
         {
             return filePath;
         }
 
-        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (profile.EndsWith(Path.DirectorySeparatorChar))
+        if (replacement.EndsWith(Path.DirectorySeparatorChar))
         {
-            profile = profile[..^1];
+            replacement = replacement[..^1];
         }
 
-        return Path.Combine(profile, filePath[prefix.Length..]);
+        return Path.Combine(replacement, filePath[token.Length..]);
     }
 }

@@ -26,9 +26,10 @@ public interface IStorageProvider
     /// <summary>
     /// Request the storage provider prepare for requests.
     /// </summary>
+    /// <param name="settings">The settings dictionary used to configure the provider.</param>
     /// <param name="cancellationToken">A cancellation token for asynchronous methods.</param>
     /// <returns>A value indicating whether the storage provider successfully initialized and is ready to take requests.</returns>
-    public Task<bool> InitializeAsync(CancellationToken cancellationToken);
+    public Task<bool> InitializeAsync(IDictionary<string, string> settings, CancellationToken cancellationToken);
 
     /// <summary>
     /// Returns an <see cref="ISchemaStorageProvider"/> that can create, read, update, and delete <see cref="Schema"/> entities.

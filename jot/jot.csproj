@@ -12,6 +12,9 @@
   <ItemGroup>
     <PackageReference Include="com.seanmcelroy.Spectre.Console.Community.TextPromptWithHistory" Version="1.0.6" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
     <PackageReference Include="Spectre.Console" Version="0.50.0" />
@@ -25,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Figment.Common\Figment.Common.csproj" />
     <ProjectReference Include="..\Figment.Data.Local\Figment.Data.Local.csproj" />
+    <ProjectReference Include="..\Figment.Data.Memory\Figment.Data.Memory.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +37,12 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources/DefaultSchemas/00000000-0000-0000-0000-*.schema.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

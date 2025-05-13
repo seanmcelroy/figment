@@ -16,26 +16,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using Figment.Common.Data;
+using Microsoft.Extensions.Hosting;
+using Spectre.Console.Cli;
 
-namespace Figment.Data.Memory;
+namespace jot;
 
-/// <summary>
-/// A storage provider implementation that stores objects in memory.
-/// </summary>
-public class MemoryStorageProvider() : IStorageProvider
+/// <inheritdoc/>
+public sealed class TypeResolver(IHost provider) : ITypeResolver, IDisposable
 {
-    /// <summary>
-    /// The type of this provider, used to specify it in configurations.
-    /// </summary>
-    public const string PROVIDER_TYPE = "Memory";
+    private readonly IHost _host = provider ?? throw new ArgumentNullException(nameof(provider));
 
     /// <inheritdoc/>
-    public ISchemaStorageProvider? GetSchemaStorageProvider() => new MemorySchemaStorageProvider();
+    public object? Resolve(Type? type)
+    {
+        return type != null ? _host.Services.GetService(type) : null;
+    }
 
     /// <inheritdoc/>
-    public IThingStorageProvider? GetThingStorageProvider() => new MemoryThingStorageProvider();
-
-    /// <inheritdoc/>
-    public Task<bool> InitializeAsync(IDictionary<string, string> settings, CancellationToken cancellationToken) => Task.FromResult(true);
+    public void Dispose()
+    {
+        // _host.Dispose();
+    }
 }

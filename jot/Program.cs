@@ -21,6 +21,7 @@ using System.Globalization;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using Figment.Data.Memory;
 using jot.Commands;
 using jot.Commands.Interactive;
 using jot.Commands.Pomodoro;
@@ -28,6 +29,9 @@ using jot.Commands.Schemas;
 using jot.Commands.Schemas.ImportMaps;
 using jot.Commands.Things;
 using jot.Errors;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using TextPromptWithHistory;
@@ -63,24 +67,92 @@ internal class Program
         var interactive = args.Length == 0
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
-        // Setup the providers. TODO: Allow CLI config
+        // Build host
+        var hostBuilder = Host.CreateDefaultBuilder();
+        var host = hostBuilder.Build();
+        var registrar = new TypeRegistrar(hostBuilder, host);
+
+        // Pre-run configuration
+        var config = registrar.Host?.Services.GetRequiredService<IConfiguration>();
         Queue<Action> postBannerActionQueue = new();
-        AmbientErrorContext.Provider = new SpectreConsoleErrorProvider();
+
+        // // Error Provider
+        if (interactive)
         {
-            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "figment/db");
-            var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider(dataDir);
-            await ldsp.InitializeAsync(cts.Token);
-            if (interactive)
+            var ep = new SpectreConsoleErrorProvider();
+            AmbientErrorContext.Provider = ep;
+        }
+
+        // // Storage provider
+        {
+            var storageConfig = config?.GetSection("StorageProvider");
+            Dictionary<string, string> storageSettings;
+
+            string storageProviderType;
+            if (storageConfig == null)
             {
-                postBannerActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogInfo($"Using local storage of database at {dataDir}"));
+                // No storage provider is configured.
+                AmbientErrorContext.Provider.LogWarning("No storage provider configuration found.  Proceeding with an in-memory configuration.");
+                storageProviderType = MemoryStorageProvider.PROVIDER_TYPE;
+                storageSettings = [];
+            }
+            else
+            {
+                var spt = storageConfig?.GetValue<string>("Type");
+                if (string.IsNullOrWhiteSpace(spt))
+                {
+                    AmbientErrorContext.Provider.LogWarning("Storage provider type not specified.  Proceeding with an in-memory configuration.");
+                    storageProviderType = MemoryStorageProvider.PROVIDER_TYPE;
+                    storageSettings = [];
+                }
+                else
+                {
+                    storageProviderType = spt;
+                    var settingsSection = storageConfig!.GetSection("Settings");
+                    if (settingsSection == null)
+                    {
+                        AmbientErrorContext.Provider.LogError("Missing required settings section");
+                        return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Config error, perhaps.
+                    }
+
+                    storageSettings = settingsSection.Get<Dictionary<string, string>>() ?? [];
+                }
             }
 
-            AmbientStorageContext.StorageProvider = ldsp;
+            switch (storageProviderType)
+            {
+                case Figment.Data.Local.LocalDirectoryStorageProvider.PROVIDER_TYPE:
+                    var ldsp = new Figment.Data.Local.LocalDirectoryStorageProvider();
+                    if (storageSettings.TryGetValue(Figment.Data.Local.LocalDirectoryStorageProvider.SETTINGS_KEY_DB_PATH, out string? dataDir))
+                    {
+                        if (interactive)
+                        {
+                            postBannerActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogInfo($"Using local storage of database at {ldsp.DatabasePath}"));
+                        }
+                    }
+                    else
+                    {
+                        AmbientErrorContext.Provider.LogError($"Missing required setting: {Figment.Data.Local.LocalDirectoryStorageProvider.SETTINGS_KEY_DB_PATH}");
+                        return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Config error, perhaps.
+                    }
+
+                    AmbientStorageContext.StorageProvider = ldsp;
+                    break;
+                case MemoryStorageProvider.PROVIDER_TYPE:
+                    var msp = new MemoryStorageProvider();
+                    AmbientStorageContext.StorageProvider = msp;
+                    break;
+                default:
+                    AmbientErrorContext.Provider.LogError($"Unknown storage provider type: {storageProviderType}");
+                    return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Config error, perhaps.
+            }
+
+            await AmbientStorageContext.StorageProvider!.InitializeAsync(storageSettings, cts.Token);
         }
 
         var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "UNKNOWN";
 
-        var app = new CommandApp();
+        var app = new CommandApp(registrar);
         app.Configure(config =>
         {
             config.Settings.ApplicationName = "jot";
