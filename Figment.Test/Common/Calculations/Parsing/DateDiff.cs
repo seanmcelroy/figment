@@ -31,7 +31,7 @@ public sealed class DateDiff
     public void Initialize()
     {
         AmbientStorageContext.StorageProvider = new MemoryStorageProvider();
-        _ = AmbientStorageContext.StorageProvider.InitializeAsync(CancellationToken.None).Result;
+        _ = AmbientStorageContext.StorageProvider.InitializeAsync(new Dictionary<string, string>(), CancellationToken.None).Result;
     }
 
     /// <summary>
