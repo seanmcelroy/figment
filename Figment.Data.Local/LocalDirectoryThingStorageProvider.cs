@@ -439,9 +439,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         var fileName = $"{thing.Guid}.thing.json";
         var filePath = Path.Combine(thingDir.FullName, fileName);
         var backupFileName = $"{thing.Guid}.thing.json.backup";
+        var backupFilePath = Path.Combine(thingDir.FullName, backupFileName);
 
         if (File.Exists(filePath))
-            File.Move(filePath, backupFileName, true);
+            File.Move(filePath, backupFilePath, true);
 
         using var fs = File.Create(filePath);
         try
@@ -449,8 +450,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             await JsonSerializer.SerializeAsync(fs, thing, jsonSerializerOptions, cancellationToken: cancellationToken);
             await fs.FlushAsync(cancellationToken);
 
-            if (File.Exists(backupFileName))
-                File.Delete(backupFileName);
+            if (File.Exists(backupFilePath))
+                File.Delete(backupFilePath);
 
             return (true, $"{thing.Guid} saved to {filePath}.");
         }
@@ -459,8 +460,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             var errorMessage = $"Unable to serialize thing {thing.Guid} from {filePath}";
             AmbientErrorContext.Provider.LogException(je, errorMessage);
 
-            if (File.Exists(backupFileName))
-                File.Move(backupFileName, fileName);
+            if (File.Exists(backupFilePath))
+                File.Move(backupFilePath, filePath);
 
             return (false, errorMessage);
         }
