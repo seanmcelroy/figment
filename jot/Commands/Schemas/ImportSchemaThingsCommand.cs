@@ -131,40 +131,83 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var importedThings = new List<(Thing thing, int rowNumber)>();
+        var thingsToImport = new List<(Thing thing, int rowNumber)>();
         await foreach (var (thing, rowNumber) in things)
         {
-            importedThings.Add((thing, rowNumber));
+            thingsToImport.Add((thing, rowNumber));
         }
 
         // Are there duplicates in the import batch?  We can test this without touching the current data store.
-        var dupes = importedThings
+        var dupes = thingsToImport
             .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
             .Where(i => i.Count() > 1)
             .Select(i => new { name = i.Key, count = i.Count(), rows = i.Select(r => $"{r.rowNumber}").Aggregate((c, n) => $"{c},{n}") });
 
         if (dupes.Any())
         {
-            foreach (var dupe in dupes)
+            if (settings.IgnoreDuplicates ?? false)
             {
-                AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates for '{dupe.name}' on rows {dupe.rows}.");
-            }
+                // Print warnings but fall through.
+                foreach (var dupe in dupes)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Ignoring {dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}.");
+                }
 
-            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+                // Ignore dupes by culling them out.
+                thingsToImport = [.. thingsToImport
+                    .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+                    .Where(i => i.Count() == 1)
+                    .Select(i => (i.First().thing, i.First().rowNumber))];
+            }
+            else
+            {
+                // Print errors and exit.
+                foreach (var dupe in dupes)
+                {
+                    AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}.");
+                }
+
+                AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created.");
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+            }
         }
 
         // Now check dupes against the data store.
         var savedCount = 0;
-        await foreach (var (thing, rowNumber) in things)
+        var anyDupeInStore = false;
+        var thingsToImportReal = new List<(Thing thing, int rowNumber)>();
+        foreach (var (thing, rowNumber) in thingsToImport)
         {
             // Before we save it, is there already an object with the same name?
             var existing = await tsp.FindByNameAsync(thing.Name, cancellationToken);
             if (existing != Reference.EMPTY)
             {
-                AmbientErrorContext.Provider.LogError($"Failed to save thing from row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')");
+                anyDupeInStore = true;
+                if (settings.IgnoreDuplicates ?? false)
+                {
+                    // Print warnings but fall through.
+                    AmbientErrorContext.Provider.LogWarning($"Ignoring row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')");
+                }
+                else
+                {
+                    AmbientErrorContext.Provider.LogError($"Conflict on row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')");
+                }
+
                 continue;
             }
 
+            thingsToImportReal.Add((thing, rowNumber));
+        }
+
+        if (anyDupeInStore && !(settings.IgnoreDuplicates ?? false))
+        {
+            AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created.");
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+        }
+
+        // Now save them.
+        foreach (var (thing, rowNumber) in thingsToImportReal)
+        {
             var (saved, saveMessage) = await tsp.SaveAsync(thing, cancellationToken);
             if (!saved)
             {

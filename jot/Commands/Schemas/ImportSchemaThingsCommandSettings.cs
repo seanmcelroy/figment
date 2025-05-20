@@ -43,6 +43,13 @@ public class ImportSchemaThingsCommandSettings : SchemaCommandSettings
     [CommandArgument(1, "[FORMAT]")]
     public string? Format { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether to ignore duplicate records in the file and import non-duplicate records.
+    /// </summary>
+    [Description("Ignores duplicate records in the file and imports non-duplicates instead of erroring and not importing any when any duplicates are found.")]
+    [CommandOption("--ignore-dupes")]
+    required public bool? IgnoreDuplicates { get; init; } = false;
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {

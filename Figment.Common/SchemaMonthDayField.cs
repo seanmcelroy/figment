@@ -44,7 +44,9 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
         "M-dd",
         "M/dd",
         "MMM dd",
+        "MMM d",
         "MMMM dd",
+        "MMMM d",
     ];
 
     /// <inheritdoc/>
