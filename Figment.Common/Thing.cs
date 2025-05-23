@@ -81,13 +81,13 @@ public class Thing
     /// <remarks>
     /// Do not use this outside of this class.  Left public for serialization only.
     /// </remarks>
-    public Dictionary<string, object> Properties { get; init; } = [];
+    private Dictionary<string, object> Properties { get; init; } = [];
 
     /// <summary>
-    /// Gets the date this thing was created.
+    /// Gets or sets the date this thing was created.
     /// </summary>
     [JsonIgnore]
-    public DateTime CreatedOn { get; init; }
+    public DateTime CreatedOn { get; set; }
 
     /// <summary>
     /// Gets or sets the date things thing was last modified.
@@ -993,5 +993,38 @@ public class Thing
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Merges another <see cref="Thing"/> into this one.  Only values missing on this thing
+    /// are replaced with values on the <paramref name="incoming"/> version.
+    /// </summary>
+    /// <param name="incoming">The <see cref="Thing"/> to merge into this one.</param>
+    /// <returns>This object, which has been modified by the merge.</returns>
+    public Thing Merge(Thing incoming)
+    {
+        // We retain our Guid.
+        CreatedOn = incoming.CreatedOn < CreatedOn ? incoming.CreatedOn : CreatedOn;
+        IsDirty = true;
+        LastAccessed = DateTime.UtcNow;
+        LastModified = LastAccessed;
+        Name = string.IsNullOrWhiteSpace(Name) ? incoming.Name : Name;
+        foreach (var ip in incoming.Properties)
+        {
+            if (!Properties.ContainsKey(ip.Key))
+            {
+                Properties.TryAdd(ip.Key, ip.Value);
+            }
+        }
+
+        foreach (var ig in incoming.SchemaGuids)
+        {
+            if (!SchemaGuids.Contains(ig))
+            {
+                SchemaGuids.Add(ig);
+            }
+        }
+
+        return this;
     }
 }

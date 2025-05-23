@@ -44,11 +44,11 @@ public class ImportSchemaThingsCommandSettings : SchemaCommandSettings
     public string? Format { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether to ignore duplicate records in the file and import non-duplicate records.
+    /// Gets a value indicating how to handle duplicates.  Acceptable values are stop, skip, merge, or overwrite.
     /// </summary>
-    [Description("Ignores duplicate records in the file and imports non-duplicates instead of erroring and not importing any when any duplicates are found.")]
-    [CommandOption("--ignore-dupes")]
-    required public bool? IgnoreDuplicates { get; init; } = false;
+    [Description("How to handle duplicates.  Acceptable values are stop, skip, merge, or overwrite.")]
+    [CommandOption("--on-dupe")]
+    public string? DupeStrategy { get; init; } = "stop";
 
     /// <summary>
     /// Gets a value indicating whether the operation could run to completion, without actually importing any data to the underlying data store.

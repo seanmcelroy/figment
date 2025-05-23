@@ -194,13 +194,14 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
                 // This implements partial imports.
                 // This will skip settings.RecordsToSkip records, and only take settings.RecordsToImport records, if specified.
+                var thingsToDelete = new List<Reference>();
                 var thingsToImport = new List<(Thing thing, int rowNumber)>();
                 {
                     var count = 0;
                     await foreach (var (thing, rowNumber) in things)
                     {
                         count++;
-                        if (count < (settings.RecordsToSkip ?? 0))
+                        if (count <= (settings.RecordsToSkip ?? 0))
                         {
                             continue;
                         }
@@ -226,34 +227,46 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
                     if (dupes.Any())
                     {
-                        if (settings.IgnoreDuplicates ?? false)
+                        switch (settings.DupeStrategy)
                         {
-                            // Print warnings but fall through.
-                            foreach (var dupe in dupes)
-                            {
-                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Ignoring {dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}."));
-                            }
+                            case "skip":
+                                // Print warnings but fall through.
+                                foreach (var dupe in dupes)
+                                {
+                                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Ignoring {dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}."));
+                                }
 
-                            // Ignore dupes by culling them out.
-                            thingsToImport = [.. thingsToImport
-                                .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
-                                .Where(i => i.Count() == 1) // We do not want to keep the first, we just want ones where there is exactly one.  That's why we don't call i.First() here.
-                                .Select(i => (i.First().thing, i.First().rowNumber))];
-                        }
-                        else
-                        {
-                            // Print errors and exit.
-                            foreach (var dupe in dupes)
-                            {
-                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}."));
-                            }
+                                // Ignore dupes by culling them out.
+                                thingsToImport = [.. thingsToImport
+                                    .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+                                    .Where(i => i.Count() == 1) // We do not want to keep ANY dupes here.
+                                    .Select(i => (i.First().thing, i.First().rowNumber))];
+                                break;
+                            case "merge":
+                                // There might be multiple dupes, but we aggregate them all together.
+                                thingsToImport = [.. thingsToImport
+                                    .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+                                    .Select(i => (i.Select(j => j.thing).Aggregate((c, n) => c.Merge(n)), i.Last().rowNumber))];
+                                break;
+                            case "overwrite":
+                                // Since we are at the pre-store check, overwrite will pick the last of the same name where dupes do exist.
+                                thingsToImport = [.. thingsToImport
+                                    .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+                                    .Select(i => (i.Last().thing, i.Last().rowNumber))];
+                                break;
+                            default:
+                                // STOP. Print errors and exit.
+                                foreach (var dupe in dupes)
+                                {
+                                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}."));
+                                }
 
-                            dupeTask.MaxValue(dupeTask.Value);
-                            dupeTask.StopTask();
-                            overviewTask.MaxValue(overviewTask.Value);
-                            overviewTask.StopTask();
-                            postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created."));
-                            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+                                dupeTask.MaxValue(dupeTask.Value);
+                                dupeTask.StopTask();
+                                overviewTask.MaxValue(overviewTask.Value);
+                                overviewTask.StopTask();
+                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created."));
+                                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
                         }
                     }
 
@@ -267,7 +280,6 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                     var dupeTask = ctx.AddTask("Analyzing for dupes in data store")
                         .MaxValue(thingsToImport.Count);
 
-                    var anyDupeInStore = false;
                     foreach (var (thing, rowNumber) in thingsToImport)
                     {
                         dupeTask.Increment(1);
@@ -276,33 +288,48 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                         var existing = await tsp.FindByNameAsync(thing.Name, cancellationToken);
                         if (existing != Reference.EMPTY)
                         {
-                            anyDupeInStore = true;
-                            if (settings.IgnoreDuplicates ?? false)
+                            switch (settings.DupeStrategy)
                             {
-                                // Print warnings but fall through.
-                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Ignoring row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')"));
-                            }
-                            else
-                            {
-                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Conflict on row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')"));
+                                case "skip":
+                                    // Print warnings but fall through.
+                                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Skipping row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')"));
+                                    break;
+                                case "merge":
+                                    var existingThing = await tsp.LoadAsync(existing.Guid, cancellationToken);
+                                    if (existingThing != null)
+                                    {
+                                        existingThing.Merge(thing);
+                                        thingsToImportReal.Add((existingThing, rowNumber));
+                                        postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Merging row {rowNumber}: Another object with the same name already exists. ('{thing.Name}', GUID '{existing.Guid}')  This row will be merged into it."));
+                                    }
+
+                                    break;
+                                case "overwrite":
+                                    thingsToDelete.Add(existing);
+                                    thingsToImportReal.Add((thing, rowNumber));
+                                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Superceding row {rowNumber}: Another object with the same name already exists. ('{thing.Name}', GUID '{existing.Guid}')  It will be overwritten by this row."));
+                                    break;
+                                default: // Stop
+                                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Conflict on row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')"));
+                                    dupeTask.MaxValue(dupeTask.Value);
+                                    dupeTask.StopTask();
+                                    overviewTask.MaxValue(overviewTask.Value);
+                                    overviewTask.StopTask();
+                                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created."));
+                                    return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
                             }
 
                             continue;
                         }
-
-                        thingsToImportReal.Add((thing, rowNumber));
+                        else
+                        {
+                            // No dupe, no special handling required.
+                            thingsToImportReal.Add((thing, rowNumber));
+                        }
                     }
 
                     dupeTask.MaxValue(dupeTask.Value);
                     dupeTask.StopTask();
-
-                    if (anyDupeInStore && !(settings.IgnoreDuplicates ?? false))
-                    {
-                        overviewTask.MaxValue(overviewTask.Value);
-                        overviewTask.StopTask();
-                        postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created."));
-                        return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
-                    }
                 }
 
                 // Now save them.
@@ -523,7 +550,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         {
             if (csvToRow.HasValue)
             {
-                readStatusMessage = $"Reading CSV file rows {csvFromRow.Value} to {csvToRow.HasValue}";
+                readStatusMessage = $"Reading CSV file rows {csvFromRow.Value} to {csvToRow.Value}";
             }
             else
             {
@@ -534,7 +561,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         {
             if (csvToRow.HasValue)
             {
-                readStatusMessage = $"Reading CSV file rows 1 to {csvToRow.HasValue}";
+                readStatusMessage = $"Reading CSV file rows 1 to {csvToRow.Value}";
             }
             else
             {
@@ -573,7 +600,12 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                         break;
                     }
 
-                    var fieldConfig = importMap.FieldConfiguration.First(fc => fc.SchemaPropertyName != null && fc.SchemaPropertyName.Equals(propertyName));
+                    var fieldConfig = importMap.FieldConfiguration.FirstOrDefault(fc => fc.SchemaPropertyName != null && fc.SchemaPropertyName.Equals(propertyName));
+                    if (fieldConfig == null)
+                    {
+                        AmbientErrorContext.Provider.LogError($"No field configuration found for property '{propertyName}' in row {rowCount}.");
+                        yield break;
+                    }
                     var value = handler.Invoke(csv);
                     if (TOMBSTONE.Equals(value))
                     {
