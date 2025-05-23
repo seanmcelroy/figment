@@ -50,6 +50,53 @@ public class ImportSchemaThingsCommandSettings : SchemaCommandSettings
     [CommandOption("--ignore-dupes")]
     required public bool? IgnoreDuplicates { get; init; } = false;
 
+    /// <summary>
+    /// Gets a value indicating whether the operation could run to completion, without actually importing any data to the underlying data store.
+    /// </summary>
+    [Description("Checks whether the operation could run to completion, without actually importing any data to the underlying data store.")]
+    [CommandOption("--dry-run")]
+    required public bool? DryRun { get; init; } = false;
+
+    /// <summary>
+    /// Gets the line number in the CSV file rows should be read (1-based).
+    /// </summary>
+    /// <remarks>
+    /// Row range filtering when reading from a comma separated value file.
+    /// </remarks>
+    [Description("Import rows from a CSV file from a specific line number (1-based)")]
+    [CommandOption("--csv-from-row")]
+    public int? CsvFromRow { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the line number in the CSV file rows which data should be read (1-based, inclusive).
+    /// </summary>
+    /// <remarks>
+    /// Row range filtering when reading from a comma separated value file.
+    /// </remarks>
+    [Description("Import rows to line number (1-based, inclusive)")]
+    [CommandOption("--csv-to-row")]
+    public int? CsvToRow { get; init; }
+
+    /// <summary>
+    /// Gets the number of records to skip before beginning an import.
+    /// </summary>
+    /// <remarks>
+    /// This is a general alternative to a source-specific selector, like <see cref="CsvFromRow"/>.
+    /// </remarks>
+    [Description("Number of records to skip before beginning an import.  This applies to records read from any given source or format.")]
+    [CommandArgument(2, "[SKIP]")]
+    public int? RecordsToSkip { get; init; }
+
+    /// <summary>
+    /// Gets the number of records to import.  If unspecified, all parsable records will be imported.
+    /// </summary>
+    /// <remarks>
+    /// This is a general alternative to a source-specific selector, like <see cref="CsvToRow"/>.
+    /// </remarks>
+    [Description("Number of records to import.  If unspecified, all parsable records will be imported.  This applies to records read from any given source or format.")]
+    [CommandArgument(3, "[COUNT]")]
+    public int? RecordsToImport { get; init; }
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
@@ -62,6 +109,31 @@ public class ImportSchemaThingsCommandSettings : SchemaCommandSettings
         if (!File.Exists(expandedPath))
         {
             return ValidationResult.Error($"File path '{expandedPath}' does not exist");
+        }
+
+        if (CsvFromRow.HasValue && CsvFromRow < 1)
+        {
+            return ValidationResult.Error($"CSV starting row must be 1 or greater");
+        }
+
+        if (CsvToRow.HasValue && CsvToRow < 1)
+        {
+            return ValidationResult.Error($"CSV ending row must be 1 or greater");
+        }
+
+        if (CsvFromRow.HasValue && CsvToRow.HasValue && CsvFromRow.Value > CsvToRow.Value)
+        {
+            return ValidationResult.Error($"CSV ending row must be greater than or equal to the starting row");
+        }
+
+        if (RecordsToImport.HasValue && RecordsToImport < 1)
+        {
+            return ValidationResult.Error($"Records to import must be greater than 1");
+        }
+
+        if (RecordsToSkip.HasValue && RecordsToSkip < 0)
+        {
+            return ValidationResult.Error($"Records to import must be greater than 0");
         }
 
         return ValidationResult.Success();

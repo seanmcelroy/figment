@@ -131,7 +131,8 @@ public readonly record struct ThingProperty
         // Cannot be a system property
         if (propertyName.Equals("createdon", StringComparison.InvariantCultureIgnoreCase)
             || propertyName.Equals("lastaccessed", StringComparison.InvariantCultureIgnoreCase)
-            || propertyName.Equals("lastmodified", StringComparison.InvariantCultureIgnoreCase))
+            || propertyName.Equals("lastmodified", StringComparison.InvariantCultureIgnoreCase)
+            )
         {
             message = "Property name cannot be a reserved word.";
             return false;

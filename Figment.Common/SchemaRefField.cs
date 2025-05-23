@@ -103,7 +103,7 @@ public class SchemaRefField(string Name, string SchemaGuid) : SchemaFieldBase(Na
             return false;
         }
 
-        if (value is string s && !await tsp.GuidExists(s, cancellationToken))
+        if (value is string s && (string.IsNullOrWhiteSpace(s) || !await tsp.GuidExists(s, cancellationToken)))
         {
             return false;
         }

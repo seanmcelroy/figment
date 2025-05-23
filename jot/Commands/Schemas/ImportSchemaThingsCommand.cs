@@ -98,14 +98,14 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         if (string.IsNullOrWhiteSpace(settings.Format))
         {
             // Extension
-            if (string.Equals(Path.GetExtension(expandedPath), "csv", StringComparison.InvariantCultureIgnoreCase))
+            if (string.Equals(Path.GetExtension(expandedPath), ".csv", StringComparison.InvariantCultureIgnoreCase))
             {
                 fileFormat = "csv";
             }
         }
 
         var possibleImportMaps = schema.ImportMaps
-            .Where(s => string.Equals(s.Format, settings.Format, StringComparison.InvariantCultureIgnoreCase))
+            .Where(s => string.Equals(s.Format, fileFormat, StringComparison.InvariantCultureIgnoreCase))
             .ToArray();
 
         if (possibleImportMaps.Length == 0)
@@ -114,14 +114,32 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.UNKNOWN_TYPE;
         }
 
-        if (string.Equals(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase))
+        // Select import map
+        SchemaImportMap importMap;
         {
-            things = ImportCsv(expandedPath, schema, possibleImportMaps, cancellationToken);
-        }
-        else
-        {
-            AmbientErrorContext.Provider.LogError($"Unsupported format '{settings.Format}'.");
-            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+            if (possibleImportMaps.Length == 1)
+            {
+                importMap = possibleImportMaps[0];
+            }
+            else
+            {
+                var which = AnsiConsole.Prompt(
+                    new SelectionPrompt<PossibleGenericMatch<SchemaImportMap>>()
+                        .Title($"There was more than one import map.  Which do you want to use for this import?")
+                        .PageSize(5)
+                        .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
+                        .EnableSearch()
+                        .AddChoices(possibleImportMaps.Select(m => new PossibleGenericMatch<SchemaImportMap>(x => x.Name, m))));
+                importMap = which.Entity;
+            }
+
+            if (importMap.FieldConfiguration == null
+                || importMap.FieldConfiguration.Count == 0
+                || !importMap.FieldConfiguration.Any(fc => !string.IsNullOrWhiteSpace(fc.SchemaPropertyName)))
+            {
+                AmbientErrorContext.Provider.LogError($"Import map '{importMap.Name}' does not map to any fields on {schema.Name}.  This file will not be imported.");
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+            }
         }
 
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
@@ -131,120 +149,234 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var thingsToImport = new List<(Thing thing, int rowNumber)>();
-        await foreach (var (thing, rowNumber) in things)
-        {
-            thingsToImport.Add((thing, rowNumber));
-        }
+        Queue<Action> postProgressActionQueue = new();
 
-        // Are there duplicates in the import batch?  We can test this without touching the current data store.
-        var dupes = thingsToImport
-            .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
-            .Where(i => i.Count() > 1)
-            .Select(i => new { name = i.Key, count = i.Count(), rows = i.Select(r => $"{r.rowNumber}").Aggregate((c, n) => $"{c},{n}") });
-
-        if (dupes.Any())
-        {
-            if (settings.IgnoreDuplicates ?? false)
+        var result = await AnsiConsole.Progress()
+            .Columns(
+            [
+                new TaskDescriptionColumn(),    // Task description
+                new ProgressBarColumn(),        // Progress bar
+                new PercentageColumn(),         // Percentage
+                new ElapsedTimeColumn(),        // Elapsed time
+            ])
+            .StartAsync(
+            async ctx =>
             {
-                // Print warnings but fall through.
-                foreach (var dupe in dupes)
+                var overviewTask = ctx.AddTask("Importing data")
+                    .IsIndeterminate(true);
                 {
-                    AmbientErrorContext.Provider.LogWarning($"Ignoring {dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}.");
+                    var rebuildIndexTask = ctx.AddTask("Rebuilding thing indexes pre-import")
+                        .IsIndeterminate(true);
+
+                    var success = await tsp.RebuildIndexes(cancellationToken);
+                    rebuildIndexTask.MaxValue(rebuildIndexTask.Value);
+                    rebuildIndexTask.StopTask();
+                    if (!success)
+                    {
+                        overviewTask.MaxValue(overviewTask.Value);
+                        overviewTask.StopTask();
+                        postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Unable to reindex things.  Import aborted."));
+                        return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+                    }
                 }
 
-                // Ignore dupes by culling them out.
-                thingsToImport = [.. thingsToImport
-                    .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
-                    .Where(i => i.Count() == 1)
-                    .Select(i => (i.First().thing, i.First().rowNumber))];
-            }
-            else
-            {
-                // Print errors and exit.
-                foreach (var dupe in dupes)
+                if (string.Equals(fileFormat, "csv", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}.");
-                }
-
-                AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created.");
-                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
-            }
-        }
-
-        // Now check dupes against the data store.
-        var savedCount = 0;
-        var anyDupeInStore = false;
-        var thingsToImportReal = new List<(Thing thing, int rowNumber)>();
-        foreach (var (thing, rowNumber) in thingsToImport)
-        {
-            // Before we save it, is there already an object with the same name?
-            var existing = await tsp.FindByNameAsync(thing.Name, cancellationToken);
-            if (existing != Reference.EMPTY)
-            {
-                anyDupeInStore = true;
-                if (settings.IgnoreDuplicates ?? false)
-                {
-                    // Print warnings but fall through.
-                    AmbientErrorContext.Provider.LogWarning($"Ignoring row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')");
+                    things = ImportCsv(expandedPath, schema, importMap, settings.CsvFromRow, settings.CsvToRow, ctx, cancellationToken);
                 }
                 else
                 {
-                    AmbientErrorContext.Provider.LogError($"Conflict on row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')");
+                    overviewTask.MaxValue(overviewTask.Value);
+                    overviewTask.StopTask();
+                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Unsupported format '{fileFormat}'."));
+                    return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
                 }
 
-                continue;
-            }
-
-            thingsToImportReal.Add((thing, rowNumber));
-        }
-
-        if (anyDupeInStore && !(settings.IgnoreDuplicates ?? false))
-        {
-            AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created.");
-            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
-        }
-
-        // Now save them.
-        foreach (var (thing, rowNumber) in thingsToImportReal)
-        {
-            var (saved, saveMessage) = await tsp.SaveAsync(thing, cancellationToken);
-            if (!saved)
-            {
-                AmbientErrorContext.Provider.LogError($"Failed to save thing from row {rowNumber}: {saveMessage}");
-                continue;
-            }
-            else
-            {
-                savedCount++;
-            }
-        }
-
-        AmbientErrorContext.Provider.LogDone($"Imported {savedCount} rows from '{expandedPath}'.");
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots)
-            .SpinnerStyle(Style.Parse("purple"))
-            .StartAsync("Rebuilding thing indexes...", async ctx =>
-            {
-                var success = await tsp.RebuildIndexes(cancellationToken);
-                if (success)
+                // This implements partial imports.
+                // This will skip settings.RecordsToSkip records, and only take settings.RecordsToImport records, if specified.
+                var thingsToImport = new List<(Thing thing, int rowNumber)>();
                 {
-                    ctx.Status("Success!");
+                    var count = 0;
+                    await foreach (var (thing, rowNumber) in things)
+                    {
+                        count++;
+                        if (count < (settings.RecordsToSkip ?? 0))
+                        {
+                            continue;
+                        }
+
+                        thingsToImport.Add((thing, rowNumber));
+
+                        if (settings.RecordsToImport != null && thingsToImport.Count >= settings.RecordsToImport)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                // Are there duplicates in the import batch?  We can test this without touching the current data store.
+                {
+                    var dupeTask = ctx.AddTask("Analyzing imported records for dupes")
+                        .IsIndeterminate(true);
+
+                    var dupes = thingsToImport
+                        .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+                        .Where(i => i.Count() > 1)
+                        .Select(i => new { name = i.Key, count = i.Count(), rows = i.Select(r => $"{r.rowNumber}").Aggregate((c, n) => $"{c},{n}") });
+
+                    if (dupes.Any())
+                    {
+                        if (settings.IgnoreDuplicates ?? false)
+                        {
+                            // Print warnings but fall through.
+                            foreach (var dupe in dupes)
+                            {
+                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Ignoring {dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}."));
+                            }
+
+                            // Ignore dupes by culling them out.
+                            thingsToImport = [.. thingsToImport
+                                .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
+                                .Where(i => i.Count() == 1) // We do not want to keep the first, we just want ones where there is exactly one.  That's why we don't call i.First() here.
+                                .Select(i => (i.First().thing, i.First().rowNumber))];
+                        }
+                        else
+                        {
+                            // Print errors and exit.
+                            foreach (var dupe in dupes)
+                            {
+                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"{dupe.count} duplicates in file for '{dupe.name}' on rows {dupe.rows}."));
+                            }
+
+                            dupeTask.MaxValue(dupeTask.Value);
+                            dupeTask.StopTask();
+                            overviewTask.MaxValue(overviewTask.Value);
+                            overviewTask.StopTask();
+                            postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created."));
+                            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+                        }
+                    }
+
+                    dupeTask.MaxValue(dupeTask.Value);
+                    dupeTask.StopTask();
+                }
+
+                // Now check dupes against the data store.
+                var thingsToImportReal = new List<(Thing thing, int rowNumber)>();
+                {
+                    var dupeTask = ctx.AddTask("Analyzing for dupes in data store")
+                        .MaxValue(thingsToImport.Count);
+
+                    var anyDupeInStore = false;
+                    foreach (var (thing, rowNumber) in thingsToImport)
+                    {
+                        dupeTask.Increment(1);
+
+                        // Before we save it, is there already an object with the same name?
+                        var existing = await tsp.FindByNameAsync(thing.Name, cancellationToken);
+                        if (existing != Reference.EMPTY)
+                        {
+                            anyDupeInStore = true;
+                            if (settings.IgnoreDuplicates ?? false)
+                            {
+                                // Print warnings but fall through.
+                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogWarning($"Ignoring row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')"));
+                            }
+                            else
+                            {
+                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Conflict on row {rowNumber}: Another object with the same name already exists. ('{thing.Name}')"));
+                            }
+
+                            continue;
+                        }
+
+                        thingsToImportReal.Add((thing, rowNumber));
+                    }
+
+                    dupeTask.MaxValue(dupeTask.Value);
+                    dupeTask.StopTask();
+
+                    if (anyDupeInStore && !(settings.IgnoreDuplicates ?? false))
+                    {
+                        overviewTask.MaxValue(overviewTask.Value);
+                        overviewTask.StopTask();
+                        postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Aborted file import: No things were created."));
+                        return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR; // TODO: Return a more specific error code.
+                    }
+                }
+
+                // Now save them.
+                var savedCount = 0;
+                var importJobId = Guid.NewGuid().ToString();
+                {
+                    var saveTask = ctx.AddTask("Saving items to data store")
+                        .MaxValue(thingsToImportReal.Count);
+
+                    foreach (var (thing, rowNumber) in thingsToImportReal)
+                    {
+                        saveTask.Increment(1);
+
+                        await thing.Set("ImportJobID", importJobId, cancellationToken);
+                        if (settings.DryRun ?? false)
+                        {
+                            savedCount++;
+                        }
+                        else
+                        {
+                            var (saved, saveMessage) = await tsp.SaveAsync(thing, cancellationToken);
+                            if (!saved)
+                            {
+                                postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogError($"Failed to save thing from row {rowNumber}: {saveMessage}"));
+                                continue;
+                            }
+                            else
+                            {
+                                savedCount++;
+                            }
+                        }
+                    }
+
+                    saveTask.MaxValue(saveTask.Value);
+                    saveTask.StopTask();
+                }
+
+                if (settings.DryRun ?? false)
+                {
+                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogDone($"Dry Run: Would have imported {savedCount} rows from '{expandedPath}'."));
                 }
                 else
                 {
-                    ctx.Status("Failed!");
+                    postProgressActionQueue.Enqueue(() => AmbientErrorContext.Provider.LogDone($"Imported {savedCount} rows from '{expandedPath}' as import job ID {importJobId}."));
+
+                    var rebuildIndexTask = ctx.AddTask("Rebuilding thing indexes post-import")
+                        .IsIndeterminate(true);
+
+                    var success = await tsp.RebuildIndexes(cancellationToken);
+                    rebuildIndexTask.MaxValue(rebuildIndexTask.Value);
+                    rebuildIndexTask.StopTask();
                 }
+
+                overviewTask.MaxValue(overviewTask.Value);
+                overviewTask.StopTask();
+                return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
             });
 
-        return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+        while (postProgressActionQueue.Count > 0)
+        {
+            var action = postProgressActionQueue.Dequeue();
+            action.Invoke();
+        }
+
+        return result;
     }
 
     private static async IAsyncEnumerable<(Thing thing, int rowNumber)> ImportCsv(
         string filePath,
         Schema schema,
-        SchemaImportMap[] possibleImportMaps,
+        SchemaImportMap importMap,
+        int? csvFromRow,
+        int? csvToRow,
+        ProgressContext ctx,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
@@ -255,7 +387,11 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             yield break;
         }
 
-        using var reader = new StreamReader(filePath);
+        using var fs = File.OpenRead(filePath);
+        var fileRowCount = FileUtility.CountLines(fs);
+        fs.Seek(0, SeekOrigin.Begin); // Rewind to beginning of file.
+
+        using var reader = new StreamReader(fs);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
 
         if (!await csv.ReadAsync())
@@ -271,228 +407,263 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         }
 
         // Dump headers
-        AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c, n) => $"{c},{n}")}");
+        // AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c, n) => $"{c},{n}")}");
 
-        // Select import map
-        SchemaImportMap importMap;
-
-        if (possibleImportMaps.Length == 0)
-        {
-            AmbientErrorContext.Provider.LogError("No import maps found for schema.");
-            yield break;
-        }
-
-        if (possibleImportMaps.Length == 1)
-        {
-            importMap = possibleImportMaps[0];
-        }
-        else
-        {
-            var which = AnsiConsole.Prompt(
-                new SelectionPrompt<PossibleGenericMatch<SchemaImportMap>>()
-                    .Title($"There was more than one import map.  Which do you want to use for this import?")
-                    .PageSize(5)
-                    .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
-                    .EnableSearch()
-                    .AddChoices(possibleImportMaps.Select(m => new PossibleGenericMatch<SchemaImportMap>(x => x.Name, m))));
-            importMap = which.Entity;
-        }
-
-        if (importMap.FieldConfiguration == null
-            || importMap.FieldConfiguration.Count == 0
-            || !importMap.FieldConfiguration.Any(fc => !string.IsNullOrWhiteSpace(fc.SchemaPropertyName)))
-        {
-            AmbientErrorContext.Provider.LogError($"Import map '{importMap.Name}' does not map to any fields on {schema.Name}.  This file will not be imported.");
-            yield break;
-        }
-
-        // Build index map
+        // Building index map
         var propertyNamesHandler = new Dictionary<string, Func<CsvReader, object?>>();
-        foreach (var fc in importMap.FieldConfiguration)
         {
-            if (string.IsNullOrWhiteSpace(fc.ImportFieldName)
-                || string.IsNullOrWhiteSpace(fc.SchemaPropertyName))
-            {
-                // Field is unmapped, so skip.
-                continue;
-            }
+            var buildIndexMapTask = ctx.AddTask("Building index map")
+                .MaxValue(importMap.FieldConfiguration.Count);
 
-            // If the import field name is a formula, parse it now as it might have multiple field references.
+            foreach (var fc in importMap.FieldConfiguration)
+            {
+                buildIndexMapTask.Increment(1);
+
+                if (string.IsNullOrWhiteSpace(fc.ImportFieldName)
+                    || string.IsNullOrWhiteSpace(fc.SchemaPropertyName))
+                {
+                    // Field is unmapped, so skip.
+                    continue;
+                }
+
+                // If the import field name is a formula, parse it now as it might have multiple field references.
 #pragma warning disable SA1011 // Closing square brackets should be spaced correctly
-            string[]? formulaFieldReferences = null;
+                string[]? formulaFieldReferences = null;
 #pragma warning restore SA1011 // Closing square brackets should be spaced correctly
-            if (fc.ImportFieldName.StartsWith('='))
-            {
-                // This property matches to a formula, which may reference zero to many CSV header columns.
-                if (!ExpressionParser.TryParse(fc.ImportFieldName, out NodeBase? nb))
+                if (fc.ImportFieldName.StartsWith('='))
                 {
-                    AmbientErrorContext.Provider.LogError($"Import map '{importMap.Name}' contains mapping '{fc.ImportFieldName}' which starts with an equals sign, but it could not be parsed as a formula.  This file will not be imported.");
-                    yield break;
-                }
-
-                formulaFieldReferences = [.. nb.WalkFieldNames()];
-
-                // Build argument parsers
-                var argHandlers = new Dictionary<string, Func<CsvReader, string?>>();
-                foreach (var formFieldRef in formulaFieldReferences)
-                {
-                    var matchingCsvColumns = csv.HeaderRecord
-                        .Select((hdr, idx) => new { hdr, idx })
-                        .Where(x => x.hdr.Equals(formFieldRef, StringComparison.InvariantCultureIgnoreCase))
-                        .ToArray();
-
-                    if (matchingCsvColumns.Length == 0)
+                    // This property matches to a formula, which may reference zero to many CSV header columns.
+                    if (!ExpressionParser.TryParse(fc.ImportFieldName, out NodeBase? nb))
                     {
-                        if (fc.SkipRecordIfMissing)
+                        AmbientErrorContext.Provider.LogError($"Import map '{importMap.Name}' contains mapping '{fc.ImportFieldName}' which starts with an equals sign, but it could not be parsed as a formula.  This file will not be imported.");
+                        yield break;
+                    }
+
+                    formulaFieldReferences = [.. nb.WalkFieldNames()];
+
+                    // Build argument parsers
+                    var argHandlers = new Dictionary<string, Func<CsvReader, string?>>();
+                    foreach (var formFieldRef in formulaFieldReferences)
+                    {
+                        var matchingCsvColumns = csv.HeaderRecord
+                            .Select((hdr, idx) => new { hdr, idx })
+                            .Where(x => x.hdr.Equals(formFieldRef, StringComparison.InvariantCultureIgnoreCase))
+                            .ToArray();
+
+                        if (matchingCsvColumns.Length == 0)
                         {
-                            AmbientErrorContext.Provider.LogError($"File column has formula '{fc.ImportFieldName}' and references field '{formFieldRef}' which was not found.  This property {fc.SchemaPropertyName} is marked as required (SkipRecordIfMissing=true).  This file will not be imported.");
-                            yield break;
+                            if (fc.SkipRecordIfMissing)
+                            {
+                                AmbientErrorContext.Provider.LogError($"File column has formula '{fc.ImportFieldName}' and references field '{formFieldRef}' which was not found.  This property {fc.SchemaPropertyName} is marked as required (SkipRecordIfMissing=true).  This file will not be imported.");
+                                yield break;
+                            }
+
+                            argHandlers.Add(formFieldRef, cr => null);
                         }
-
-                        argHandlers.Add(formFieldRef, cr => null);
-                    }
-                    else if (matchingCsvColumns.Length > 1)
-                    {
-                        AmbientErrorContext.Provider.LogError($"File column has formula '{fc.ImportFieldName}' and references field '{formFieldRef}' which appears multiple times in the CSV file.  This file will not be imported.");
-                        yield break;
-                    }
-                    else
-                    {
-                        argHandlers.Add(formFieldRef, cr => cr.GetField(matchingCsvColumns[0].idx));
-                    }
-                }
-
-                var bespokeHandler = new Func<CsvReader, object?>(csv =>
-                {
-                    var args = argHandlers.ToDictionary(k => k.Key, v => v.Value.Invoke(csv));
-                    var bespokeContext = new EvaluationContext(args);
-                    var expressionResult = nb.Evaluate(bespokeContext);
-                    if (expressionResult.IsSuccess)
-                    {
-                        return expressionResult.Result;
-                    }
-
-                    return TOMBSTONE;
-                });
-                propertyNamesHandler.Add(fc.SchemaPropertyName, bespokeHandler);
-            }
-            else
-            {
-                // This property should match a single CSV header column.
-                var matchingCsvColumns = csv.HeaderRecord
-                    .Select((hdr, idx) => new { hdr, idx })
-                    .Where(x => x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
-                    .ToArray();
-
-                if (fc.SkipRecordIfMissing && matchingCsvColumns.Length == 0)
-                {
-                    AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' is marked as required (SkipRecordIfMissing=true) but is missing in the CSV header.  This file will not be imported.");
-                    yield break;
-                }
-
-                if (matchingCsvColumns.Length > 1)
-                {
-                    AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' appears multiple times in the CSV file.  This file will not be imported.");
-                    yield break;
-                }
-
-                propertyNamesHandler.Add(fc.SchemaPropertyName, new Func<CsvReader, object?>(csv => csv.GetField(matchingCsvColumns[0].idx)));
-            }
-        }
-
-        var rowCount = 0;
-        while (await csv.ReadAsync())
-        {
-            rowCount++;
-            var thingGuid = Guid.NewGuid().ToString();
-            var thing = new Thing(thingGuid, $"Imported {rowCount}");
-
-            foreach (var (propertyName, handler) in propertyNamesHandler)
-            {
-                var fieldConfig = importMap.FieldConfiguration.First(fc => fc.SchemaPropertyName != null && fc.SchemaPropertyName.Equals(propertyName));
-                var value = handler.Invoke(csv);
-                if (TOMBSTONE.Equals(value))
-                {
-                    if (fieldConfig.SkipRecordIfInvalid)
-                    {
-                        AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value for field '{fieldConfig.ImportFieldName}'->{fieldConfig.SchemaPropertyName}.");
-                        continue;
-                    }
-                    else
-                    {
-                        AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value for field mapping '{fieldConfig.ImportFieldName}'->{fieldConfig.SchemaPropertyName}.");
-                        yield break;
-                    }
-                }
-
-                // Try to set the property value
-                try
-                {
-                    string? inputValue;
-                    if (value == null)
-                    {
-                        inputValue = null;
-                    }
-                    else if (value is string sv)
-                    {
-                        inputValue = sv;
-                    }
-                    else
-                    {
-                        inputValue = value.ToString();
-                    }
-
-                    // Handle reserved values.
-                    if (propertyName.Equals("$Name"))
-                    {
-                        if (!string.IsNullOrWhiteSpace(inputValue))
+                        else if (matchingCsvColumns.Length > 1)
                         {
-                            thing.Name = inputValue;
+                            AmbientErrorContext.Provider.LogError($"File column has formula '{fc.ImportFieldName}' and references field '{formFieldRef}' which appears multiple times in the CSV file.  This file will not be imported.");
+                            yield break;
                         }
                         else
                         {
-                            AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for the name of the {schema.Name} instance.");
-                            yield break;
+                            argHandlers.Add(formFieldRef, cr => cr.GetField(matchingCsvColumns[0].idx));
                         }
                     }
-                    else
+
+                    var bespokeHandler = new Func<CsvReader, object?>(csv =>
                     {
-                        var tsr = await thing.Set(propertyName, inputValue, cancellationToken);
-                        if (!tsr.Success)
+                        var args = argHandlers.ToDictionary(k => k.Key, v => v.Value.Invoke(csv));
+                        var bespokeContext = new EvaluationContext(args);
+                        var expressionResult = nb.Evaluate(bespokeContext);
+                        if (expressionResult.IsSuccess)
                         {
-                            if (fieldConfig.SkipRecordIfInvalid)
-                            {
-                                AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
-                                continue;
-                            }
-                            else
-                            {
-                                AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
-                                yield break;
-                            }
+                            return expressionResult.Result;
                         }
-                    }
+
+                        return TOMBSTONE;
+                    });
+                    propertyNamesHandler.Add(fc.SchemaPropertyName, bespokeHandler);
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (fieldConfig.SkipRecordIfInvalid)
+                    // This property should match a single CSV header column.
+                    var matchingCsvColumns = csv.HeaderRecord
+                        .Select((hdr, idx) => new { hdr, idx })
+                        .Where(x => x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
+                        .ToArray();
+
+                    if (fc.SkipRecordIfMissing && matchingCsvColumns.Length == 0)
                     {
-                        AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Error setting field '{fieldConfig.ImportFieldName}': {ex.Message}");
-                        continue;
-                    }
-                    else
-                    {
-                        AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: {ex.Message}");
+                        AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' is marked as required (SkipRecordIfMissing=true) but is missing in the CSV header.  This file will not be imported.");
                         yield break;
+                    }
+
+                    switch (matchingCsvColumns.Length)
+                    {
+                        case 0:
+                            AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' missing in file.  This file will not be imported.");
+                            yield break;
+                        case 1:
+                            propertyNamesHandler.Add(fc.SchemaPropertyName, new Func<CsvReader, object?>(csv => csv.GetField(matchingCsvColumns[0].idx)));
+                            break;
+                        default: // > 1
+                            AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' appears multiple times in the CSV file.  This file will not be imported.");
+                            yield break;
                     }
                 }
             }
 
-            // Save the thing if we have at least one property set
-            if (thing.IsDirty)
+            buildIndexMapTask.MaxValue(buildIndexMapTask.Value);
+            buildIndexMapTask.StopTask();
+        }
+
+        string readStatusMessage;
+        if (csvFromRow.HasValue)
+        {
+            if (csvToRow.HasValue)
             {
-                yield return (thing, rowCount);
+                readStatusMessage = $"Reading CSV file rows {csvFromRow.Value} to {csvToRow.HasValue}";
             }
+            else
+            {
+                readStatusMessage = $"Reading CSV file starting at row {csvFromRow.Value}";
+            }
+        }
+        else
+        {
+            if (csvToRow.HasValue)
+            {
+                readStatusMessage = $"Reading CSV file rows 1 to {csvToRow.HasValue}";
+            }
+            else
+            {
+                readStatusMessage = $"Reading CSV file rows";
+            }
+        }
+
+        {
+            var readCsvRowTask = ctx.AddTask(readStatusMessage)
+                .MaxValue(fileRowCount);
+
+            var rowCount = 0;
+            while (await csv.ReadAsync())
+            {
+                rowCount++;
+
+                // Apply row range filtering
+                if (csvFromRow.HasValue && rowCount < csvFromRow.Value)
+                {
+                    continue;
+                }
+                else if (csvToRow.HasValue && rowCount > csvToRow.Value)
+                {
+                    break;
+                }
+
+                var thingGuid = Guid.NewGuid().ToString();
+                var thing = new Thing(thingGuid, $"Imported {rowCount}");
+                thing.SchemaGuids.Add(schema.Guid);
+
+                var skipThisRow = false;
+                foreach (var (propertyName, handler) in propertyNamesHandler)
+                {
+                    if (skipThisRow)
+                    {
+                        break;
+                    }
+
+                    var fieldConfig = importMap.FieldConfiguration.First(fc => fc.SchemaPropertyName != null && fc.SchemaPropertyName.Equals(propertyName));
+                    var value = handler.Invoke(csv);
+                    if (TOMBSTONE.Equals(value))
+                    {
+                        if (fieldConfig.SkipRecordIfInvalid)
+                        {
+                            skipThisRow = true;
+                            AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value for field '{fieldConfig.ImportFieldName}'->{fieldConfig.SchemaPropertyName}.");
+                            continue;
+                        }
+                        else
+                        {
+                            AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value for field mapping '{fieldConfig.ImportFieldName}'->{fieldConfig.SchemaPropertyName}.");
+                            yield break;
+                        }
+                    }
+
+                    // Try to set the property value
+                    try
+                    {
+                        string? inputValue;
+                        if (value == null)
+                        {
+                            inputValue = null;
+                        }
+                        else if (value is string sv)
+                        {
+                            inputValue = sv;
+                        }
+                        else
+                        {
+                            inputValue = value.ToString();
+                        }
+
+                        // Handle reserved values.
+                        if (propertyName.Equals("$Name"))
+                        {
+                            if (!string.IsNullOrWhiteSpace(inputValue))
+                            {
+                                thing.Name = inputValue;
+                            }
+                            else
+                            {
+                                AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for the name of the {schema.Name} instance.");
+                                yield break;
+                            }
+                        }
+                        else
+                        {
+                            var tsr = await thing.Set(propertyName, inputValue, cancellationToken);
+                            if (!tsr.Success)
+                            {
+                                if (fieldConfig.SkipRecordIfInvalid)
+                                {
+                                    skipThisRow = true;
+                                    AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                                    continue;
+                                }
+                                else
+                                {
+                                    AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: Invalid value '{value}' for field '{fieldConfig.ImportFieldName}'.");
+                                    yield break;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (fieldConfig.SkipRecordIfInvalid)
+                        {
+                            skipThisRow = true;
+                            AmbientErrorContext.Provider.LogWarning($"Skipping row {rowCount}: Error setting field '{fieldConfig.ImportFieldName}': {ex.Message}");
+                            continue;
+                        }
+                        else
+                        {
+                            AmbientErrorContext.Provider.LogError($"Error processing row {rowCount}: {ex.Message}");
+                            yield break;
+                        }
+                    }
+                }
+
+                // Save the thing if we have at least one property set
+                if (!skipThisRow && thing.IsDirty)
+                {
+                    yield return (thing, rowCount);
+                }
+            }
+
+            readCsvRowTask.MaxValue(readCsvRowTask.Value);
+            readCsvRowTask.StopTask();
         }
     }
 }

@@ -99,12 +99,19 @@ public class SetThingPropertyCommand : CancellableAsyncCommand<SetThingPropertyC
             return which;
         }
 
-        var saved = await thing.Set(propName, propValue, cancellationToken,
+        var setResult = await thing.Set(propName, propValue, cancellationToken,
             AnsiConsole.Profile.Capabilities.Interactive ? ChooserHandler : null);
 
-        if (!saved.Success)
+        if (!setResult.Success)
         {
             AmbientErrorContext.Provider.LogError($"Unable to edit thing with Guid '{thingReference.Guid}'.");
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
+        }
+
+        var savedResult = await thing.SaveAsync(cancellationToken);
+        if (!savedResult.success)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to save thing with Guid '{thingReference.Guid}'.");
             return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
         }
 

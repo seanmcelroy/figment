@@ -313,7 +313,12 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                 {
                     var elementValue = element.GetString();
                     if (!string.IsNullOrWhiteSpace(elementValue))
-                        thingLoaded.SchemaGuids.Add(elementValue);
+                    {
+                        if (!thingLoaded.SchemaGuids.Contains(elementValue))
+                        {
+                            thingLoaded.SchemaGuids.Add(elementValue);
+                        }
+                    }
                 }
             }
 
@@ -436,6 +441,21 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             return (false, $"Directory '{ThingDirectoryPath}' not found.");
         }
 
+        if (string.IsNullOrWhiteSpace(thing.Guid))
+        {
+            return (false, $"Thing '{thing.Name ?? "<UNNAMED>"}' has a missing GUID.");
+        }
+
+        if (!Thing.IsThingNameValid(thing.Name))
+        {
+            return (false, $"Name '{thing.Name}' is invalid for thing '{thing.Guid}'.");
+        }
+
+        if (thing.SchemaGuids == null || thing.SchemaGuids.Count == 0)
+        {
+            return (false, $"Thing '{thing.Name}' has no schema(s).");
+        }
+
         var fileName = $"{thing.Guid}.thing.json";
         var filePath = Path.Combine(thingDir.FullName, fileName);
         var backupFileName = $"{thing.Guid}.thing.json.backup";
@@ -543,7 +563,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         if (!thing.SchemaGuids.Contains(schemaGuid))
         {
             thing.SchemaGuids.Add(schemaGuid);
-            var (saved, saveMessage) = await thing.SaveAsync(cancellationToken);
+            var (saved, _) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
         }
@@ -624,10 +644,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
 
         var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp != null)
-            await foreach (var (reference, name) in ssp.GetAll(cancellationToken))
+            await foreach (var (reference, _) in ssp.GetAll(cancellationToken))
             {
-                schemaGuidsAndThingIndexes.Add(reference.Guid, []);
-                schemaGuidsAndThingNames.Add(reference.Guid, []);
+                schemaGuidsAndThingIndexes.TryAdd(reference.Guid, []);
+                schemaGuidsAndThingNames.TryAdd(reference.Guid, []);
             }
 
         Dictionary<string, string> namesIndex = [];
@@ -640,18 +660,31 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             if (thing == null)
                 continue;
 
-            namesIndex.Add(thing.Name, thingFileName.Name);
-            if (thing.SchemaGuids != null)
-                foreach (var schemaGuid in thing.SchemaGuids)
-                    if (!string.IsNullOrWhiteSpace(schemaGuid)
-                        && schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
-                        value?.Add(thing.Guid, thingFileName.Name);
+            if (namesIndex.TryGetValue(thing.Name, out string? existingNamedThingPath))
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to index named thing '{thing.Name}' in '{thingFileName.Name}'.  Another thing of the same name is already in '{existingNamedThingPath}'.");
+                continue;
+            }
 
-            if (thing.SchemaGuids != null)
-                foreach (var schemaGuid in thing.SchemaGuids)
-                    if (!string.IsNullOrWhiteSpace(schemaGuid)
-                && schemaGuidsAndThingNames.TryGetValue(schemaGuid, out Dictionary<string, string>? value2))
-                        value2?.Add(thing.Name, thingFileName.Name);
+            if (namesIndex.TryAdd(thing.Name, thingFileName.Name))
+            {
+                if (thing.SchemaGuids != null)
+                    foreach (var schemaGuid in thing.SchemaGuids)
+                        if (!string.IsNullOrWhiteSpace(schemaGuid)
+                            && schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
+                            value?.Add(thing.Guid, thingFileName.Name);
+
+                if (thing.SchemaGuids != null)
+                    foreach (var schemaGuid in thing.SchemaGuids)
+                        if (!string.IsNullOrWhiteSpace(schemaGuid)
+                    && schemaGuidsAndThingNames.TryGetValue(schemaGuid, out Dictionary<string, string>? value2))
+                            value2?.Add(thing.Name, thingFileName.Name);
+            }
+            else
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to index named thing '{thing.Name}' in '{thingFileName.Name}'.");
+                continue;
+            }
         }
         indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
 

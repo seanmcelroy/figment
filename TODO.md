@@ -33,3 +33,44 @@
 - [ ] Array of references (owner/owners of teams) properties
 - [ ] org chart command ("app"?ee)
 - [ ] schema export/import maps / .VCF export/imports
+
+# Future import improvements
+
+  Data Quality & Validation
+
+  - Pre-import validation report: Show summary of data issues before importing (missing required fields, invalid formats, etc.)
+  - Field value statistics: Display min/max/average for numeric fields, value frequency for enums
+  - Data type inference: Suggest schema field types based on CSV data patterns
+
+  Import Flexibility
+
+  - Multiple file formats: Add JSON, Excel (.xlsx), XML support beyond CSV
+  - Partial imports: Allow importing specific rows/columns with filters
+  - Resume capability: Support resuming failed imports from last successful row
+  - Chunked processing: Process large files in batches to avoid memory issues
+
+  User Experience
+
+  - Preview mode: Show first N rows of how data will be imported before committing
+  - Interactive mapping: Allow users to map CSV columns to schema fields interactively
+  - Progress reporting: Real-time progress bar for large imports with ETA
+  - Import history: Track and log previous import operations
+
+  Data Management
+
+  - Update existing records: Option to update rather than skip duplicates
+  - Backup before import: Create automatic backup of existing data
+  - Rollback capability: Ability to undo an import operation
+  - Merge strategies: Different approaches for handling conflicts (overwrite, merge, skip)
+
+  Performance & Monitoring
+
+  - Parallel processing: Process multiple rows concurrently for large datasets
+  - Memory optimization: Stream processing for very large files
+  - Import metrics: Track performance stats (rows/second, memory usage)
+
+  Integration Features
+
+  - Scheduled imports: Support for recurring imports from file paths or URLs
+  - External data sources: Import from databases, APIs, cloud storage
+  - Transform pipelines: Built-in data transformation during import

@@ -700,10 +700,12 @@ public class Thing
                         }
 
                         Name = propValue;
+                        return new ThingSetResult(true, $"Property {nameof(Name)} set to '{propValue}'");
                     }
-
-                    var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                    return new ThingSetResult(saved, saveMessage);
+                    else
+                    {
+                        return new ThingSetResult(true, $"Property {propName} set to '{propValue}'");
+                    }
                 }
 
             case 1:
@@ -722,8 +724,7 @@ public class Thing
                         AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
                     }
 
-                    var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                    return new ThingSetResult(saved, saveMessage);
+                    return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} value wsa removed.");
                 }
 
                 if (!candidateProperties[0].Valid)
@@ -743,8 +744,7 @@ public class Thing
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
                             AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
-                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved, saveMessage);
+                            return new ThingSetResult(true, $"Property {propName} set to '{disambig[0].Reference.Guid}'");
                         }
                         else if (disambig.Length > 1)
                         {
@@ -753,23 +753,20 @@ public class Thing
                                 disambig);
 
                             Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved, saveMessage);
+                            return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{which.Reference.Guid}'");
                         }
                         else
                         {
                             if (massagedPropValue == null)
                             {
                                 Properties.Remove(candidateProperties[0].TruePropertyName);
+                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} was removed.");
                             }
                             else
                             {
                                 Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
                             }
-
-                            AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved, saveMessage);
                         }
                     }
                     else if (chooserHandler != null
@@ -789,8 +786,7 @@ public class Thing
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
                             AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
-                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved, saveMessage);
+                            return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{disambig[0].Reference.Guid}'");
                         }
                         else if (disambig.Length > 1)
                         {
@@ -799,31 +795,27 @@ public class Thing
                                 disambig);
 
                             Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved, saveMessage);
+                            return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{which.Reference.Guid}'");
                         }
                         else
                         {
                             if (massagedPropValue == null)
                             {
                                 Properties.Remove(candidateProperties[0].TruePropertyName);
+                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} was removed.");
                             }
                             else
                             {
                                 Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
                             }
-
-                            AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                            var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                            return new ThingSetResult(saved, saveMessage);
                         }
                     }
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
                         AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                        var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                        return new ThingSetResult(saved, saveMessage);
+                        return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
                     }
                 }
 
@@ -838,14 +830,13 @@ public class Thing
                         }
 
                         Name = massagedPropValue.ToString()!;
+                        return new ThingSetResult(true, $"Property {nameof(Name)} set to '{massagedPropValue}'");
                     }
                     else
                     {
                         Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                        return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
                     }
-
-                    var (saved, saveMessage) = await SaveAsync(cancellationToken);
-                    return new ThingSetResult(saved, saveMessage);
                 }
 
             default:

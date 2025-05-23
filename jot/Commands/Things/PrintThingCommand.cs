@@ -273,9 +273,9 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                                 new Markup(prop.Field.Required ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark));
                         }
                     }
-                }
 
-                masterTable.AddRow(new Markup("[indianred1]Unset Properties[/]"), unsetPropertyTable);
+                    masterTable.AddRow(new Markup("[indianred1]Unset Properties[/]"), unsetPropertyTable);
+                }
             }
         }
 
