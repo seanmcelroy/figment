@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common;
+using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
@@ -38,6 +40,16 @@ public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettin
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
+        NodeBase? filterExpression = null;
+        if (!string.IsNullOrWhiteSpace(settings.Filter))
+        {
+            if (!ExpressionParser.TryParse(settings.Filter, out filterExpression))
+            {
+                AmbientErrorContext.Provider.LogError($"Invalid filter expression: {settings.Filter}");
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+            }
+        }
+
         if (settings.AsTable ?? false)
         {
             Table t = new();
@@ -45,32 +57,90 @@ public class ListThingsCommand : CancellableAsyncCommand<ListThingsCommandSettin
             t.AddColumn("GUID");
 
             await foreach (var (reference, name) in thingProvider.GetAll(cancellationToken))
-                if (string.IsNullOrWhiteSpace(settings.PartialNameMatch)
-                    || (
-                        name != null
-                        && name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase)
-                    )
-                )
+            {
+                if (await ShouldIncludeThing(thingProvider, reference, name, settings, filterExpression, cancellationToken))
                 {
                     t.AddRow(name ?? string.Empty, reference.Guid);
                 }
+            }
 
             AnsiConsole.Write(t);
         }
         else
         {
-            await foreach (var (_, name) in thingProvider.GetAll(cancellationToken))
-                if (string.IsNullOrWhiteSpace(settings.PartialNameMatch)
-                    || (
-                        name != null
-                        && name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase)
-                    )
-                )
+            await foreach (var (reference, name) in thingProvider.GetAll(cancellationToken))
+            {
+                if (await ShouldIncludeThing(thingProvider, reference, name, settings, filterExpression, cancellationToken))
                 {
                     Console.WriteLine(name);
                 }
+            }
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+    }
+
+    /// <summary>
+    /// Client-side filtering of the listing.
+    /// </summary>
+    /// <param name="thingProvider">The thing provider.</param>
+    /// <param name="reference">The unique identifier of the thing.</param>
+    /// <param name="name">The name of the thing.</param>
+    /// <param name="settings">The settings passed into the command.</param>
+    /// <param name="filterExpression">An optional complex filter expression.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the thing referenced by <paramref name="reference"/> should be included.</returns>
+    private static async Task<bool> ShouldIncludeThing(
+        IThingStorageProvider thingProvider,
+        Reference reference,
+        string? name,
+        ListThingsCommandSettings settings,
+        NodeBase? filterExpression,
+        CancellationToken cancellationToken)
+    {
+        // If there is no filtering, then yes.
+        var partialNameFilterSpecified = !string.IsNullOrWhiteSpace(settings.PartialNameMatch);
+        var complexFilterSpecified = !string.IsNullOrWhiteSpace(settings.Filter) && filterExpression != null;
+        if (!partialNameFilterSpecified && !complexFilterSpecified)
+        {
+            return true;
+        }
+
+        // Does it pass the simple name filter, if one is specified?
+        if (partialNameFilterSpecified
+            && !string.IsNullOrWhiteSpace(name)
+            && !string.IsNullOrWhiteSpace(settings.PartialNameMatch)
+            && name.Contains(settings.PartialNameMatch, StringComparison.CurrentCultureIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!complexFilterSpecified)
+        {
+            return false;
+        }
+
+        try
+        {
+            var thing = await thingProvider.LoadAsync(reference.Guid, cancellationToken);
+            if (thing == null)
+            {
+                return false;
+            }
+
+            var evaluationContext = new EvaluationContext(thing);
+            var result = filterExpression!.Evaluate(evaluationContext);
+
+            if (result.IsSuccess && result.Result is bool boolResult)
+            {
+                return boolResult;
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

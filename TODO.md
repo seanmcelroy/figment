@@ -33,6 +33,7 @@
 - [ ] Array of references (owner/owners of teams) properties
 - [ ] org chart command ("app"?ee)
 - [ ] schema export/import maps / .VCF export/imports
+- [ ] remotes and sync between them for various schemas
 
 # Future import improvements
 

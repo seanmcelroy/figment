@@ -163,7 +163,8 @@ internal class Program
             config.AddCommand<ListSchemasCommand>("schemas")
                 .WithDescription("Lists all the schemas in the database");
             config.AddCommand<ListThingsCommand>("things")
-                .WithDescription("Lists all the things in the database");
+                .WithDescription("Lists all the things in the database")
+                .WithExample("things", "--filter", "\"[Email]='me@seanmcelroy.com'\"");
 
             config.AddBranch("pomodoro", pomo =>
                 {

@@ -39,4 +39,11 @@ public class ListThingsCommandSettings : CommandSettings
     [Description("Outputs the list in a human-readable tabular format")]
     [CommandOption("--as-table")]
     public bool? AsTable { get; init; } = false;
+
+    /// <summary>
+    /// Gets an optional filter expression to apply to things.
+    /// </summary>
+    [Description("An optional filter expression to apply to things (e.g., \"[name] = 'John'\" or \"[age] = 25\")")]
+    [CommandOption("--filter")]
+    public string? Filter { get; init; }
 }

@@ -606,6 +606,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                         AmbientErrorContext.Provider.LogError($"No field configuration found for property '{propertyName}' in row {rowCount}.");
                         yield break;
                     }
+
                     var value = handler.Invoke(csv);
                     if (TOMBSTONE.Equals(value))
                     {
