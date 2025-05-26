@@ -43,7 +43,7 @@ public class ListThingsCommandSettings : CommandSettings
     /// <summary>
     /// Gets an optional filter expression to apply to things.
     /// </summary>
-    [Description("An optional filter expression to apply to things (e.g., \"[name] = 'John'\" or \"[age] = 25\")")]
+    [Description("An optional filter expression to apply to things (e.g., \"[[name]] = 'John'\" or \"[[age]] = 25\")")]
     [CommandOption("--filter")]
     public string? Filter { get; init; }
 }
