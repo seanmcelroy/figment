@@ -503,11 +503,10 @@ internal class Program
 
                     var forSchemaGuidObject = viewProps
                         .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.for", StringComparison.Ordinal))
-                        .Select(p => p.Value)
                         .FirstOrDefault();
 
                     if (forSchemaGuidObject != default
-                        && forSchemaGuidObject is string forSchemaGuid
+                        && forSchemaGuidObject.Value is string forSchemaGuid
                         && !string.IsNullOrWhiteSpace(forSchemaGuid)
                         && string.Equals(forSchemaGuid, commonSchema.Guid, StringComparison.Ordinal)
                         && await ssp.GuidExists(forSchemaGuid, cancellationToken))
@@ -515,13 +514,12 @@ internal class Program
                         // Found a matching view!
                         var viewColumnsObject = viewProps
                             .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.displayColumns", StringComparison.Ordinal))
-                            .Select(p => p.Value)
                             .FirstOrDefault();
 
                         var schema = await ssp.LoadAsync(forSchemaGuid, cancellationToken);
 
                         if (viewColumnsObject != default
-                            && viewColumnsObject is System.Collections.IEnumerable viewColumns
+                            && viewColumnsObject.Value is System.Collections.IEnumerable viewColumns
                             && schema != null)
                         {
                             // Do it this way so we preserve viewColumns order
@@ -575,7 +573,14 @@ internal class Program
                                         string? text;
                                         if (schema.Properties.TryGetValue(thingProperty.FullDisplayName[(thingProperty.FullDisplayName.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
                                         {
-                                            text = await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken);
+                                            if (!thingProperty.Valid)
+                                            {
+                                                text = $"[yellow]{await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken)}[/]";
+                                            }
+                                            else
+                                            {
+                                                text = await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken);
+                                            }
                                         }
                                         else
                                         {
