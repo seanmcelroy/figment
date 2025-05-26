@@ -25,26 +25,73 @@ namespace jot;
 /// </summary>
 public static class Globals
 {
+    /// <summary>
+    /// Error codes that can be returned from the entry point.
+    /// </summary>
     public enum GLOBAL_ERROR_CODES : int
     {
+        /// <summary>
+        /// The operation completed successfully or the program is terminating normally.
+        /// </summary>
         SUCCESS = 0,
+
+        /// <summary>
+        /// One or more arguments were invalid for the specified operation.
+        /// </summary>
         ARGUMENT_ERROR = -1,
+
+        /// <summary>
+        /// One or more objects could not be located by name or by reference.
+        /// </summary>
         NOT_FOUND = -2,
+
+        /// <summary>
+        /// More than one objects were located by name or by reference, but only one was expected.
+        /// </summary>
         AMBIGUOUS_MATCH = -3,
+
+        /// <summary>
+        /// Because the type of the object is not known, the operation cannot proceed.
+        /// </summary>
         UNKNOWN_TYPE = -4,
+
+        /// <summary>
+        /// General input/output error, such as files or network connections could not be read or written to.
+        /// </summary>
         GENERAL_IO_ERROR = -5,
+
+        /// <summary>
+        /// Unable to load a <see cref="Figment.Common.Schema"/> from the underlying data store.
+        /// </summary>
         SCHEMA_LOAD_ERROR = -1000,
+
+        /// <summary>
+        /// Unable to save a <see cref="Figment.Common.Schema"/> to the underlying data store.
+        /// </summary>
         SCHEMA_SAVE_ERROR = -1001,
 
         // SCHEMA_CREATE_ERROR = -1002
         // SCHEMA_DELETE_ERROR = -2002
+
+        /// <summary>
+        /// Unable to load a <see cref="Figment.Common.Thing"/> from the underlying data store.
+        /// </summary>
         THING_LOAD_ERROR = -2000,
+
+        /// <summary>
+        /// Unable to save a <see cref="Figment.Common.Thing"/> to the underlying data store.
+        /// </summary>
         THING_SAVE_ERROR = -2001,
 
         // THING_CREATE_ERROR = -2002
         // THING_DELETE_ERROR = -2003,
     }
 
+    /// <summary>
+    /// Splits command arguments in one string into multiple strings.
+    /// </summary>
+    /// <param name="commandLine">The input command line arguments.</param>
+    /// <returns>An enumeration of each command line argument.</returns>
     public static IEnumerable<string> SplitArgs(string? commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine))

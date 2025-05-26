@@ -5,7 +5,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas;
 
 /// <summary>
-/// Sets a 'pretty' display name for a schema field.
+/// Sets a 'pretty' display name for a <see cref="Schema"/> field.
 /// </summary>
 public class SetSchemaPropertyDisplayCommand : SchemaCancellableAsyncCommand<SetSchemaPropertyDisplayCommandSettings>
 {

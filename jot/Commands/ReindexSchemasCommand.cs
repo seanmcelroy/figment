@@ -24,7 +24,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands;
 
 /// <summary>
-/// Rebuilds the index files for <see cref="Schema"/> for consistency.
+/// Rebuilds the index files for <see cref="Figment.Common.Schema"/> for consistency.
 /// </summary>
 public class ReindexSchemasCommand : CancellableAsyncCommand
 {

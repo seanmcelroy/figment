@@ -27,7 +27,7 @@ namespace jot.Commands.Interactive;
 public class DescribeSelectedSchemaCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the description of this <see cref="Schema"/>.
+    /// Gets the description of this <see cref="Figment.Common.Schema"/>.
     /// </summary>
     [Description("Description of this schema")]
     [CommandArgument(0, "[DESCRIPTION]")]

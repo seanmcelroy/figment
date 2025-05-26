@@ -28,7 +28,7 @@ namespace jot.Commands.Things;
 public class ThingRenameCommandSettings : ThingCommandSettings
 {
     /// <summary>
-    /// Gets the new name for the <see cref="Thing"/>.
+    /// Gets the new name for the <see cref="Figment.Common.Thing"/>.
     /// </summary>
     [Description("New name for the thing")]
     [CommandArgument(0, "<NEW_NAME>")]

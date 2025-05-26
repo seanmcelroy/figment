@@ -28,7 +28,7 @@ namespace jot.Commands.Schemas;
 public class DissociateSchemaFromThingCommandSettings : SchemaCommandSettings
 {
     /// <summary>
-    /// Gets the name of the <see cref="Thing"/> to dissociate from the <see cref="Schema"/>.
+    /// Gets the name of the <see cref="Figment.Common.Thing"/> to dissociate from the <see cref="Figment.Common.Schema"/>.
     /// </summary>
     [Description("Name of the thing to dissociate from the schema")]
     [CommandArgument(0, "<THING_NAME>")]
@@ -46,7 +46,7 @@ public class DissociateSchemaFromThingCommandSettings : SchemaCommandSettings
     /// Attempts to resolve the specified <see cref="ThingName"/>.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A tuple with a indicating whether the resolution was successful, and if so, what the reference to the <see cref="Thing"/> is.</returns>
+    /// <returns>A tuple with a indicating whether the resolution was successful, and if so, what the reference to the <see cref="Figment.Common.Thing"/> is.</returns>
     public (Globals.GLOBAL_ERROR_CODES, Figment.Common.Reference thing) ResolveThingName(CancellationToken cancellationToken)
     {
         return Things.ThingCommandSettings.ResolveThingName(ThingName, cancellationToken);

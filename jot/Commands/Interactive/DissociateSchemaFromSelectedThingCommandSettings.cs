@@ -28,7 +28,7 @@ namespace jot.Commands.Interactive;
 public class DissociateSchemaFromSelectedThingCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the name of the <see cref="Schema"/> to target.
+    /// Gets the name of the <see cref="Figment.Common.Schema"/> to target.
     /// </summary>
     [Description("Name of the schema to target")]
     [CommandArgument(0, "<SCHEMA>")]

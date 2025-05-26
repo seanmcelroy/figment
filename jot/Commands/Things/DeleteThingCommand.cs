@@ -36,10 +36,10 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
     /// <summary>
     /// Attempts to delete the <see cref="Thing"/> by its name or identifier.
     /// </summary>
-    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> of things to match and return.</param>
+    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Thing.Name"/> of things to match and return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An integer indicating whether or not the command executed successfully.</returns>
-    /// <remarks>This can be used by <see cref="DeleteThingCommand"/> and <see cref="DeleteCommand"/>.</remarks>
+    /// <remarks>This can be used by <see cref="DeleteThingCommand"/> and <see cref="Interactive.DeleteCommand"/>.</remarks>
     internal static async Task<int> TryDeleteThing(string guidOrNamePart, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;

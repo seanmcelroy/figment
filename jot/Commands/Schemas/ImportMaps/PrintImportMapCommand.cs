@@ -5,7 +5,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas.ImportMaps;
 
 /// <summary>
-/// Prints the details of an import map on a <see cref="Schema"/> configuration.
+/// Prints the details of an import map on a <see cref="Figment.Common.Schema"/> configuration.
 /// </summary>
 public class PrintImportMapCommand : SchemaCancellableAsyncCommand<PrintImportMapCommandSettings>
 {

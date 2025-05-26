@@ -27,7 +27,7 @@ namespace jot.Commands.Schemas;
 public class SetSchemaDescriptionCommandSettings : SchemaCommandSettings
 {
     /// <summary>
-    /// Gets the description of the <see cref="Schema"/>.  If blank, the description will be cleared.
+    /// Gets the description of the <see cref="Figment.Common.Schema"/>.  If blank, the description will be cleared.
     /// </summary>
     [Description("Description of the schema. If blank, the description will be cleared")]
     [CommandArgument(0, "[DESCRIPTION]")]

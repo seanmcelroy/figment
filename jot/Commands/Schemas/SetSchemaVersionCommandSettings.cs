@@ -27,7 +27,7 @@ namespace jot.Commands.Schemas;
 public class SetSchemaVersionCommandSettings : SchemaCommandSettings
 {
     /// <summary>
-    /// Gets the version plan of the <see cref="Schema"/>.  If blank, the version plan will be cleared.
+    /// Gets the version plan of the <see cref="Figment.Common.Schema"/>.  If blank, the version plan will be cleared.
     /// </summary>
     [Description("Version plan for the schema. If blank, the version plan will be cleared")]
     [CommandArgument(0, "[VERSION GUID OR NAME]")]

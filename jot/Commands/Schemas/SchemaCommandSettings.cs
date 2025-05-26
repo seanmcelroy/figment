@@ -23,7 +23,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas;
 
 /// <summary>
-/// The settings supplied to commands that only need to target a <see cref="Schema"/>
+/// The settings supplied to commands that only need to target a <see cref="Figment.Common.Schema"/>
 /// and have no other arguments.
 /// </summary>
 /// <seealso cref="DeleteSchemaCommand"/>
@@ -32,7 +32,7 @@ namespace jot.Commands.Schemas;
 public class SchemaCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the name of the <see cref="Schema"/> to target.
+    /// Gets the name of the <see cref="Figment.Common.Schema"/> to target.
     /// </summary>
     [Description("Name of the schema to target")]
     [CommandArgument(0, "<SCHEMA>")]

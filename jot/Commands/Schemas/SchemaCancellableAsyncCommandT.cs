@@ -4,14 +4,30 @@ using Figment.Common.Errors;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// The base class implementation for cancelable asynchornous commands used by <see cref="Spectre.Console.Cli"/>.
+/// </summary>
+/// <typeparam name="T">The type of the settings this command requireds.</typeparam>
 public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand<T>
     where T : SchemaCommandSettings
 {
+    /// <summary>
+    /// Attempts to load the <see cref="Schema"/> from settings implementation <typeparamref name="T"/>.
+    /// </summary>
+    /// <param name="settings">The settings from which to load the <see cref="Schema"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple with a result which can be returned by the entry point if it is an error, the schema, if loaded, and the storage provider, if constructed.</returns>
     protected async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(T settings, CancellationToken cancellationToken)
     {
         return await TryGetSchema(settings.SchemaName, cancellationToken);
     }
 
+    /// <summary>
+    /// Attempts to load the <see cref="Schema"/> by name or reference.
+    /// </summary>
+    /// <param name="guidOrNamePart">The <see cref="Schema.Guid"/> or <see cref="Schema.Name"/> a schema to match and return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple with a result which can be returned by the entry point if it is an error, the schema, if loaded, and the storage provider, if constructed.</returns>
     public static async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(string guidOrNamePart, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;

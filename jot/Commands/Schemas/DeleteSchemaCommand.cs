@@ -36,10 +36,10 @@ public class DeleteSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSe
     /// <summary>
     /// Attempts to delete the schem by its name or identifier.
     /// </summary>
-    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Name"/> of schemas to match and return.</param>
+    /// <param name="guidOrNamePart">The <see cref="Guid"/> or <see cref="Schema.Name"/> of schemas to match and return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An integer indicating whether or not the command executed successfully.</returns>
-    /// <remarks>This can be used by <see cref="DeleteSchemaCommand"/> and <see cref="DeleteCommand"/>.</remarks>
+    /// <remarks>This can be used by <see cref="DeleteSchemaCommand"/> and <see cref="Interactive.DeleteCommand"/>.</remarks>
     internal static async Task<int> TryDeleteSchema(string guidOrNamePart, CancellationToken cancellationToken)
     {
         var (tgs, schema, _) = await TryGetSchema(guidOrNamePart, cancellationToken);

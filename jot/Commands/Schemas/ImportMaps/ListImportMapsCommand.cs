@@ -4,7 +4,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas.ImportMaps;
 
 /// <summary>
-/// Lists all import maps defined on a <see cref="Schema"/>.
+/// Lists all import maps defined on a <see cref="Figment.Common.Schema"/>.
 /// </summary>
 public class ListImportMapsCommand : SchemaCancellableAsyncCommand<ListImportMapsCommandSettings>
 {

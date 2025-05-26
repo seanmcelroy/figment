@@ -7,6 +7,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands;
 
+/// <summary>
+/// Sets a field on either a <see cref="Thing"/> or its <see cref="Schema"/>.
+/// </summary>
 public class SetSelectedPropertyCommand : CancellableAsyncCommand<SetSelectedPropertyCommandSettings>, ICommand
 {
     private static void PrintSchemaSubcommandHelp()

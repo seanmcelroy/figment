@@ -28,7 +28,7 @@ namespace jot.Commands.Schemas;
 public class SchemaRenameCommandSettings : SchemaCommandSettings
 {
     /// <summary>
-    /// Gets the new name for the <see cref="Schema"/>.  This is usually one singular term.
+    /// Gets the new name for the <see cref="Figment.Common.Schema"/>.  This is usually one singular term.
     /// </summary>
     [Description("New name for the schema.  This is usually one singular term")]
     [CommandArgument(0, "<NEW_NAME>")]

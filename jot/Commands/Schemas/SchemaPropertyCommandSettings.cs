@@ -23,7 +23,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas;
 
 /// <summary>
-/// The settings supplied to the <see cref="SchemaPropertyCommand"/>.
+/// The settings supplied to the commands that modify schema properties.
 /// </summary>
 public class SchemaPropertyCommandSettings : SchemaCommandSettings
 {

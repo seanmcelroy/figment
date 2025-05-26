@@ -3,6 +3,9 @@ using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas;
 
+/// <summary>
+/// Sets the description for a <see cref="Figment.Common.Schema"/>.
+/// </summary>
 public class SetSchemaDescriptionCommand : SchemaCancellableAsyncCommand<SetSchemaDescriptionCommandSettings>
 {
     /// <inheritdoc/>

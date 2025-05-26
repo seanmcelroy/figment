@@ -23,7 +23,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas.ImportMaps;
 
 /// <summary>
-/// The settings supplied to commands that need to target na <see cref="SchemaImportMap"/>
+/// The settings supplied to commands that need to target na <see cref="Figment.Common.SchemaImportMap"/>
 /// and have no other arguments.
 /// </summary>
 /// <seealso cref="DeleteImportMapCommand"/>

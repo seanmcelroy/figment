@@ -29,7 +29,7 @@ public class SetSchemaPropertyFormulaCommandSettings : SchemaPropertyCommandSett
     /// <summary>
     /// Gets the formula to use if the field type is 'calculated'.
     /// </summary>
-    /// <seealso cref="SchemaCalculatedField"/>
+    /// <seealso cref="Figment.Common.SchemaCalculatedField"/>
     [Description("If the field type is 'calculated', this is the formula to use")]
     [CommandArgument(0, "[FORMULA]")]
     public string? Formula { get; init; }

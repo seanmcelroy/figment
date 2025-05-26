@@ -4,7 +4,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas.ImportMaps;
 
 /// <summary>
-/// Removes an import map from a <see cref="Schema"/> configuration.
+/// Removes an import map from a <see cref="Figment.Common.Schema"/> configuration.
 /// </summary>
 public class DeleteImportMapCommand : SchemaCancellableAsyncCommand<DeleteImportMapCommandSettings>
 {

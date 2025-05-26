@@ -4,7 +4,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Schemas;
 
 /// <summary>
-/// Sets the plural name for a <see cref="Schema"/>.
+/// Sets the plural name for a <see cref="Figment.Common.Schema"/>.
 /// </summary>
 public class SetSchemaPluralCommand : SchemaCancellableAsyncCommand<SetSchemaPluralCommandSettings>
 {

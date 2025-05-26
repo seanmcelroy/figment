@@ -28,7 +28,7 @@ namespace jot.Commands.Schemas.ImportMaps;
 public class ImportMapRenameCommandSettings : ImportMapCommandSettings
 {
     /// <summary>
-    /// Gets the new name for the <see cref="SchemaImportMap"/>.
+    /// Gets the new name for the <see cref="Figment.Common.SchemaImportMap"/>.
     /// </summary>
     [Description("New name for the import map")]
     [CommandArgument(0, "<NEW_NAME>")]

@@ -6,7 +6,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands;
 
 /// <summary>
-/// Interactive mode command.  Sets the plural name for the schema.
+/// Interactive mode command.  Sets the plural name for the <see cref="Schema"/>.
 /// </summary>
 public class SetSelectedSchemaPluralCommand : CancellableAsyncCommand<SetSelectedSchemaPluralCommandSettings>
 {
