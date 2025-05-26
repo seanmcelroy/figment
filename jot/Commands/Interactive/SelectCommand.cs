@@ -136,8 +136,8 @@ public class SelectCommand : CancellableAsyncCommand<SelectCommandSettings>
                     }
                 });
 
-                var disambig = possibilities
-                    .Select(p => new { Guid = p, Object = loadAnyEntity(p, cancellationToken).Result })
+                var disambig = (await Task.WhenAll(possibilities
+                    .Select(async p => new { Guid = p, Object = await loadAnyEntity(p, cancellationToken) })))
                     .Where(p => p.Object != null)
                     .Select(p => new PossibleEntityMatch(p.Guid, p.Object!))
                     .ToArray();
