@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - 'jot' commands 'initialize', 'verbose', and 'reindex' are now parented under a 'configure' branch.
 - 'jot' has additional hidden command aliases to make the CLI more intuitive
 - 'jot' import-maps and import-map command syntax updated
+- Invalid field values are now rendered with warning colors in views
 
 ### Fixed
 
