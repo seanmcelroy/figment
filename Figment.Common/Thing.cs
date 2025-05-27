@@ -81,7 +81,7 @@ public class Thing
     /// <remarks>
     /// Do not use this outside of this class.  Left public for serialization only.
     /// </remarks>
-    private Dictionary<string, object> Properties { get; init; } = [];
+    public Dictionary<string, object> Properties { get; init; } = []; // DO NOT MAKE PRIVATE.
 
     /// <summary>
     /// Gets or sets the date this thing was created.
@@ -104,7 +104,7 @@ public class Thing
     /// <summary>
     /// Gets a value indicating whether this object has been changed since it was loaded.
     /// </summary>
-    public bool IsDirty { get; private set; } = false;
+    public bool IsDirty { get; private set; }
 
     /// <summary>
     /// Retrieves an enumeration of references for <see cref="Thing"/> instances that have a

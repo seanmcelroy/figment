@@ -80,11 +80,6 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             {
                 AmbientErrorContext.Provider.LogWarning($"Property name '{property.SimpleDisplayName}' is invalid: {message}");
             }
-
-            if (!property.Valid)
-            {
-                AmbientErrorContext.Provider.LogWarning($"Property {property.SimpleDisplayName} ({property.TruePropertyName}) has an invalid value of '{property.Value}'.");
-            }
         }
 
         if (thing.SchemaGuids == null
@@ -103,22 +98,33 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
                 return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
             }
 
-            foreach (var schemaGuid in thing.SchemaGuids)
+            // Load all schemas first
+            var schemas = new Dictionary<string, Schema>();
+            foreach (var schemaGuid in thing.SchemaGuids.Where(g => !string.IsNullOrWhiteSpace(g)))
             {
-                var schemaLoaded = string.IsNullOrWhiteSpace(schemaGuid)
-                    ? null
-                    : await provider.LoadAsync(schemaGuid, cancellationToken);
-
+                var schemaLoaded = await provider.LoadAsync(schemaGuid, cancellationToken);
                 if (schemaLoaded == null)
                 {
                     AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}' from {thing.Name}.  Must be able to load schema to promote a property to it.");
                     return (int)Globals.GLOBAL_ERROR_CODES.SCHEMA_LOAD_ERROR;
                 }
 
-                foreach (var sp in schemaLoaded.Properties
+                schemas[schemaGuid] = schemaLoaded;
+            }
+
+            // Validate each property against its schema field type
+            await ValidatePropertyAgainstSchemaFields(thingProperties, schemas, cancellationToken);
+
+            // Validate reference integrity
+            await ValidateReferenceIntegrity(thingProperties, schemas, cancellationToken);
+
+            // Check for required properties
+            foreach (var schema in schemas.Values)
+            {
+                foreach (var sp in schema.Properties
                     .Where(sp => sp.Value.Required
                         && !thingProperties.Any(
-                            tp => string.Equals(tp.SchemaGuid, schemaLoaded.Guid, StringComparison.OrdinalIgnoreCase)
+                            tp => string.Equals(tp.SchemaGuid, schema.Guid, StringComparison.OrdinalIgnoreCase)
                             && string.Equals(tp.SimpleDisplayName, sp.Key, StringComparison.OrdinalIgnoreCase))))
                 {
                     AmbientErrorContext.Provider.LogWarning($"Schema property {sp.Key} is required but is not set!");
@@ -128,5 +134,114 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
         AmbientErrorContext.Provider.LogDone($"Validation has finished.");
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+    }
+
+    private static async Task ValidatePropertyAgainstSchemaFields(
+        List<ThingProperty> thingProperties,
+        Dictionary<string, Schema> schemas,
+        CancellationToken cancellationToken)
+    {
+        foreach (var property in thingProperties.Where(p => !string.IsNullOrEmpty(p.SchemaGuid)))
+        {
+            if (!schemas.TryGetValue(property.SchemaGuid!, out var schema))
+            {
+                continue;
+            }
+
+            var fieldName = property.SimpleDisplayName;
+            if (schema.Properties.TryGetValue(fieldName, out var schemaField))
+            {
+                if (schemaField is SchemaRefField)
+                {
+                    // We do not evaluate these here.  That will be checked in ValidateReferenceIntegrity.
+                    continue;
+                }
+
+                // Use the schema field's built-in validation
+                var isValid = await schemaField.IsValidAsync(property.Value, cancellationToken);
+
+                if (!isValid)
+                {
+                    var fieldType = await schemaField.GetReadableFieldTypeAsync(cancellationToken);
+                    var suggestion = GetValidationSuggestion(schemaField);
+
+                    AmbientErrorContext.Provider.LogWarning(
+                        $"Property '{property.FullDisplayName}' has invalid value '{property.Value}' for {fieldType} field. {suggestion}");
+                }
+            }
+        }
+    }
+
+    private static string GetValidationSuggestion(SchemaFieldBase field)
+    {
+        return field switch
+        {
+            SchemaEmailField => "Expected valid email address format (e.g., user@domain.com)",
+            SchemaDateField => "Expected date format (e.g., 2023-12-25, today, tomorrow, next friday)",
+            SchemaIntegerField => "Expected whole number",
+            SchemaNumberField => "Expected numeric value",
+            SchemaBooleanField => "Expected true/false or yes/no",
+            SchemaUriField => "Expected valid URL format",
+            SchemaPhoneField => "Expected valid phone number format",
+            _ => "Value does not meet field requirements"
+        };
+    }
+
+    private static async Task ValidateReferenceIntegrity(
+        List<ThingProperty> thingProperties,
+        Dictionary<string, Schema> schemas,
+        CancellationToken cancellationToken)
+    {
+        var thingProvider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
+        if (thingProvider == null)
+        {
+            return;
+        }
+
+        foreach (var property in thingProperties.Where(p => !string.IsNullOrEmpty(p.SchemaGuid)))
+        {
+            if (!schemas.TryGetValue(property.SchemaGuid!, out var schema))
+            {
+                continue;
+            }
+
+            var fieldName = property.SimpleDisplayName;
+            if (!schema.Properties.TryGetValue(fieldName, out var schemaField) || schemaField is not SchemaRefField refField)
+            {
+                continue;
+            }
+
+            if (property.Value is not string referencedGuid)
+            {
+                AmbientErrorContext.Provider.LogWarning($"Reference '{property.FullDisplayName}' has invalid value '{property.Value}'. Expected string GUID, but type is {property.Valid.GetType().FullName}");
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(referencedGuid))
+            {
+                continue;
+            }
+
+            // Check if referenced thing exists
+            if (!await thingProvider.GuidExists(referencedGuid, cancellationToken))
+            {
+                AmbientErrorContext.Provider.LogWarning($"Reference '{property.FullDisplayName}' points to non-existent thing with GUID '{referencedGuid}'. Update the reference or remove the property.");
+                continue;
+            }
+
+            // Check if referenced thing has the expected schema
+            var referencedThing = await thingProvider.LoadAsync(referencedGuid, cancellationToken);
+            if (referencedThing == null)
+            {
+                // We break this up between the previous and next if branches so we don't output warnings on ref field checks.
+                AmbientErrorContext.Provider.LogWarning($"Reference '{property.FullDisplayName}' points to non-existent thing with GUID '{referencedGuid}'. Update the reference or remove the property.");
+                continue;
+            }
+
+            if (referencedThing.SchemaGuids == null || !referencedThing.SchemaGuids.Contains(refField.SchemaGuid))
+            {
+                AmbientErrorContext.Provider.LogWarning($"Reference '{property.FullDisplayName}' points to thing '{referencedThing.Name}' which doesn't have the expected schema '{refField.SchemaGuid}'.");
+            }
+        }
     }
 }
