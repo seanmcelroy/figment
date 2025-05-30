@@ -25,12 +25,12 @@ namespace Figment.Data.Memory;
 /// <summary>
 /// A <see cref="Thing"/> storage provider implementation that stores objects in memory.
 /// </summary>
-public class MemoryThingStorageProvider : IThingStorageProvider
+public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorageProvider
 {
     private static readonly Dictionary<string, Thing> ThingCache = [];
 
     /// <inheritdoc/>
-    public async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
+    public override async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
         await foreach (var reference in FindByNameAsync(
             new Func<string, bool>(x => string.Equals(x, exactName, comparisonType)), cancellationToken))
@@ -65,7 +65,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     /// <inheritdoc/>
-    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -88,14 +88,9 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         }
     }
 
-    /// <summary>
-    /// Gets all things
-    /// </summary>
-    /// <param name="cancellationToken">A cancellation token to abort the enumerator</param>
-    /// <returns>Each thing</returns>
-    /// <remarks>This may be a very expensive operation</remarks>
+    /// <inheritdoc/>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    public async IAsyncEnumerable<(Reference reference, string? name)> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<(Reference reference, string? name)> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         foreach (var thing in ThingCache.Values)
@@ -112,7 +107,21 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+    public override async IAsyncEnumerable<Thing> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+    {
+        foreach (var thing in ThingCache.Values)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
+
+            yield return thing;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
         await foreach (var (reference, name) in GetAll(cancellationToken))
@@ -127,14 +136,14 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
     /// <inheritdoc/>
-    public Task<bool> GuidExists(string thingGuid, CancellationToken _)
+    public override Task<bool> GuidExists(string thingGuid, CancellationToken _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
         return Task.FromResult(ThingCache.ContainsKey(thingGuid));
     }
 
     /// <inheritdoc/>
-    public Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
+    public override Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
 
@@ -143,14 +152,14 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
     /// <inheritdoc/>
-    public Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
+    public override Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         ThingCache[thing.Guid] = thing;
         return Task.FromResult<(bool, string?)>((true, $"Thing {thing.Name} saved."));
     }
 
     /// <inheritdoc/>
-    public async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
+    public override async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
@@ -170,7 +179,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
     /// <inheritdoc/>
-    public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
@@ -196,7 +205,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
     /// <inheritdoc/>
-    public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    public override async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
@@ -205,7 +214,7 @@ public class MemoryThingStorageProvider : IThingStorageProvider
         return await DissociateFromSchemaInternal(thing, schemaGuid, cancellationToken);
     }
 
-    private async Task<(bool, Thing?)> DissociateFromSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
+    private static async Task<(bool, Thing?)> DissociateFromSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(thing);
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
@@ -222,10 +231,10 @@ public class MemoryThingStorageProvider : IThingStorageProvider
     }
 
     /// <inheritdoc/>
-    public Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
+    public override Task<bool> RebuildIndexes(CancellationToken cancellationToken) => Task.FromResult(true);
 
     /// <inheritdoc/>
-    public Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
+    public override Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
         return Task.FromResult(ThingCache.Remove(thingGuid));

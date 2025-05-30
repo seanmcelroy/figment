@@ -141,4 +141,18 @@ public readonly record struct ThingProperty
         message = null;
         return true;
     }
+
+    /// <summary>
+    /// Returns the <see cref="Value"/> as a <see cref="ulong"/>.
+    /// </summary>
+    /// <returns>The value of the property, if it is a <see cref="ulong"/>.</returns>
+    public ulong? AsUInt64()
+    {
+        if (Value is ulong ul)
+        {
+            return ul;
+        }
+
+        return null;
+    }
 }

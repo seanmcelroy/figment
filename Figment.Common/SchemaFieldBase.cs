@@ -32,6 +32,7 @@ namespace Figment.Common;
 [JsonDerivedType(typeof(SchemaDateField), typeDiscriminator: SchemaDateField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaEmailField), typeDiscriminator: SchemaEmailField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaEnumField), typeDiscriminator: SchemaEnumField.SCHEMA_FIELD_TYPE)]
+[JsonDerivedType(typeof(SchemaIncrementField), typeDiscriminator: SchemaIncrementField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaIntegerField), typeDiscriminator: SchemaIntegerField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaMonthDayField), typeDiscriminator: SchemaMonthDayField.SCHEMA_FIELD_TYPE)]
 [JsonDerivedType(typeof(SchemaNumberField), typeDiscriminator: SchemaNumberField.SCHEMA_FIELD_TYPE)]
@@ -52,10 +53,11 @@ public abstract class SchemaFieldBase(string Name)
     public abstract string Type { get; }
 
     /// <summary>
-    /// Gets the name of the field.
+    /// Gets or sets the name of the field.
     /// </summary>
+    /// <remarks>Deserialization from Json will not set this property.  An internal process sets it.</remarks>
     [JsonIgnore]
-    public string Name { get; init; } = Name;
+    public string Name { get; set; } = Name;
 
     /// <summary>
     /// Gets or sets a value indicating whether this field is required.

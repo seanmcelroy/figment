@@ -58,6 +58,9 @@ public abstract class SchemaStorageProviderBase : ISchemaStorageProvider
     public abstract IAsyncEnumerable<PossibleNameMatch> GetAll(CancellationToken cancellationToken);
 
     /// <inheritdoc/>
+    public abstract IAsyncEnumerable<Schema> LoadAll(CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
     public abstract Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
@@ -82,7 +85,15 @@ public abstract class SchemaStorageProviderBase : ISchemaStorageProvider
                 return null;
             }
 
-            return schemaDefinition.ToSchema();
+            var schema = schemaDefinition.ToSchema();
+
+            // Set name fields.
+            foreach (var prop in schema.Properties)
+            {
+                prop.Value.Name = prop.Key;
+            }
+
+            return schema;
         }
         catch (JsonException je)
         {

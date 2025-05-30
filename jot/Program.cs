@@ -27,6 +27,7 @@ using jot.Commands.Interactive;
 using jot.Commands.Pomodoro;
 using jot.Commands.Schemas;
 using jot.Commands.Schemas.ImportMaps;
+using jot.Commands.Tasks;
 using jot.Commands.Things;
 using jot.Errors;
 using Microsoft.Extensions.Configuration;
@@ -172,6 +173,13 @@ internal class Program
                         .WithDescription("Starts a pomodoro timer");
                 })
                 .WithAlias("pomo");
+
+            config.AddBranch("task", task =>
+                {
+                    task.AddCommand<ListTasksCommand>("list")
+                        .WithDescription("Lists all tasks")
+                        .WithAlias("l");
+                });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>
                 {

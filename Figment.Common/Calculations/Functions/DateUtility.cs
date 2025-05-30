@@ -152,6 +152,46 @@ public static class DateUtility
     }
 
     /// <summary>
+    /// Provides a short relative description for a future date.
+    /// </summary>
+    /// <param name="futureDate">The future date to describe.</param>
+    /// <param name="referenceDate">The reference date to compare against. If null, uses DateTime.Now.</param>
+    /// <returns>A relative description like "today", "tomorrow", "wednesday", or "Wed Jun 3".</returns>
+    public static string GetShortRelativeFutureDateDescription(DateTime futureDate, DateTime? referenceDate = null)
+    {
+        var reference = (referenceDate ?? DateTime.Now).Date;
+        var target = futureDate.Date;
+
+        var daysDifference = (target - reference).Days;
+
+        // Today
+        if (daysDifference == 0)
+        {
+            return "today";
+        }
+
+        // Tomorrow
+        if (daysDifference == 1)
+        {
+            return "tomorrow";
+        }
+
+        // Within this week (next 6 days)
+        if (daysDifference >= 2 && daysDifference <= 6)
+        {
+            return target.ToString("dddd").ToLower();
+        }
+
+        // Beyond this week - return abbreviated day and month/day
+        if (target.Year != reference.Year)
+        {
+            return target.ToString("ddd MMM d, yyyy");
+        }
+
+        return target.ToString("ddd MMM d");
+    }
+
+    /// <summary>
     /// Turns a time span into a human-readable relative phrase, such as "one second" or "a day".
     /// </summary>
     /// <param name="duration">Duration to convert into a phrase.</param>

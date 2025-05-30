@@ -74,12 +74,19 @@ public interface ISchemaStorageProvider
     public Task<bool> GuidExists(string schemaGuid, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets all schemas.
+    /// Retrieves an enumeration of metadata for every <see cref="Schema"/> in the underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asychronous enumerator with metadata for each <see cref="Schema"/> in the underlying data store.</returns>
+    public IAsyncEnumerable<PossibleNameMatch> GetAll(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves an enumeration of every <see cref="Schema"/> in the underlying data store.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token to abort the enumerator.</param>
-    /// <returns>Each schema's reference and name.</returns>
-    /// <remarks>This may be a very expensive operation, as it must load each <see cref="Schema"/> to obtain its name.</remarks>
-    public IAsyncEnumerable<PossibleNameMatch> GetAll(CancellationToken cancellationToken);
+    /// <returns>An asychronous enumerator for each <see cref="Schema"/> in the underlying data store.</returns>
+    /// <remarks>This may be a very expensive operation.</remarks>
+    public IAsyncEnumerable<Schema> LoadAll(CancellationToken cancellationToken);
 
     /// <summary>
     /// Attempts to load a <see cref="Schema"/> from the underlying data store.

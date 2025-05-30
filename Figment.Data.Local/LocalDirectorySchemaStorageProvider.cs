@@ -155,7 +155,6 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         return true;
     }
 
-
     /// <summary>
     /// Gets all schemas
     /// </summary>
@@ -175,6 +174,23 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             yield break;
         }
 
+        await foreach (var schema in LoadAll(cancellationToken))
+        {
+            yield return new PossibleNameMatch
+            {
+                Reference = new()
+                {
+                    Guid = schema.Guid,
+                    Type = Reference.ReferenceType.Schema
+                },
+                Name = schema?.Name ?? "<UNDEFINED>"
+            };
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<Schema> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         var schemaDir = new DirectoryInfo(SchemaDirectoryPath);
         if (schemaDir == null || !schemaDir.Exists)
             yield break;
@@ -195,15 +211,10 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
                 && Guid.TryParse(schemaGuidString[0], out Guid _))
             {
                 var schema = await LoadAsync(schemaGuidString[0], cancellationToken);
-                yield return new PossibleNameMatch
+                if (schema != null)
                 {
-                    Reference = new()
-                    {
-                        Guid = schemaGuidString[0],
-                        Type = Reference.ReferenceType.Schema
-                    },
-                    Name = schema?.Name ?? "<UNDEFINED>"
-                };
+                    yield return schema;
+                }
             }
         }
     }
@@ -255,6 +266,12 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             {
                 AmbientErrorContext.Provider.LogError($"Unable to load schema. Required property {nameof(Schema.Name)} is '{schema.Name}', which is not valid.");
                 return null;
+            }
+
+            // Set name fields.
+            foreach (var prop in schema.Properties)
+            {
+                prop.Value.Name = prop.Key;
             }
 
             return schema;

@@ -17,8 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -181,7 +183,7 @@ public class Thing
                 yield break;
             }
 
-            foreach (var schemaGuid in SchemaGuids)
+            foreach (var schemaGuid in SchemaGuids.Distinct())
             {
                 if (!string.IsNullOrWhiteSpace(schemaGuid))
                 {
@@ -485,6 +487,61 @@ public class Thing
     }
 
     /// <summary>
+    /// Retrieves a property by the property's <see cref="ThingProperty.TruePropertyName"/> name.
+    /// </summary>
+    /// <param name="truePropertyName">The true name of the property to retrieve.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The property, if its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
+    public ThingProperty? GetPropertyByTrueName(string truePropertyName, CancellationToken cancellationToken)
+    {
+        var x = GetPropertiesByTrueName([truePropertyName], cancellationToken);
+        if (x.Count != 1)
+        {
+            return null;
+        }
+
+        return x.Values.Single();
+    }
+
+    /// <summary>
+    /// Retrieves each property by the property's <see cref="ThingProperty.TruePropertyName"/> name.
+    /// </summary>
+    /// <param name="truePropertyNames">The true names of the properties to retrieve.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The a dictionary of property values, keyed by the <paramref name="truePropertyNames"/> true names, if found by its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
+    [return: NotNull]
+    public Dictionary<string, ThingProperty?> GetPropertiesByTrueName(string[] truePropertyNames, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(truePropertyNames);
+
+        MarkAccessed();
+
+        Dictionary<string, ThingProperty?> result = [];
+
+        var props = GetProperties(cancellationToken).ToBlockingEnumerable(cancellationToken).ToArray();
+        foreach (var truePropName in truePropertyNames)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(truePropName, nameof(truePropertyNames));
+            if (!truePropName.Contains('.'))
+            {
+                throw new ArgumentException($"True property name '{truePropName}' does not contain a period.", nameof(truePropertyNames));
+            }
+
+            var match = props.FirstOrDefault(p => p.TruePropertyName.Equals(truePropName, StringComparison.InvariantCultureIgnoreCase));
+            if (match == default)
+            {
+                result.Add(truePropName, null);
+            }
+            else
+            {
+                result.Add(truePropName, match);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Retrieves each property by the property name.
     /// Because each <see cref="Thing"/> may have multiple properties that have the
     /// same name, but are defined by varying schema, this can return zero to many
@@ -534,7 +591,7 @@ public class Thing
     /// <returns>The result of this operation.</returns>
     public async Task<ThingSetResult> Set(
         string propName,
-        string? propValue,
+        object? propValue,
         CancellationToken cancellationToken,
         Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null)
     {
@@ -681,7 +738,7 @@ public class Thing
             case 0:
                 {
                     // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
-                    if (propValue == null || string.IsNullOrWhiteSpace(propValue))
+                    if (propValue == null || (propValue is string pvs && string.IsNullOrWhiteSpace(pvs)))
                     {
                         Properties.Remove(propName);
                     }
@@ -693,13 +750,13 @@ public class Thing
                     // Special case for Name.
                     if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
                     {
-                        if (propValue == null || string.IsNullOrWhiteSpace(propValue))
+                        if (propValue == null || propValue is not string pvs2 || string.IsNullOrWhiteSpace(pvs2))
                         {
                             AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
                             return new ThingSetResult(false, $"Value of {nameof(Name)} cannot be empty.");
                         }
 
-                        Name = propValue;
+                        Name = pvs2;
                         return new ThingSetResult(true, $"Property {nameof(Name)} set to '{propValue}'");
                     }
                     else

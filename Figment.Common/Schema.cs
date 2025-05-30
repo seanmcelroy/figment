@@ -197,6 +197,7 @@ public class Schema
 
         var stf = new SchemaTextField(name)
         {
+            Name = name,
             MinLength = minLength,
             MaxLength = maxLength,
             Pattern = pattern,

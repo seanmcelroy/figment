@@ -28,7 +28,7 @@ namespace Figment.Data.Local;
 /// A <see cref="Thing"/> storage provider implementation that stores objects in files on a local file system.
 /// </summary>
 /// <param name="ThingDirectoryPath">The path to the <see cref="Thing"/> subdirectory under the root of the file system database.</param>
-public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : IThingStorageProvider
+public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ThingStorageProviderBase, IThingStorageProvider
 {
     private const string NameIndexFileName = $"_thing.names.csv";
 
@@ -42,7 +42,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     };
 
     /// <inheritdoc/>
-    public async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
+    public override async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
         await foreach (var reference in FindByNameAsync(
             new Func<string, bool>(x => string.Equals(x, exactName, comparisonType)), cancellationToken))
@@ -85,7 +85,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
         ArgumentException.ThrowIfNullOrWhiteSpace(thingNamePart);
@@ -115,13 +115,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         }
     }
 
-    /// <summary>
-    /// Gets all things
-    /// </summary>
-    /// <param name="cancellationToken">A cancellation token to abort the enumerator</param>
-    /// <returns>Each thing</returns>
-    /// <remarks>This may be a very expensive operation</remarks>
-    public async IAsyncEnumerable<(Reference reference, string? name)> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<(Reference reference, string? name)> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Shortcut - try to get them by name index first.
         var indexFilePath = Path.Combine(ThingDirectoryPath, NameIndexFileName);
@@ -134,6 +129,19 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             yield break;
         }
 
+        await foreach (var thing in LoadAll(cancellationToken))
+        {
+            yield return (new Reference
+            {
+                Guid = thing.Guid,
+                Type = Reference.ReferenceType.Thing
+            }, thing?.Name);
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<Thing> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
         if (thingDir == null || !thingDir.Exists)
             yield break;
@@ -153,17 +161,14 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
                 && Guid.TryParse(thingGuidString[0], out Guid _))
             {
                 var thing = await LoadAsync(thingGuidString[0], cancellationToken);
-                yield return (new Reference
-                {
-                    Guid = thingGuidString[0],
-                    Type = Reference.ReferenceType.Thing
-                }, thing?.Name);
+                if (thing != null)
+                    yield return thing;
             }
         }
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
@@ -204,7 +209,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public Task<bool> GuidExists(string thingGuid, CancellationToken _)
+    public override Task<bool> GuidExists(string thingGuid, CancellationToken _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
 
@@ -231,7 +236,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
+    public override async Task<Thing?> LoadAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
 
@@ -433,7 +438,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
+    public override async Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
         if (thingDir == null || !thingDir.Exists)
@@ -488,7 +493,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
+    public override async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
@@ -540,7 +545,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
-    public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
@@ -584,7 +589,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    public override async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
@@ -632,7 +637,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
+    public override async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
         if (thingDir == null || !thingDir.Exists)
@@ -641,15 +646,30 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
         Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingIndexes = [];
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingNames = [];
+        Dictionary<string, SchemaIncrementField> schemaGuidsAndIncrementFields = [];
+        Dictionary<string, Dictionary<Reference, (long existingId, DateTime createdOn, string path)>> schemaGuidsAndThingIncrementMetadata = [];
 
         var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp != null)
-            await foreach (var (reference, _) in ssp.GetAll(cancellationToken))
+            await foreach (var schema in ssp.LoadAll(cancellationToken))
             {
-                schemaGuidsAndThingIndexes.TryAdd(reference.Guid, []);
-                schemaGuidsAndThingNames.TryAdd(reference.Guid, []);
+                schemaGuidsAndThingIndexes.TryAdd(schema.Guid, []);
+                schemaGuidsAndThingNames.TryAdd(schema.Guid, []);
+
+                // Does this schema have an increment field?
+                var incProperty = schema.Properties
+                    .OrderBy(p => p.Key)
+                    .Where(p => p.Value is SchemaIncrementField)
+                    .Select(p => p.Value)
+                    .Cast<SchemaIncrementField>()
+                    .FirstOrDefault();
+                if (incProperty != default)
+                {
+                    schemaGuidsAndIncrementFields.TryAdd(schema.Guid, incProperty);
+                }
             }
 
+        // Build NAMES index and INCREMENT index
         Dictionary<string, string> namesIndex = [];
         foreach (var thingFileName in thingDir.GetFiles("*.thing.json"))
         {
@@ -660,13 +680,12 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             if (thing == null)
                 continue;
 
+            // NAMES index
             if (namesIndex.TryGetValue(thing.Name, out string? existingNamedThingPath))
             {
                 AmbientErrorContext.Provider.LogError($"Unable to index named thing '{thing.Name}' in '{thingFileName.Name}'.  Another thing of the same name is already in '{existingNamedThingPath}'.");
-                continue;
             }
-
-            if (namesIndex.TryAdd(thing.Name, thingFileName.Name))
+            else if (namesIndex.TryAdd(thing.Name, thingFileName.Name))
             {
                 if (thing.SchemaGuids != null)
                     foreach (var schemaGuid in thing.SchemaGuids)
@@ -683,11 +702,36 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             else
             {
                 AmbientErrorContext.Provider.LogError($"Unable to index named thing '{thing.Name}' in '{thingFileName.Name}'.");
-                continue;
+            }
+
+            // INCREMENT index
+            foreach (var schemaGuid in thing.SchemaGuids ?? [])
+            {
+                // Does this schema have an increment field?
+                if (schemaGuidsAndIncrementFields.TryGetValue(schemaGuid, out SchemaIncrementField? incrementProperty))
+                {
+                    // Yes, so do we already have a metadata list?
+                    if (!schemaGuidsAndThingIncrementMetadata.TryGetValue(schemaGuid, out Dictionary<Reference, (long existingId, DateTime createdOn, string path)>? metadata))
+                    {
+                        // No, create one and add it.
+                        metadata = [];
+                        schemaGuidsAndThingIncrementMetadata.TryAdd(schemaGuid, metadata);
+                    }
+
+                    long existingId = 0;
+                    if (thing.Properties.TryGetValue(incrementProperty.Name, out object? eid)
+                        && long.TryParse(eid.ToString(), out long eidLong))
+                    {
+                        existingId = eidLong;
+                    }
+
+                    metadata.Add(thing, (existingId, thing.CreatedOn, thingFileName.Name));
+                }
             }
         }
         indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
 
+        // Write Things-of-Schema index
         foreach (var kvp in schemaGuidsAndThingIndexes)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -695,11 +739,45 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
             indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.schema.{kvp.Key}.csv"), kvp.Value);
         }
 
+        // Write NAMES index
         foreach (var kvp in schemaGuidsAndThingNames)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
             indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.names.schema.{kvp.Key}.csv"), kvp.Value);
+        }
+
+        // Write INCREMENT index
+        foreach (var (schemaGuid, incrementField) in schemaGuidsAndIncrementFields)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                break;
+
+            if (!schemaGuidsAndThingIncrementMetadata.TryGetValue(schemaGuid, out Dictionary<Reference, (long existingId, DateTime createdOn, string path)>? metadata))
+            {
+                AmbientErrorContext.Provider.LogWarning($"Consistency issue: Could not get increment metadata for schema {schemaGuid} but did find increment field '{incrementField.Name}'.");
+                continue;
+            }
+
+            var reorderedBase = metadata
+                .OrderBy(x => x.Value.existingId)
+                .ThenBy(x => x.Value.createdOn)
+                .Select((x, i) => new { reference = x.Key, index = i + 1, x.Value.path })
+                .ToArray();
+
+            var reorderedIndex = reorderedBase
+                .ToDictionary(k => k.index.ToString(), v => v.path);
+
+            indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.inc.schema.{schemaGuid}.csv"), reorderedIndex);
+
+            var reorderedBulk = reorderedBase
+                .ToDictionary(k => k.reference, v => new List<(string, object)>() { (incrementField.Name, v.index) });
+
+            var (bulkSuccess, _) = await TryBulkUpdate(reorderedBulk, cancellationToken);
+            if (!bulkSuccess)
+            {
+                AmbientErrorContext.Provider.LogWarning($"Bulk update of increment values on {schemaGuid} failed.");
+            }
         }
 
         foreach (var index in indexesToWrite)
@@ -721,7 +799,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ITh
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
+    public override async Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
 

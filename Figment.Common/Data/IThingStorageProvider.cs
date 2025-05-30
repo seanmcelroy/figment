@@ -85,11 +85,19 @@ public interface IThingStorageProvider
     public IAsyncEnumerable<PossibleNameMatch> FindByPartialNameAsync(string schemaGuid, string thingNamePart, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Retrieves an enumeration of every <see cref="Thing"/> in the underlying data store.
+    /// Retrieves an enumeration of metadata for every <see cref="Thing"/> in the underlying data store.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>An asychronous enumerator for each <see cref="Thing"/> in the underlying data store.</returns>
+    /// <returns>An asychronous enumerator with metadata for each <see cref="Thing"/> in the underlying data store.</returns>
     public IAsyncEnumerable<(Reference reference, string? name)> GetAll(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves an enumeration of every <see cref="Thing"/> in the underlying data store.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token to abort the enumerator.</param>
+    /// <returns>An asychronous enumerator for each <see cref="Thing"/> in the underlying data store.</returns>
+    /// <remarks>This may be a very expensive operation.</remarks>
+    public IAsyncEnumerable<Thing> LoadAll(CancellationToken cancellationToken);
 
     /// <summary>
     /// Determines whether a <see cref="Thing"/> with the specified unique identifier exists in the data store.
@@ -113,6 +121,17 @@ public interface IThingStorageProvider
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value indicating whether or not the index rebuild was successful.</returns>
     public Task<bool> RebuildIndexes(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Attempts to update one or more things by their guid with one or more property values.
+    /// </summary>
+    /// <param name="changes">A <see cref="Dictionary{Reference, List}"/> keyed by
+    /// <see cref="Reference"/> for <see cref="Thing.Guid"/>s to update and a <see cref="List{Tuple}"/>
+    /// which contains one or more <see cref="Tuple"/> containing a property name to update and the new value,
+    /// similar to the signature and use of <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}.TryUpdate(TKey, TValue, TValue)"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple containing a value whether the operations was successful at all, and individual results for each of the <see cref="Reference"/> keys passed in to <paramref name="changes"/>.</returns>
+    public Task<(bool, Dictionary<Reference, (bool success, string message)> results)> TryBulkUpdate(Dictionary<Reference, List<(string propertyName, object newValue)>> changes, CancellationToken cancellationToken);
 
     /// <summary>
     /// Attempts to save the thing to the underlying data store.

@@ -78,6 +78,11 @@ public readonly record struct EvaluationContext
                     enu.TryMassageInput("red", out object? enuOutput);
                     RowData.Add(prop.Key.ToLowerInvariant(), ExpressionResult.Success(enuOutput));
                     break;
+                case SchemaIncrementField.SCHEMA_FIELD_TYPE:
+                    var inc = new SchemaIntegerField(prop.Key);
+                    inc.TryMassageInput(123456, out object? incOutput);
+                    RowData.Add(prop.Key.ToLowerInvariant(), ExpressionResult.Success(incOutput));
+                    break;
                 case SchemaIntegerField.SCHEMA_FIELD_TYPE:
                     var inte = new SchemaIntegerField(prop.Key);
                     inte.TryMassageInput(8675309, out object? inteOutput);

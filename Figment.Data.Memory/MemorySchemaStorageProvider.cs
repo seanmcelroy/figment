@@ -55,12 +55,7 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
         return Task.FromResult(removed);
     }
 
-    /// <summary>
-    /// Gets all schemas
-    /// </summary>
-    /// <param name="cancellationToken">A cancellation token to abort the enumerator</param>
-    /// <returns>Each schema</returns>
-    /// <remarks>This may be a very expensive operation</remarks>
+    /// <inheritdoc/>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public override async IAsyncEnumerable<PossibleNameMatch> GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -76,6 +71,17 @@ public class MemorySchemaStorageProvider : SchemaStorageProviderBase, ISchemaSto
                 },
                 Name = schema?.Name ?? "<UNDEFINED>"
             };
+        }
+    }
+
+    /// <inheritdoc/>
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+    public override async IAsyncEnumerable<Schema> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+    {
+        foreach (var schema in SchemaCache.Values)
+        {
+            yield return schema;
         }
     }
 

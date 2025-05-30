@@ -102,6 +102,12 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             var sef = new SchemaEmailField(propName);
             schema!.Properties[propName] = sef;
         }
+        else if (string.Equals(settings.FieldType, SchemaIncrementField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
+        {
+            // Auto-incrementing id (increment)
+            var sif = new SchemaIncrementField(propName);
+            schema!.Properties[propName] = sif;
+        }
         else if (string.Equals(settings.FieldType, SchemaIntegerField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Number (integer)
