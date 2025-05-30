@@ -63,14 +63,14 @@ internal class Program
 
     private static async Task<int> Main(string[] args)
     {
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         var interactive = args.Length == 0
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
         // Build host
         var hostBuilder = Host.CreateDefaultBuilder();
-        var host = hostBuilder.Build();
+        using var host = hostBuilder.Build();
         var registrar = new TypeRegistrar(hostBuilder, host);
 
         // Pre-run configuration
@@ -408,31 +408,35 @@ internal class Program
         do
         {
             string? input;
-            if (AnsiConsole.Profile.Capabilities.Interactive)
+            do
             {
-                if (string.IsNullOrWhiteSpace(SelectedEntityName))
+                if (AnsiConsole.Profile.Capabilities.Interactive)
                 {
-                    input = AnsiConsole.Prompt(new TextPromptWithHistory<string>("[green]>[/]").AddHistory(history));
+                    if (string.IsNullOrWhiteSpace(SelectedEntityName))
+                    {
+                        input = AnsiConsole.Prompt(new TextPromptWithHistory<string>("[green]>[/]").AddHistory(history));
+                    }
+                    else
+                    {
+                        input = AnsiConsole.Prompt(new TextPromptWithHistory<string>($"[green]({SelectedEntityName})>[/]").AddHistory(history));
+                    }
                 }
                 else
                 {
-                    input = AnsiConsole.Prompt(new TextPromptWithHistory<string>($"[green]({SelectedEntityName})>[/]").AddHistory(history));
-                }
-            }
-            else
-            {
-                // Handle vscode Debug Console, which is not 'interactive'
-                if (string.IsNullOrWhiteSpace(SelectedEntityName))
-                {
-                    Console.Write($"> ");
-                }
-                else
-                {
-                    Console.Write($"({SelectedEntityName})> ");
-                }
+                    // Handle vscode Debug Console, which is not 'interactive'
+                    if (string.IsNullOrWhiteSpace(SelectedEntityName))
+                    {
+                        Console.Write($"> ");
+                    }
+                    else
+                    {
+                        Console.Write($"({SelectedEntityName})> ");
+                    }
 
-                input = Console.ReadLine();
+                    input = Console.ReadLine();
+                }
             }
+            while (input == null);
 
             var inputArgs = Globals.SplitArgs(input);
 
@@ -507,7 +511,11 @@ internal class Program
                         return;
                     }
 
-                    var viewProps = viewInstance.GetProperties(cancellationToken).ToBlockingEnumerable(cancellationToken).ToArray();
+                    var viewProps = new List<ThingProperty>();
+                    await foreach (var prop in viewInstance.GetProperties(cancellationToken))
+                    {
+                        viewProps.Add(prop);
+                    }
 
                     var forSchemaGuidObject = viewProps
                         .Where(p => string.Equals(p.TruePropertyName, $"{viewSchemaRef.Guid}.for", StringComparison.Ordinal))
@@ -583,11 +591,11 @@ internal class Program
                                         {
                                             if (!thingProperty.Valid)
                                             {
-                                                text = $"[yellow]{await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken)}[/]";
+                                                text = $"[yellow]{await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, null, cancellationToken)}[/]";
                                             }
                                             else
                                             {
-                                                text = await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, cancellationToken);
+                                                text = await PrintThingCommand.GetMarkedUpFieldValue(schprop, thingProperty.Value, null, cancellationToken);
                                             }
                                         }
                                         else

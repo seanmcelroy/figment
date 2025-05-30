@@ -49,29 +49,38 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
             .AddColumn("Due", c => c.Padding(5, 0))
             .AddColumn("Name");
 
-        List<Thing> tasks = [];
-
-        await foreach (var reference in thingProvider.GetBySchemaAsync(WellKnownSchemas.Task.Guid, cancellationToken))
+        // Collect all task references first
+        var taskReferences = new List<Reference>();
+        await foreach (var reference in thingProvider.GetBySchemaAsync(WellKnownSchemas.TaskGuid, cancellationToken))
         {
-            var task = await thingProvider.LoadAsync(reference.Guid, cancellationToken);
-            if (task == null)
-            {
-                continue;
-            }
-
-            tasks.Add(task);
+            taskReferences.Add(reference);
         }
 
-        var trueNameId = $"{WellKnownSchemas.Task.Guid}.id";
-        var trueNameComplete = $"{WellKnownSchemas.Task.Guid}.complete";
-        var trueNameDue = $"{WellKnownSchemas.Task.Guid}.due";
+        // Batch load all tasks in parallel to avoid N+1 query problem
+        var taskTasks = taskReferences.Select(reference => thingProvider.LoadAsync(reference.Guid, cancellationToken));
+        var taskResults = await Task.WhenAll(taskTasks);
 
-        foreach (var task in tasks.OrderBy(t => t.GetPropertyByTrueName(trueNameId, cancellationToken)?.AsUInt64()))
+        // Filter out null results
+        var tasks = taskResults.Where(task => task != null).Cast<Thing>().ToList();
+
+        const string trueNameId = $"{WellKnownSchemas.TaskGuid}.id";
+        const string trueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
+        const string trueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
+
+        // Extract properties once and cache them with tasks to avoid duplicate lookups
+        var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props)>();
+        foreach (var task in tasks)
         {
-            var props = task.GetPropertiesByTrueName(
-                [trueNameId,
-                 trueNameComplete,
-                 trueNameDue], cancellationToken);
+            var props = await task.GetPropertiesByTrueNameAsync([trueNameId, trueNameComplete, trueNameDue], cancellationToken);
+            tasksWithProps.Add((task, props));
+        }
+
+        // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
+        var nowDate = DateTime.Now.Date;
+        foreach (var item in tasksWithProps.OrderBy(x => x.Props.TryGetValue(trueNameId, out var idProp) ? idProp?.AsUInt64() : null))
+        {
+            var task = item.Task;
+            var props = item.Props;
 
             var id = props[trueNameId]?.AsUInt64();
             var idValue = id != null
@@ -112,11 +121,11 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
                 if (dueValue == null && dueDate != null)
                 {
                     var dueValueInner = DateUtility.GetShortRelativeFutureDateDescription(dueDate.Value);
-                    if (dueDate < DateTime.Now.Date)
+                    if (dueDate < nowDate)
                     {
                         dueValue = $"[red]{dueValueInner}[/]";
                     }
-                    else if (dueDate == DateTime.Now.Date)
+                    else if (dueDate == nowDate)
                     {
                         dueValue = $"[yellow]{dueValueInner}[/]";
                     }

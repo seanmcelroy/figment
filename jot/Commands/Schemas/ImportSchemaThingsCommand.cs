@@ -223,7 +223,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                     var dupes = thingsToImport
                         .GroupBy(i => i.thing.Name, StringComparer.InvariantCultureIgnoreCase)
                         .Where(i => i.Count() > 1)
-                        .Select(i => new { name = i.Key, count = i.Count(), rows = i.Select(r => $"{r.rowNumber}").Aggregate((c, n) => $"{c},{n}") });
+                        .Select(i => new { name = i.Key, count = i.Count(), rows = string.Join(',', i.Select(r => $"{r.rowNumber}")) });
 
                     if (dupes.Any())
                     {
@@ -434,7 +434,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         }
 
         // Dump headers
-        // AmbientErrorContext.Provider.LogDebug($"Headers: {csv.HeaderRecord.Aggregate((c, n) => $"{c},{n}")}");
+        // AmbientErrorContext.Provider.LogDebug($"Headers: {string.Join(',', csv.HeaderRecord)}");
 
         // Building index map
         var propertyNamesHandler = new Dictionary<string, Func<CsvReader, object?>>();

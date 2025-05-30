@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Diagnostics;
 using System.Globalization;
-using System.Text;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -84,42 +83,19 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
         Dictionary<string, Schema> schemas = [];
         if (thing.SchemaGuids != null)
         {
-            foreach (var schemaGuid in thing.SchemaGuids)
+            var schemaTasks = thing.SchemaGuids.Select(guid => schemaProvider.LoadAsync(guid, cancellationToken));
+            var schemaResults = await Task.WhenAll(schemaTasks);
+
+            for (int i = 0; i < schemaResults.Length; i++)
             {
-                var schema = await schemaProvider.LoadAsync(schemaGuid, cancellationToken);
+                var schema = schemaResults[i];
                 if (schema != null)
                 {
                     schemas.Add(schema.Guid, schema);
                 }
                 else
                 {
-                    AmbientErrorContext.Provider.LogWarning($"Unable to load associated schema with Guid '{schemaGuid}'.");
-                }
-            }
-        }
-
-        var linksBuilder = new StringBuilder();
-        if (schemas.Count > 0)
-        {
-            linksBuilder.AppendLine("[red]Links[/]");
-            foreach (var schema in schemas)
-            {
-                var linkedFields = schema.Value.Properties
-                    .Where(p => p.Value.Type.Equals(SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
-                    .ToDictionary(k => k.Key, v => (SchemaRefField)v.Value);
-
-                foreach (var lf in linkedFields)
-                {
-                    var linkedSchema = await schemaProvider.LoadAsync(lf.Value.SchemaGuid, cancellationToken);
-                    if (linkedSchema == null)
-                    {
-                        AmbientErrorContext.Provider.LogWarning($"Unable to load linked schema {lf.Value.SchemaGuid}.");
-                    }
-                    else
-                    {
-                        var linkedPlural = linkedSchema.Plural;
-                        linksBuilder.AppendLine($"    {lf.Key} ({linkedPlural})");
-                    }
+                    AmbientErrorContext.Provider.LogWarning($"Unable to load associated schema with Guid '{thing.SchemaGuids[i]}'.");
                 }
             }
         }
@@ -151,9 +127,13 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
         if (verbose)
         {
-            masterTable.AddRow("[indianred1]GUID[/]", $"[gray]{Markup.Escape(thing.Guid)}[/]");
-            masterTable.AddRow("[indianred1]Created On[/]", $"[gray]{thing.CreatedOn.ToLocalTime().ToLongDateString()} at {thing.CreatedOn.ToLocalTime().ToLongTimeString()}[/]");
-            masterTable.AddRow("[indianred1]Modified On[/]", $"[gray]{thing.LastModified.ToLocalTime().ToLongDateString()} at {thing.LastModified.ToLocalTime().ToLongTimeString()}[/]");
+            var escapedGuid = Markup.Escape(thing.Guid);
+            var createdLocalTime = thing.CreatedOn.ToLocalTime();
+            var modifiedLocalTime = thing.LastModified.ToLocalTime();
+
+            masterTable.AddRow("[indianred1]GUID[/]", $"[gray]{escapedGuid}[/]");
+            masterTable.AddRow("[indianred1]Created On[/]", $"[gray]{createdLocalTime:D} at {createdLocalTime:T}[/]");
+            masterTable.AddRow("[indianred1]Modified On[/]", $"[gray]{modifiedLocalTime:D} at {modifiedLocalTime:T}[/]");
         }
 
         // Properties
@@ -179,9 +159,50 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
 
             await foreach (var property in thing.GetProperties(cancellationToken))
             {
-                propDict.Add(property.FullDisplayName, (property.SchemaGuid, property.Value, property.Valid));
+                if (!string.IsNullOrWhiteSpace(property.FullDisplayName))
+                {
+                    propDict.Add(property.FullDisplayName, (property.SchemaGuid, property.Value, property.Valid));
+                }
             }
 
+            // Pre-load all referenced things to avoid N+1 query problem
+            var referencedThingGuids = new HashSet<string>();
+            foreach (var prop in propDict)
+            {
+                if (prop.Value.schemaGuid != null
+                    && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch))
+                {
+                    var dotIndex = prop.Key.IndexOf('.');
+                    var propertyKey = dotIndex >= 0 ? prop.Key[(dotIndex + 1)..] : prop.Key;
+
+                    if (sch.Properties.TryGetValue(propertyKey, out SchemaFieldBase? schprop)
+                        && schprop is SchemaRefField
+                        && prop.Value.fieldValue is string refValue)
+                    {
+                        var refDotIndex = refValue.IndexOf('.');
+                        var thingGuid = refDotIndex >= 0 ? refValue[(refDotIndex + 1)..] : refValue;
+                        referencedThingGuids.Add(thingGuid);
+                    }
+                }
+            }
+
+            var referencedThings = new Dictionary<string, Thing>();
+            if (referencedThingGuids.Count > 0)
+            {
+                var thingTasks = referencedThingGuids.Select(guid => thingProvider.LoadAsync(guid, cancellationToken));
+                var thingResults = await Task.WhenAll(thingTasks);
+
+                for (int i = 0; i < thingResults.Length; i++)
+                {
+                    var loadedThing = thingResults[i];
+                    if (loadedThing != null)
+                    {
+                        referencedThings.Add(loadedThing.Guid, loadedThing);
+                    }
+                }
+            }
+
+            var currentCultureName = CultureInfo.CurrentCulture.Name;
             foreach (var prop in propDict)
             {
                 // Skip built-ins
@@ -195,37 +216,43 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                 // Coerce value if schema-bound using a field renderer.
                 var propDisplayName = prop.Key;
                 if (prop.Value.schemaGuid != null
-                    && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch)
-                    && sch.Properties.TryGetValue(prop.Key[(prop.Key.IndexOf('.') + 1)..], out SchemaFieldBase? schprop))
+                    && schemas.TryGetValue(prop.Value.schemaGuid, out Schema? sch))
                 {
-                    if (!(settings.NoPrettyDisplayNames ?? false)
-                        && schprop.DisplayNames != null
-                        && schprop.DisplayNames.TryGetValue(CultureInfo.CurrentCulture.Name, out string? prettyDisplayName))
-                    {
-                        propDisplayName = prettyDisplayName;
-                    }
+                    var dotIndex = prop.Key.IndexOf('.');
+                    var propertyKey = dotIndex >= 0 ? prop.Key[(dotIndex + 1)..] : prop.Key;
 
-                    var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, cancellationToken);
-                    if (prop.Value.valid)
+                    // This is the intended behavior, if prop.Key has no dot, we return the whole string.
+                    if (sch.Properties.TryGetValue(propertyKey, out SchemaFieldBase? schprop))
                     {
-                        if (verbose)
+                        if (!(settings.NoPrettyDisplayNames ?? false)
+                            && schprop.DisplayNames != null
+                            && schprop.DisplayNames.TryGetValue(currentCultureName, out string? prettyDisplayName))
                         {
-                            propertyTable.AddRow(sch.Name, propDisplayName, text ?? string.Empty);
+                            propDisplayName = prettyDisplayName;
+                        }
+
+                        var text = await GetMarkedUpFieldValue(schprop, prop.Value.fieldValue, referencedThings, cancellationToken);
+                        if (prop.Value.valid)
+                        {
+                            if (verbose)
+                            {
+                                propertyTable.AddRow(sch.Name, propDisplayName, text ?? string.Empty);
+                            }
+                            else
+                            {
+                                propertyTable.AddRow(propDisplayName, text ?? string.Empty);
+                            }
                         }
                         else
                         {
-                            propertyTable.AddRow(propDisplayName, text ?? string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        if (verbose)
-                        {
-                            propertyTable.AddRow(new Markup(sch.Name), new Markup(propDisplayName), new Markup($"[red bold]{text}[/]"));
-                        }
-                        else
-                        {
-                            propertyTable.AddRow(new Markup(propDisplayName), new Markup($"[red bold]{text}[/]"));
+                            if (verbose)
+                            {
+                                propertyTable.AddRow(new Markup(sch.Name), new Markup(propDisplayName), new Markup($"[red bold]{text}[/]"));
+                            }
+                            else
+                            {
+                                propertyTable.AddRow(new Markup(propDisplayName), new Markup($"[red bold]{text}[/]"));
+                            }
                         }
                     }
                 }
@@ -267,7 +294,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                         foreach (var prop in grp)
                         {
                             unsetPropertyTable.AddRow(
-                                new Markup($"[aqua]{grp.Key.SchemaName}[/]"),
+                                new Markup($"[aqua]{grp.Key.SchemaName ?? string.Empty}[/]"),
                                 new Markup($"[red]{prop.SimpleDisplayName}[/]"),
                                 new Markup($"[red]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}[/]"),
                                 new Markup(prop.Field.Required ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark));
@@ -290,162 +317,198 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
     /// <typeparam name="T">The type of the schema field to mark up for rendering.</typeparam>
     /// <param name="field">The schema field to mark up.</param>
     /// <param name="value">The value in the schema field to mark up.</param>
+    /// <param name="referencedThings">Pre-loaded referenced things to avoid database calls.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The marked-up <paramref name="value"/> that can be rendered to a <see cref="IAnsiConsole"/> for a rich display or interaction experience.</returns>
-    internal static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, CancellationToken cancellationToken)
+    internal static async Task<string?> GetMarkedUpFieldValue<T>(T field, object? value, Dictionary<string, Thing>? referencedThings, CancellationToken cancellationToken)
         where T : SchemaFieldBase
     {
         ArgumentNullException.ThrowIfNull(field);
 
-        var fieldType = field.GetType();
-        if (fieldType.Equals(typeof(SchemaArrayField)))
+        return field switch
         {
-            if (value == null)
-            {
-                return default;
-            }
+            SchemaArrayField => HandleArrayField(value),
+            SchemaDateField => HandleDateField(value),
+            SchemaMonthDayField => HandleMonthDayField(value),
+            SchemaPhoneField => HandlePhoneField(value),
+            SchemaRefField => await HandleRefField(value, referencedThings, cancellationToken),
+            _ => HandleDefaultField(value)
+        };
+    }
 
-            if (value is not System.Collections.IEnumerable ie)
-            {
-                return default;
-            }
-
-            var contents = ie.Cast<object?>()
-                .Select(x => x?.ToString() ?? string.Empty)
-                .Aggregate((c, n) => $"{c},{n}");
-
-            return Markup.Escape($"[{contents}]"); // This needs to be escaped
+    private static string? HandleArrayField(object? value)
+    {
+        if (value == null)
+        {
+            return default;
         }
 
-        if (fieldType.Equals(typeof(SchemaDateField)))
+        if (value is not System.Collections.IEnumerable ie)
         {
-            if (value == null)
-            {
-                return default;
-            }
-
-            if (value is DateTimeOffset dto)
-            {
-                if (dto.TimeOfDay == TimeSpan.Zero)
-                {
-                    return dto.Date.ToShortDateString();
-                }
-
-                return $"{dto:s}";
-            }
-
-            if (value is DateTime dt)
-            {
-                if (dt.TimeOfDay == TimeSpan.Zero)
-                {
-                    return dt.Date.ToShortDateString();
-                }
-
-                return $"{dt:s}";
-            }
-
-            if (SchemaDateField.TryParseDate(value.ToString(), out DateTimeOffset dto2))
-            {
-                if (dto2.TimeOfDay == TimeSpan.Zero)
-                {
-                    return dto2.Date.ToShortDateString();
-                }
-
-                return $"{dto2:s}";
-            }
-
-            return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+            return default;
         }
 
-        if (fieldType.Equals(typeof(SchemaMonthDayField)))
+        var contentsArray = ie.Cast<object?>() // This is the expected behavior, it should always be castable to a nullable System.Object.
+            .Select(x => x?.ToString() ?? string.Empty)
+            .ToArray();
+
+        // Use string.Join for efficient concatenation
+        if (contentsArray.Length == 0)
         {
-            if (value == null)
-            {
-                return default;
-            }
-
-            if (value is DateTimeOffset dto)
-            {
-                if (dto.TimeOfDay == TimeSpan.Zero)
-                {
-                    return dto.Date.ToShortDateString();
-                }
-
-                return $"{dto:MMMM dd}";
-            }
-
-            if (value is DateTime dt)
-            {
-                if (dt.TimeOfDay == TimeSpan.Zero)
-                {
-                    return dt.Date.ToShortDateString();
-                }
-
-                return $"{dt:MMMM dd}";
-            }
-
-            if (SchemaMonthDayField.TryParseMonthDay(value.ToString(), out int md))
-            {
-                var d = new DateTime(new DateOnly(2000, md / 100, md - ((md / 100) * 100)), TimeOnly.FromTimeSpan(TimeSpan.Zero));
-                return $"{d:MMMM dd}";
-            }
-
-            return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+            return Markup.Escape("[]"); // This needs to be escaped
         }
 
-        if (fieldType.Equals(typeof(SchemaPhoneField)))
+        var contents = string.Join(",", contentsArray);
+        return Markup.Escape($"[{contents}]"); // This needs to be escaped
+    }
+
+    private static string? HandleDateField(object? value)
+    {
+        if (value == null)
         {
-            if (value == null)
-            {
-                return default;
-            }
-
-            var str = value as string;
-
-            if (Debugger.IsAttached
-                || !AnsiConsole.Profile.Capabilities.Links
-                || str?.IndexOfAny(['[', ']']) > -1)
-            {
-                return str; // No link wrapping.
-            }
-
-            if (string.IsNullOrEmpty(str))
-            {
-                return str;
-            }
-
-            return (string?)$"[link=tel:{Markup.Escape(str)}]{Markup.Escape(str)}[/]";
+            return default;
         }
 
-        if (fieldType.Equals(typeof(SchemaRefField)))
+        if (value is DateTimeOffset dto)
         {
-            if (value == null)
+            if (dto.TimeOfDay == TimeSpan.Zero)
             {
-                return default;
+                return dto.Date.ToShortDateString();
             }
 
-            if (value is not string str)
-            {
-                return default;
-            }
-
-            var thingGuid = str[(str.IndexOf('.') + 1)..];
-
-            var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
-            if (tsp == null)
-            {
-                return str;
-            }
-
-            var thing = await tsp.LoadAsync(thingGuid, cancellationToken);
-            if (thing == null)
-            {
-                return str;
-            }
-
-            return Markup.Escape(thing.Name);
+            return $"{dto:s}";
         }
 
+        if (value is DateTime dt)
+        {
+            if (dt.TimeOfDay == TimeSpan.Zero)
+            {
+                return dt.Date.ToShortDateString();
+            }
+
+            return $"{dt:s}";
+        }
+
+        if (SchemaDateField.TryParseDate(value.ToString(), out DateTimeOffset dto2))
+        {
+            if (dto2.TimeOfDay == TimeSpan.Zero)
+            {
+                return dto2.Date.ToShortDateString();
+            }
+
+            return $"{dto2:s}";
+        }
+
+        return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+    }
+
+    private static string? HandleMonthDayField(object? value)
+    {
+        if (value == null)
+        {
+            return default;
+        }
+
+        if (value is DateTimeOffset dto)
+        {
+            if (dto.TimeOfDay == TimeSpan.Zero)
+            {
+                return dto.Date.ToShortDateString();
+            }
+
+            return $"{dto:MMMM dd}";
+        }
+
+        if (value is DateTime dt)
+        {
+            if (dt.TimeOfDay == TimeSpan.Zero)
+            {
+                return dt.Date.ToShortDateString();
+            }
+
+            return $"{dt:MMMM dd}";
+        }
+
+        if (SchemaMonthDayField.TryParseMonthDay(value.ToString(), out int md))
+        {
+            var month = md / 100;
+            var day = md - (month * 100);
+
+            if (md < 100 || month < 1 || month > 12 || day < 1 || day > DateTime.DaysInMonth(2000, month))
+            {
+                return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+            }
+
+            var d = new DateTime(new DateOnly(2000, month, day), TimeOnly.FromTimeSpan(TimeSpan.Zero));
+            return $"{d:MMMM dd}";
+        }
+
+        return (string?)$"[yellow]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
+    }
+
+    private static string? HandlePhoneField(object? value)
+    {
+        if (value == null)
+        {
+            return default;
+        }
+
+        var str = value as string;
+
+        if (string.IsNullOrEmpty(str))
+        {
+            return str;
+        }
+
+        if (Debugger.IsAttached
+            || !AnsiConsole.Profile.Capabilities.Links
+            || str.IndexOfAny(['[', ']']) > -1)
+        {
+            return str; // No link wrapping.
+        }
+
+        return (string?)$"[link=tel:{Markup.Escape(str)}]{Markup.Escape(str)}[/]";
+    }
+
+    private static async Task<string?> HandleRefField(object? value, Dictionary<string, Thing>? referencedThings, CancellationToken cancellationToken)
+    {
+        if (value == null)
+        {
+            return default;
+        }
+
+        if (value is not string str)
+        {
+            return default;
+        }
+
+        var dotIndex = str.IndexOf('.');
+        var thingGuid = dotIndex >= 0 ? str[(dotIndex + 1)..] : str; // This is the intended behavior - if there is no dot, then we return the entire string.
+
+        // Use pre-loaded things cache to avoid database call
+        if (referencedThings != null && referencedThings.TryGetValue(thingGuid, out Thing? cachedThing))
+        {
+            return Markup.Escape(cachedThing.Name);
+        }
+
+        // Fallback to database call if not in cache
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
+        if (tsp == null)
+        {
+            return str;
+        }
+
+        var thing = await tsp.LoadAsync(thingGuid, cancellationToken);
+        if (thing == null)
+        {
+            return str;
+        }
+
+        return Markup.Escape(thing.Name);
+    }
+
+    private static string? HandleDefaultField(object? value)
+    {
         var val = value?.ToString();
         if (string.IsNullOrEmpty(val))
         {

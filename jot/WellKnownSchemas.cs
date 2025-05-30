@@ -28,5 +28,10 @@ public static class WellKnownSchemas
     /// <summary>
     /// Tasks.
     /// </summary>
-    public static readonly Reference Task = new() { Guid = "00000000-0000-0000-0000-000000000004", Type = Reference.ReferenceType.Schema };
+    public const string TaskGuid = "00000000-0000-0000-0000-000000000004";
+
+    /// <summary>
+    /// Tasks.
+    /// </summary>
+    public static readonly Reference Task = new() { Guid = TaskGuid, Type = Reference.ReferenceType.Schema };
 }

@@ -20,7 +20,6 @@ using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -487,20 +486,54 @@ public class Thing
     }
 
     /// <summary>
-    /// Retrieves a property by the property's <see cref="ThingProperty.TruePropertyName"/> name.
+    /// Retrieves each property by the property's <see cref="ThingProperty.TruePropertyName"/> name.
     /// </summary>
-    /// <param name="truePropertyName">The true name of the property to retrieve.</param>
+    /// <param name="truePropertyNames">The true names of the properties to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The property, if its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
-    public ThingProperty? GetPropertyByTrueName(string truePropertyName, CancellationToken cancellationToken)
+    /// <returns>The a dictionary of property values, keyed by the <paramref name="truePropertyNames"/> true names, if found by its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
+    [return: NotNull]
+    public async Task<Dictionary<string, ThingProperty?>> GetPropertiesByTrueNameAsync(string[] truePropertyNames, CancellationToken cancellationToken)
     {
-        var x = GetPropertiesByTrueName([truePropertyName], cancellationToken);
-        if (x.Count != 1)
+        ArgumentNullException.ThrowIfNull(truePropertyNames);
+
+        MarkAccessed();
+
+        // Validate property names upfront
+        foreach (var truePropName in truePropertyNames)
         {
-            return null;
+            ArgumentException.ThrowIfNullOrWhiteSpace(truePropName, nameof(truePropertyNames));
+            if (!truePropName.Contains('.'))
+            {
+                throw new ArgumentException($"True property name '{truePropName}' does not contain a period.", nameof(truePropertyNames));
+            }
         }
 
-        return x.Values.Single();
+        var result = new Dictionary<string, ThingProperty?>();
+        var searchSet = new HashSet<string>(truePropertyNames, StringComparer.InvariantCultureIgnoreCase);
+
+        // Stream through properties without materializing the entire collection
+        await foreach (var prop in GetProperties(cancellationToken))
+        {
+            if (searchSet.Contains(prop.TruePropertyName))
+            {
+                result[prop.TruePropertyName] = prop;
+                searchSet.Remove(prop.TruePropertyName);
+
+                // Early exit if we've found all requested properties
+                if (searchSet.Count == 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        // Add null entries for properties that weren't found
+        foreach (var missingPropName in searchSet)
+        {
+            result[missingPropName] = null;
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -510,35 +543,10 @@ public class Thing
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The a dictionary of property values, keyed by the <paramref name="truePropertyNames"/> true names, if found by its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
     [return: NotNull]
+    [Obsolete("Use GetPropertiesByTrueNameAsync for better performance")]
     public Dictionary<string, ThingProperty?> GetPropertiesByTrueName(string[] truePropertyNames, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(truePropertyNames);
-
-        MarkAccessed();
-
-        Dictionary<string, ThingProperty?> result = [];
-
-        var props = GetProperties(cancellationToken).ToBlockingEnumerable(cancellationToken).ToArray();
-        foreach (var truePropName in truePropertyNames)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(truePropName, nameof(truePropertyNames));
-            if (!truePropName.Contains('.'))
-            {
-                throw new ArgumentException($"True property name '{truePropName}' does not contain a period.", nameof(truePropertyNames));
-            }
-
-            var match = props.FirstOrDefault(p => p.TruePropertyName.Equals(truePropName, StringComparison.InvariantCultureIgnoreCase));
-            if (match == default)
-            {
-                result.Add(truePropName, null);
-            }
-            else
-            {
-                result.Add(truePropName, match);
-            }
-        }
-
-        return result;
+        return GetPropertiesByTrueNameAsync(truePropertyNames, cancellationToken).GetAwaiter().GetResult();
     }
 
     /// <summary>

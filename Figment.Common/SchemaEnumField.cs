@@ -107,7 +107,7 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
             return Task.FromResult("enum []");
         }
 
-        var fields = Values.Select(v => v?.ToString() ?? "null").Aggregate((c, n) => $"{c},{n}");
+        var fields = string.Join(',', Values.Select(v => v?.ToString() ?? "null"));
         return Task.FromResult($"enum [{fields}]");
     }
 }
