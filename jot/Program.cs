@@ -430,7 +430,7 @@ internal class Program
                     }
                     else
                     {
-                        input = AnsiConsole.Prompt(new TextPromptWithHistory<string>($"[green]({SelectedEntityName})>[/]").AddHistory(history));
+                        input = AnsiConsole.Prompt(new TextPromptWithHistory<string>($"[green]({Markup.Escape(SelectedEntityName)})>[/]").AddHistory(history));
                     }
                 }
                 else

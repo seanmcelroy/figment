@@ -16,12 +16,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Text;
 using Figment.Common;
 using Figment.Common.Calculations.Functions;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Rendering;
 
 namespace jot.Commands.Tasks;
 
@@ -348,7 +350,7 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
                                 return $"no {grpField}";
                             }
 
-                            if (!groupingProp.HasValue || groupingProp.Value.Value == null || (groupingProp.Value.Value is string s && string.IsNullOrWhiteSpace(s)))
+                            if (groupingProp.Value.Value == null || (groupingProp.Value.Value is string s && string.IsNullOrWhiteSpace(s)))
                             {
                                 return $"no {groupingProp.Value.SimpleDisplayName}";
                             }
@@ -387,16 +389,37 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
         var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts)>();
         foreach (var task in tasks)
         {
-            var props = await task.GetPropertiesByTrueNameAsync([trueNameId, trueNameComplete, trueNameDue], cancellationToken);
+            var props = await task.GetPropertiesByTrueNameAsync([trueNameId, trueNameComplete, trueNameDue, trueNameArchived, trueNamePriority, trueNameStatus], cancellationToken);
             string[] projects = [];
             string[] contexts = [];
             tasksWithProps.Add((task, props, projects, contexts));
         }
 
+        // Pre-evaluate filters and grouping to avoid .Result deadlocks
+        var filteredTasksWithGrouping = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts, string groupKey)>();
+
+        foreach (var item in tasksWithProps)
+        {
+            // Evaluate all filters for this task
+            bool passesAllFilters = true;
+            foreach (var filter in filters)
+            {
+                if (!await filter(item.Task))
+                {
+                    passesAllFilters = false;
+                    break;
+                }
+            }
+
+            if (passesAllFilters)
+            {
+                var groupKey = await grouping(item.Task);
+                filteredTasksWithGrouping.Add((item.Task, item.Props, item.projects, item.contexts, groupKey));
+            }
+        }
+
         var nowDate = DateTime.Now.Date;
-        foreach (var grp in tasksWithProps
-            .Where(x => filters.All(y => y.Invoke(x.Task).WaitAsync(cancellationToken).Result))
-            .GroupBy(x => grouping.Invoke(x.Task).WaitAsync(cancellationToken).Result))
+        foreach (var grp in filteredTasksWithGrouping.GroupBy(x => x.groupKey))
         {
             AnsiConsole.MarkupLineInterpolated($"[blue]{Markup.Escape(grp.Key)}[/]");
             Table t = new();
@@ -410,7 +433,6 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
 
             // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
             foreach (var item in grp
-                .Where(x => filters.All(y => y.Invoke(x.Task).WaitAsync(cancellationToken).Result))
                 .OrderBy(x => x.Props.TryGetValue(trueNameDue, out var dueProp)
                     ? dueProp?.AsDateTimeOffset()
                     : null)
@@ -488,13 +510,39 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
                     }
                 }
 
-                var name = task.Name ?? $"[red]NAME MISSING ({task.Guid})[/]";
+                string renderableName;
+                if (string.IsNullOrWhiteSpace(task.Name))
+                {
+                    renderableName = $"[red]NAME MISSING ({task.Guid})[/]";
+                }
+                else
+                {
+                    var split = task.Name.Split(" ");
+                    var sb = new StringBuilder();
+                    foreach (var entry in split)
+                    {
+                        if (entry.StartsWith('@'))
+                        {
+                            sb.AppendFormat($"[hotpink]{Markup.Escape(entry)}[/] ");
+                        }
+                        else if (entry.StartsWith('+'))
+                        {
+                            sb.AppendFormat($"[lightslateblue]{Markup.Escape(entry)}[/] ");
+                        }
+                        else
+                        {
+                            sb.AppendFormat($"{Markup.Escape(entry)} ");
+                        }
+                    }
+
+                    renderableName = sb.ToString();
+                }
 
                 t.AddRow(
                     idValue,
                     completeValue,
                     dueValue ?? string.Empty,
-                    name);
+                    renderableName);
             }
 
             AnsiConsole.Write(t);
