@@ -50,5 +50,5 @@ public class SchemaIncrementField(string Name) : SchemaIntegerField(Name)
     public long NextValue { get; set; } = 1;
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 }

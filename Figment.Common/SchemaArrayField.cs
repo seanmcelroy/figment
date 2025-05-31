@@ -122,7 +122,7 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
     }
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken)
     {
         var itemType = Items?.Type ?? "???";
         return Task.FromResult($"array of {itemType}");

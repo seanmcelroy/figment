@@ -53,7 +53,7 @@ public class SchemaEmailField(string Name) : SchemaFieldBase(Name)
     public string Format { get; } = "email"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     /// <inheritdoc/>
 #pragma warning disable SA1313 // Parameter names should begin with lower-case letter

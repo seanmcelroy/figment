@@ -1,3 +1,4 @@
+using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
@@ -55,9 +56,15 @@ public class PrintSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSet
         {
             foreach (var prop in schema.Properties)
             {
+                var dataType = Markup.Escape(await prop.Value.GetReadableFieldTypeAsync(settings.Verbose ?? false, cancellationToken));
+                if (prop.Value.Type.Equals(SchemaRefField.SCHEMA_FIELD_TYPE))
+                {
+                    dataType = $"[bold darkorange]{dataType}[/]";
+                }
+
                 propertyTable.AddRow(
                     $"[dodgerblue1]{Markup.Escape(prop.Key)}[/]",
-                    Markup.Escape(await prop.Value.GetReadableFieldTypeAsync(cancellationToken)),
+                    dataType,
                     prop.Value.DisplayNames?.Select(x => x.Value).FirstOrDefault() ?? Emoji.Known.CrossMark,
                     prop.Value.Required ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark);
             }

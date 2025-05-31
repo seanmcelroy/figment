@@ -154,7 +154,7 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
     public string Format { get; } = "date"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("date");
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult("date");
 
     /// <inheritdoc/>
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)

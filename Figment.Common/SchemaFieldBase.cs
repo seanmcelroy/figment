@@ -83,9 +83,10 @@ public abstract class SchemaFieldBase(string Name)
     /// <summary>
     /// Gets a human-readable version of the field type, with no formatting markup.
     /// </summary>
+    /// <param name="verbose">Whether or not to provide additional verbose detail.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>Text to display describing the field type of this schema field.</returns>
-    public abstract Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken);
+    public abstract Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken);
 
     /// <summary>
     /// Allows the field to modify the input to match its underlying requirement.

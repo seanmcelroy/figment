@@ -43,7 +43,7 @@ public class SchemaNumberField(string Name) : SchemaFieldBase(Name)
     public override string Type { get; } = SCHEMA_FIELD_TYPE;
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     /// <inheritdoc/>
 #pragma warning disable SA1313 // Parameter names should begin with lower-case letter

@@ -28,7 +28,7 @@ public sealed class SchemaDateField
         Assert.AreEqual("date", f.Format);
         Assert.AreEqual("string", f.Type);
 
-        var s = await f.GetReadableFieldTypeAsync(CancellationToken.None);
+        var s = await f.GetReadableFieldTypeAsync(false, CancellationToken.None);
         Assert.IsNotNull(s);
         Assert.AreEqual("date", s, StringComparer.Ordinal);
         Assert.AreEqual("string", f.Type, StringComparer.Ordinal);

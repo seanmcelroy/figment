@@ -113,7 +113,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
             }
 
             // Validate each property against its schema field type
-            await ValidatePropertyAgainstSchemaFields(thingProperties, schemas, cancellationToken);
+            await ValidatePropertyAgainstSchemaFields(thingProperties, schemas, settings.Verbose ?? false, cancellationToken);
 
             // Validate reference integrity
             await ValidateReferenceIntegrity(thingProperties, schemas, cancellationToken);
@@ -139,6 +139,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
     private static async Task ValidatePropertyAgainstSchemaFields(
         List<ThingProperty> thingProperties,
         Dictionary<string, Schema> schemas,
+        bool verbose,
         CancellationToken cancellationToken)
     {
         foreach (var property in thingProperties.Where(p => !string.IsNullOrEmpty(p.SchemaGuid)))
@@ -162,7 +163,7 @@ public class ValidateThingCommand : CancellableAsyncCommand<ThingCommandSettings
 
                 if (!isValid)
                 {
-                    var fieldType = await schemaField.GetReadableFieldTypeAsync(cancellationToken);
+                    var fieldType = await schemaField.GetReadableFieldTypeAsync(verbose, cancellationToken);
                     var suggestion = GetValidationSuggestion(schemaField);
 
                     AmbientErrorContext.Provider.LogWarning(

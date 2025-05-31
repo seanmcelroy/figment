@@ -100,7 +100,7 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
     }
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken)
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken)
     {
         if (Values == null || Values.Length == 0)
         {

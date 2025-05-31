@@ -296,7 +296,7 @@ public class PrintThingCommand : CancellableAsyncCommand<PrintThingCommandSettin
                             unsetPropertyTable.AddRow(
                                 new Markup($"[aqua]{grp.Key.SchemaName ?? string.Empty}[/]"),
                                 new Markup($"[red]{prop.SimpleDisplayName}[/]"),
-                                new Markup($"[red]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(cancellationToken))}[/]"),
+                                new Markup($"[red]{Markup.Escape(await prop.Field.GetReadableFieldTypeAsync(settings.Verbose ?? false, cancellationToken))}[/]"),
                                 new Markup(prop.Field.Required ? Emoji.Known.CheckMarkButton : Emoji.Known.CrossMark));
                         }
                     }

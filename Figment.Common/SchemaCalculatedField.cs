@@ -51,7 +51,7 @@ public class SchemaCalculatedField(string Name) : SchemaFieldBase(Name)
     public string? Formula { get; set; }
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult($"calculated: {Formula}");
 
     /// <inheritdoc/>
     public override Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)

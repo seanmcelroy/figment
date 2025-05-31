@@ -17,23 +17,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Figment.Common;
 using Figment.Common.Calculations.Functions;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using Spectre.Console.Rendering;
 
 namespace jot.Commands.Tasks;
 
 /// <summary>
 /// Lists all the things in the database.
 /// </summary>
-public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
+public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
 {
     private delegate Task<bool> FilterDelegate(Thing task);
-    private delegate Task<string> GroupingDelegate(Thing task);
+    private delegate Task<Dictionary<string, HashSet<Thing>>> GroupingDelegate(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken);
+
+    [GeneratedRegex(@"(?<!\b)\@[\w\d]+\b")]
+    private static partial Regex ContextRegex();
+
+    [GeneratedRegex(@"(?<!\b)\+[\w\d]+\b")]
+    private static partial Regex ProjectRegex();
 
     /// <summary>
     /// Converts a flag value representing a date into an inclusive range of beginning and ending dates.
@@ -120,6 +126,133 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
         }
     }
 
+    private static Task<Dictionary<string, HashSet<Thing>>> BucketTasksByContext(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tasks);
+
+        var groupedBuckets = new Dictionary<string, HashSet<Thing>>();
+        foreach (var task in tasks)
+        {
+            var contexts = ContextRegex().Matches(task.Name)
+                .Where(m => m.Success)
+                .Select(m => m.Value)
+                .ToArray();
+
+            if (contexts.Length == 0)
+            {
+                if (!groupedBuckets.TryAdd("no context", [task]))
+                {
+                    if (groupedBuckets.TryGetValue("no context", out HashSet<Thing>? bucket))
+                    {
+                        bucket.Add(task);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var context in contexts)
+                {
+                    if (!groupedBuckets.TryAdd(context, [task]))
+                    {
+                        if (groupedBuckets.TryGetValue(context, out HashSet<Thing>? bucket))
+                        {
+                            bucket.Add(task);
+                        }
+                    }
+                }
+            }
+        }
+
+        return Task.FromResult(groupedBuckets);
+    }
+
+    private static Task<Dictionary<string, HashSet<Thing>>> BucketTasksByProject(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(tasks);
+
+        var groupedBuckets = new Dictionary<string, HashSet<Thing>>();
+        foreach (var task in tasks)
+        {
+            var projects = ProjectRegex().Matches(task.Name)
+                .Where(m => m.Success)
+                .Select(m => m.Value)
+                .ToArray();
+
+            if (projects.Length == 0)
+            {
+                if (!groupedBuckets.TryAdd("no project", [task]))
+                {
+                    if (groupedBuckets.TryGetValue("no project", out HashSet<Thing>? bucket))
+                    {
+                        bucket.Add(task);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var project in projects)
+                {
+                    if (!groupedBuckets.TryAdd(project, [task]))
+                    {
+                        if (groupedBuckets.TryGetValue(project, out HashSet<Thing>? bucket))
+                        {
+                            bucket.Add(task);
+                        }
+                    }
+                }
+            }
+        }
+
+        return Task.FromResult(groupedBuckets);
+    }
+
+    private static async Task<Dictionary<string, HashSet<Thing>>> BucketTasksByProperty(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fieldName);
+        ArgumentNullException.ThrowIfNull(tasks);
+
+        string trueNameGroupField = $"{WellKnownSchemas.TaskGuid}.{fieldName}";
+
+        var groupedBuckets = new Dictionary<string, HashSet<Thing>>();
+        foreach (var task in tasks)
+        {
+            var groupingProp = await task.GetPropertyByTrueNameAsync(trueNameGroupField, cancellationToken);
+            if (!groupingProp.HasValue)
+            {
+                if (!groupedBuckets.TryAdd($"no {fieldName}", [task]))
+                {
+                    if (groupedBuckets.TryGetValue($"no {fieldName}", out HashSet<Thing>? bucket))
+                    {
+                        bucket.Add(task);
+                    }
+                }
+            }
+            else if (groupingProp.Value.Value == null || (groupingProp.Value.Value is string s && string.IsNullOrWhiteSpace(s)))
+            {
+                if (!groupedBuckets.TryAdd($"no {groupingProp.Value.SimpleDisplayName}", [task]))
+                {
+                    if (groupedBuckets.TryGetValue($"no {groupingProp.Value.SimpleDisplayName}", out HashSet<Thing>? bucket))
+                    {
+                        bucket.Add(task);
+                    }
+                }
+            }
+            else
+            {
+                var bucketName = groupingProp.Value.Value.ToString() ?? $"no {groupingProp.Value.SimpleDisplayName}";
+                if (!groupedBuckets.TryAdd(bucketName, [task]))
+                {
+                    if (groupedBuckets.TryGetValue(bucketName, out HashSet<Thing>? bucket))
+                    {
+                        bucket.Add(task);
+                    }
+                }
+            }
+        }
+
+        return groupedBuckets;
+    }
+
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListTasksCommandSettings settings, CancellationToken cancellationToken)
     {
@@ -136,11 +269,17 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
         const string trueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
         const string trueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
         const string trueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
+        const string trueNameContexts = $"{WellKnownSchemas.TaskGuid}.contexts";
+        const string trueNameProjects = $"{WellKnownSchemas.TaskGuid}.projects";
 
         // Parse filters
         List<FilterDelegate> filters = [];
         FilterDelegate? dueFilter = null;
-        GroupingDelegate grouping = (t) => Task.FromResult("all");
+        string? groupFieldName = null;
+        GroupingDelegate bucketSorter = (fieldName, tasks, ct) =>
+        {
+            return Task.FromResult(new Dictionary<string, HashSet<Thing>>() { { "all", tasks } });
+        };
 
         foreach (var flagValue in settings.Flags)
         {
@@ -331,32 +470,39 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
                         string grpFieldValue = split[1];
 
                         // Convienences
-                        string grpField;
-                        if (grpFieldValue.Equals("s", StringComparison.CurrentCultureIgnoreCase))
+                        if (grpFieldValue.Equals("c", StringComparison.CurrentCultureIgnoreCase))
                         {
-                            grpField = "status";
+                            // Special handling for context
+                            groupFieldName = "context";
+                        }
+                        else if (grpFieldValue.Equals("p", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            // Special handling for project
+                            groupFieldName = "project";
+                        }
+                        else if (grpFieldValue.Equals("s", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            groupFieldName = "status";
                         }
                         else
                         {
-                            grpField = grpFieldValue;
+                            groupFieldName = grpFieldValue;
                         }
 
-                        string trueNameGroupField = $"{WellKnownSchemas.TaskGuid}.{grpField}";
-                        grouping = async (t) =>
+                        switch (groupFieldName.ToLowerInvariant())
                         {
-                            var groupingProp = await t.GetPropertyByTrueNameAsync(trueNameGroupField, cancellationToken);
-                            if (!groupingProp.HasValue)
-                            {
-                                return $"no {grpField}";
-                            }
+                            case "context":
+                                bucketSorter = BucketTasksByContext;
+                                break;
+                            case "project":
+                                bucketSorter = BucketTasksByProject;
+                                break;
+                            case "status":
+                            default:
+                                bucketSorter = BucketTasksByProperty;
+                                break;
+                        }
 
-                            if (groupingProp.Value.Value == null || (groupingProp.Value.Value is string s && string.IsNullOrWhiteSpace(s)))
-                            {
-                                return $"no {groupingProp.Value.SimpleDisplayName}";
-                            }
-
-                            return groupingProp.Value.Value.ToString() ?? $"no {groupingProp.Value.SimpleDisplayName}";
-                        };
                         break;
                     }
 
@@ -383,7 +529,12 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
         var taskResults = await Task.WhenAll(taskTasks);
 
         // Filter out null results
-        var tasks = taskResults.Where(task => task != null).Cast<Thing>().ToList();
+        var tasks = taskResults.Where(task => task != null).Cast<Thing>().ToHashSet();
+
+        // Bucket tasks for grouping.
+        var groupedBuckets = await bucketSorter(groupFieldName, tasks, cancellationToken);
+
+        // Recalculate context and projects dynamically.
 
         // Extract properties once and cache them with tasks to avoid duplicate lookups
         var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts)>();
@@ -395,9 +546,8 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
             tasksWithProps.Add((task, props, projects, contexts));
         }
 
-        // Pre-evaluate filters and grouping to avoid .Result deadlocks
-        var filteredTasksWithGrouping = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts, string groupKey)>();
-
+        // Pre-evaluate filters to avoid .Result deadlocks
+        var filteredTaskGuidsAndProps = new Dictionary<string, Dictionary<string, ThingProperty?>>();
         foreach (var item in tasksWithProps)
         {
             // Evaluate all filters for this task
@@ -413,26 +563,26 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
 
             if (passesAllFilters)
             {
-                var groupKey = await grouping(item.Task);
-                filteredTasksWithGrouping.Add((item.Task, item.Props, item.projects, item.contexts, groupKey));
+                filteredTaskGuidsAndProps.TryAdd(item.Task.Guid, item.Props);
             }
         }
 
         var nowDate = DateTime.Now.Date;
-        foreach (var grp in filteredTasksWithGrouping.GroupBy(x => x.groupKey))
+        foreach (var (bucketName, todos) in groupedBuckets)
         {
-            AnsiConsole.MarkupLineInterpolated($"[blue]{Markup.Escape(grp.Key)}[/]");
+            AnsiConsole.MarkupLineInterpolated($"{Environment.NewLine}[teal]{Markup.Escape(bucketName)}[/]");
             Table t = new();
             t = t.HideHeaders()
                 .HideRowSeparators()
                 .Border(TableBorder.None)
-                .AddColumn("ID", c => c.Padding(5, 0))
-                .AddColumn("Done", c => c.Padding(5, 0))
-                .AddColumn("Due", c => c.Padding(5, 0))
+                .AddColumn("ID", c => c.Padding(2, 0))
+                .AddColumn("Done", c => c.Padding(2, 0))
+                .AddColumn("Due", c => c.Padding(2, 0))
                 .AddColumn("Name");
 
             // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
-            foreach (var item in grp
+            foreach (var item in todos
+                .Join(filteredTaskGuidsAndProps, t => t.Guid, f => f.Key, (f, t) => new { Task = f, Props = t.Value })
                 .OrderBy(x => x.Props.TryGetValue(trueNameDue, out var dueProp)
                     ? dueProp?.AsDateTimeOffset()
                     : null)

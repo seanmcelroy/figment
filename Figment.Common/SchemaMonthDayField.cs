@@ -54,7 +54,7 @@ public class SchemaMonthDayField(string Name) : SchemaIntegerField(Name)
     public override string Type { get; } = SchemaIntegerField.SCHEMA_FIELD_TYPE; // SCHEMA_FIELD_TYPE does not match JSON schema
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult("month+day");
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult("month+day");
 
     /// <inheritdoc/>
     public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)

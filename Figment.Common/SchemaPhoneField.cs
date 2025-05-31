@@ -36,5 +36,5 @@ public class SchemaPhoneField(string Name) : SchemaTextField(Name)
     public new const string SCHEMA_FIELD_TYPE = "phone";
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 }
