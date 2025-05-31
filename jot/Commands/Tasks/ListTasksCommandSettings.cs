@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.ComponentModel;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Tasks;
@@ -25,4 +26,10 @@ namespace jot.Commands.Tasks;
 /// </summary>
 public class ListTasksCommandSettings : CommandSettings
 {
+    /// <summary>
+    /// Gets or sets the options used to filter <see cref="Task"/>s or to group them.
+    /// </summary>
+    [CommandArgument(0, "[FLAGS]")]
+    [Description("Options used to filter or group tasks")]
+    public string[] Flags { get; set; } = [];
 }

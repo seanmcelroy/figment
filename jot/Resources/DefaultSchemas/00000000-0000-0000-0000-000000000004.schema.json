@@ -8,8 +8,9 @@
   "required": [],
   "properties": {
     "complete": {
-      "$type": "bool",
-      "type": "bool"
+      "$type": "date",
+      "type": "string",
+      "format": "date"
     },
     "due": {
       "$type": "date",
@@ -23,6 +24,26 @@
     "notes": {
       "$type": "text",
       "type": "string"
+    },
+    "archived": {
+      "$type": "bool",
+      "type": "bool"
+    },
+    "id": {
+      "$type": "increment",
+      "next": 1
+    },
+    "priority": {
+      "$type": "bool",
+      "type": "bool"
+    },
+    "status": {
+      "$type": "enum",
+      "enum": [
+        "now",
+        "next",
+        "later"
+      ]
     }
   },
   "importMaps": []

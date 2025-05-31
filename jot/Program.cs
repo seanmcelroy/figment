@@ -178,7 +178,19 @@ internal class Program
                 {
                     task.AddCommand<ListTasksCommand>("list")
                         .WithDescription("Lists all tasks")
-                        .WithAlias("l");
+                        .WithAlias("ls")
+                        .WithAlias("l")
+                        .WithExample("task", "list", "due:today") // show tasks due today
+                        .WithExample("task", "list", "duebefore:tom") // show tasks due before tomorrow (today and earlier)
+                        .WithExample("task", "list", "dueafter:tod") // show tasks due after today
+                        .WithExample("task", "list", "completed:true") // show only completed tasks
+                        .WithExample("task", "list", "completed:false") // show only incomplete tasks
+                        .WithExample("task", "list", "priority:true") // show only prioritized tasks
+                        .WithExample("task", "list", "priority:false") // show only non-prioritized tasks
+                        .WithExample("task", "list", "archived:true") // show archived tasks
+                        .WithExample("task", "list", "completed:tod") // show tasks that were completed today
+                        .WithExample("task", "list", "completed:thisweek") // show tasks that were completed this week
+                        ;
                 });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>

@@ -47,6 +47,11 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
 
         Stack<ProgressTask> taskStack = new();
 
+        var unicode = AnsiConsole.Profile.Capabilities.Unicode;
+        string tomato = unicode ? ":tomato:" : "*";
+        string shortBreak = unicode ? ":restroom:" : ".";
+        string longBreak = unicode ? ":person_walking:" : "!";
+
         await AnsiConsole.Progress()
             .Columns(
             [
@@ -59,7 +64,7 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
             async ctx =>
             {
                 {
-                    var pomoTask = ctx.AddTask(":tomato: [green]Pomodoro timer ticking[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60);
+                    var pomoTask = ctx.AddTask($"{tomato} [green]Pomodoro timer ticking[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60);
                     taskStack.Push(pomoTask);
                 }
 
@@ -70,7 +75,7 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
 
                     // Add elapsed time to currently running task
                     var topTask = taskStack.Peek();
-                    var topTaskIsWork = topTask.Description.StartsWith(":tomato:");
+                    var topTaskIsWork = topTask.Description.StartsWith(tomato);
 
                     // Is there a key to handle, before we delay?
                     var keyPressed = false;
@@ -86,7 +91,7 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
                                 topTask.Value = topTask.MaxValue;
                                 continue;
                             case ConsoleKey.S:
-                                var shortBreakTask = ctx.AddTask(":restroom: [gold1]Short break[/]", maxValue: settings.ShortBreakDurationSeconds ?? 5 * 60);
+                                var shortBreakTask = ctx.AddTask($"{shortBreak} [gold1]Short break[/]", maxValue: settings.ShortBreakDurationSeconds ?? 5 * 60);
                                 topTask.StopTask();
                                 totalWork += topTaskIsWork ? topTask.Value : 0;
                                 topTask.Value = topTask.MaxValue;
@@ -94,7 +99,7 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
                                 sw.Restart();
                                 continue;
                             case ConsoleKey.L:
-                                var longBreakTask = ctx.AddTask(":person_walking: [orangered1]Long break[/]", maxValue: settings.LongBreakDurationSeconds ?? 15 * 60);
+                                var longBreakTask = ctx.AddTask($"{longBreak} [orangered1]Long break[/]", maxValue: settings.LongBreakDurationSeconds ?? 15 * 60);
                                 topTask.StopTask();
                                 totalWork += topTaskIsWork ? topTask.Value : 0;
                                 topTask.Value = topTask.MaxValue;
@@ -108,7 +113,7 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
                                     continue;
                                 }
 
-                                var pomoTask = ctx.AddTask(":tomato: [green]Pomodoro timer ticking[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60);
+                                var pomoTask = ctx.AddTask($"{tomato} [green]Pomodoro timer ticking[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60);
                                 topTask.StopTask();
                                 totalWork += topTaskIsWork ? topTask.Value : 0;
                                 topTask.Value = topTask.MaxValue;
@@ -140,8 +145,8 @@ public class StartPomodoro : CancellableAsyncCommand<StartPomodoroSettings>
                         {
                             topTask.Value = topTask.MaxValue;
                             var pomoTask = topTaskIsWork
-                                ? ctx.AddTask(":tomato: [green]Pomodoro timer ticking (auto-renewed)[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60)
-                                : ctx.AddTask(":tomato: [green]Pomodoro timer ticking (auto-resumed)[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60);
+                                ? ctx.AddTask($"{tomato} [green]Pomodoro timer ticking (auto-renewed)[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60)
+                                : ctx.AddTask($"{tomato} [green]Pomodoro timer ticking (auto-resumed)[/]", maxValue: settings.PomodoriDurationSeconds ?? 25 * 60);
                             taskStack.Push(pomoTask);
                             sw.Restart();
                         }

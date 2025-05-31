@@ -486,6 +486,23 @@ public class Thing
     }
 
     /// <summary>
+    /// Retrieves a property by its <see cref="ThingProperty.TruePropertyName"/> name.
+    /// </summary>
+    /// <param name="truePropertyName">The true name of the properties to retrieve.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The property, if found by its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
+    public async Task<ThingProperty?> GetPropertyByTrueNameAsync(string truePropertyName, CancellationToken cancellationToken)
+    {
+        var dict = await GetPropertiesByTrueNameAsync([truePropertyName], cancellationToken);
+        if (dict.Count != 1)
+        {
+            return null;
+        }
+
+        return dict.Single().Value;
+    }
+
+    /// <summary>
     /// Retrieves each property by the property's <see cref="ThingProperty.TruePropertyName"/> name.
     /// </summary>
     /// <param name="truePropertyNames">The true names of the properties to retrieve.</param>
@@ -534,19 +551,6 @@ public class Thing
         }
 
         return result;
-    }
-
-    /// <summary>
-    /// Retrieves each property by the property's <see cref="ThingProperty.TruePropertyName"/> name.
-    /// </summary>
-    /// <param name="truePropertyNames">The true names of the properties to retrieve.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The a dictionary of property values, keyed by the <paramref name="truePropertyNames"/> true names, if found by its <see cref="ThingProperty.TruePropertyName"/>.  The value is null if the requested true property name was not found.</returns>
-    [return: NotNull]
-    [Obsolete("Use GetPropertiesByTrueNameAsync for better performance")]
-    public Dictionary<string, ThingProperty?> GetPropertiesByTrueName(string[] truePropertyNames, CancellationToken cancellationToken)
-    {
-        return GetPropertiesByTrueNameAsync(truePropertyNames, cancellationToken).GetAwaiter().GetResult();
     }
 
     /// <summary>

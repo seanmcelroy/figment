@@ -155,4 +155,42 @@ public readonly record struct ThingProperty
 
         return null;
     }
+
+    /// <summary>
+    /// Returns the <see cref="Value"/> as a <see cref="DateTimeOffset"/>.
+    /// </summary>
+    /// <returns>The value of the property, if it is a <see cref="DateTimeOffset"/>.</returns>
+    public DateTimeOffset? AsDateTimeOffset()
+    {
+        if (Value is DateTimeOffset dto)
+        {
+            return dto;
+        }
+
+        if (Value is string s && SchemaDateField.TryParseDate(s, out dto))
+        {
+            return dto;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Returns the <see cref="Value"/> as a <see cref="bool"/>.
+    /// </summary>
+    /// <returns>The value of the property, if it is a <see cref="bool"/>.</returns>
+    public bool? AsBoolean()
+    {
+        if (Value is bool b)
+        {
+            return b;
+        }
+
+        if (Value is string s && SchemaBooleanField.TryParseBoolean(s, out b))
+        {
+            return b;
+        }
+
+        return null;
+    }
 }

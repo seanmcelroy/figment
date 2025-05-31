@@ -78,9 +78,14 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
     /// <summary>
     /// Formats that this date field will attempt to parse exactly, such as RFC 3339 formats.
     /// </summary>
-    internal static readonly string[] _partialFormats = [
+    private static readonly string[] _partialMonthDayFormats = [
         "MMM d",
         "MMMM d",
+    ];
+
+    private static readonly string[] _partialYearMonthFormats = [
+        "yyyy-MM",
+        "MM/yyyy",
     ];
 
     private static readonly Dictionary<string, int> WordNumbers = new()
@@ -223,7 +228,7 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
 
         var today = DateTimeOffset.Now.Date; // By using .Date, the .Offset property is lost because it is now a DateTime and not a DateTimeOffset.
 
-        if (DateTimeOffset.TryParseExact(input, _partialFormats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTimeOffset partialDate))
+        if (DateTimeOffset.TryParseExact(input, _partialMonthDayFormats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTimeOffset partialDate))
         {
             // If this is Feb 29, but this is not a leap year, then it is not valid.
             if (partialDate.Month == 2 && partialDate.Day == 29 && !DateTime.IsLeapYear(today.Year))
@@ -242,60 +247,66 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
             return true;
         }
 
+        if (DateTimeOffset.TryParseExact(input, _partialYearMonthFormats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out partialDate))
+        {
+            output = new DateTimeOffset(partialDate.Year, partialDate.Month, 1, 0, 0, 0, DateTimeOffset.Now.Offset);
+            return true;
+        }
+
         // Relative date parsing
         input = input.Trim().ToLowerInvariant();
-        if (string.Equals(input, "today"))
+        if (string.Equals(input, "today", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today;
             return true;
         }
 
-        if (string.Equals(input, "yesterday"))
+        if (string.Equals(input, "yesterday", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddDays(-1);
             return true;
         }
 
-        if (string.Equals(input, "tomorrow"))
+        if (string.Equals(input, "tomorrow", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddDays(1);
             return true;
         }
 
-        if (string.Equals(input, "next week")
-           || string.Equals(input, "in a week"))
+        if (string.Equals(input, "next week", StringComparison.CurrentCultureIgnoreCase)
+           || string.Equals(input, "in a week", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddDays(7);
             return true;
         }
 
-        if (string.Equals(input, "last week"))
+        if (string.Equals(input, "last week", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddDays(-7);
             return true;
         }
 
-        if (string.Equals(input, "next month")
-           || string.Equals(input, "in a month"))
+        if (string.Equals(input, "next month", StringComparison.CurrentCultureIgnoreCase)
+           || string.Equals(input, "in a month", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddMonths(1);
             return true;
         }
 
-        if (string.Equals(input, "last month"))
+        if (string.Equals(input, "last month", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddMonths(-1);
             return true;
         }
 
-        if (string.Equals(input, "next year")
-           || string.Equals(input, "in a year"))
+        if (string.Equals(input, "next year", StringComparison.CurrentCultureIgnoreCase)
+           || string.Equals(input, "in a year", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddYears(1);
             return true;
         }
 
-        if (string.Equals(input, "last year"))
+        if (string.Equals(input, "last year", StringComparison.CurrentCultureIgnoreCase))
         {
             output = today.AddYears(-1);
             return true;

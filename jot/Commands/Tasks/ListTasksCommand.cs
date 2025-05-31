@@ -30,6 +30,94 @@ namespace jot.Commands.Tasks;
 /// </summary>
 public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
 {
+    private delegate Task<bool> FilterDelegate(Thing task);
+    private delegate Task<string> GroupingDelegate(Thing task);
+
+    /// <summary>
+    /// Converts a flag value representing a date into an inclusive range of beginning and ending dates.
+    /// </summary>
+    /// <param name="flagValue">The string value to parse, in the ultralist.io format.</param>
+    /// <returns>An inclusive range of dates between which tasks must have a date.</returns>
+    private static (DateTimeOffset, DateTimeOffset) ParseFlagDateValue(string flagValue)
+    {
+        // Ultralist filtering by date
+        // due:(tod|today|tom|tomorrow|thisweek|nextweek|lastweek|mon|tue|wed|thu|fri|sat|sun|none|<specific date>)
+        var nowDT = DateTime.Now.Date;
+        var nowDO = DateOnly.FromDateTime(nowDT);
+        switch (flagValue.ToLowerInvariant())
+        {
+            case "tod":
+            case "today":
+                return (nowDO.ToDateTime(TimeOnly.MinValue), nowDO.ToDateTime(TimeOnly.MaxValue));
+            case "tom":
+            case "tomorrow":
+                return (nowDO.AddDays(1).ToDateTime(TimeOnly.MinValue), nowDO.AddDays(1).ToDateTime(TimeOnly.MaxValue));
+            case "thisweek":
+                {
+                    int diff = (7 + (nowDO.DayOfWeek - DayOfWeek.Sunday)) % 7;
+                    var startOfWeek = nowDT.AddDays(-1 * diff).Date;
+                    var endOfWeek = DateOnly.FromDateTime(startOfWeek.AddDays(6)).ToDateTime(TimeOnly.MaxValue);
+                    return (startOfWeek, endOfWeek);
+                }
+
+            case "nextweek":
+                {
+                    int diff = (7 + (nowDO.DayOfWeek - DayOfWeek.Sunday)) % 7;
+                    var startOfWeek = nowDT.AddDays(7).AddDays(-1 * diff).Date;
+                    var endOfWeek = DateOnly.FromDateTime(startOfWeek.AddDays(6)).ToDateTime(TimeOnly.MaxValue);
+                    return (startOfWeek, endOfWeek);
+                }
+
+            case "lastweek":
+                {
+                    int diff = (7 + (nowDO.DayOfWeek - DayOfWeek.Sunday)) % 7;
+                    var startOfWeek = nowDT.AddDays(-7).AddDays(-1 * diff).Date;
+                    var endOfWeek = DateOnly.FromDateTime(startOfWeek.AddDays(6)).ToDateTime(TimeOnly.MaxValue);
+                    return (startOfWeek, endOfWeek);
+                }
+
+            case "sun":
+                var sundaySOD = nowDT.AddDays(((int)DayOfWeek.Sunday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (sundaySOD, DateOnly.FromDateTime(sundaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            case "mon":
+                var mondaySOD = nowDT.AddDays(((int)DayOfWeek.Monday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (mondaySOD, DateOnly.FromDateTime(mondaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            case "tue":
+                var tuesdaySOD = nowDT.AddDays(((int)DayOfWeek.Tuesday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (tuesdaySOD, DateOnly.FromDateTime(tuesdaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            case "wed":
+                var wednesdaySOD = nowDT.AddDays(((int)DayOfWeek.Wednesday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (wednesdaySOD, DateOnly.FromDateTime(wednesdaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            case "thu":
+            case "thur":
+            case "thurs":
+            case "thr":
+                var thursdaySOD = nowDT.AddDays(((int)DayOfWeek.Thursday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (thursdaySOD, DateOnly.FromDateTime(thursdaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            case "fri":
+                var fridaySOD = nowDT.AddDays(((int)DayOfWeek.Friday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (fridaySOD, DateOnly.FromDateTime(fridaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            case "sat":
+                var saturdaySOD = nowDT.AddDays(((int)DayOfWeek.Saturday - (int)nowDO.DayOfWeek + 7) % 7);
+                return (saturdaySOD, DateOnly.FromDateTime(saturdaySOD).ToDateTime(TimeOnly.MaxValue));
+
+            default:
+                if (SchemaDateField.TryParseDate(flagValue, out DateTimeOffset dto))
+                {
+                    var sod = dto.Date;
+                    return (sod, DateOnly.FromDateTime(sod).ToDateTime(TimeOnly.MaxValue));
+                }
+
+                return (DateTimeOffset.MinValue, DateTimeOffset.MaxValue);
+        }
+    }
+
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListTasksCommandSettings settings, CancellationToken cancellationToken)
     {
@@ -40,14 +128,246 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        Table t = new();
-        t = t.HideHeaders()
-            .HideRowSeparators()
-            .Border(TableBorder.None)
-            .AddColumn("ID", c => c.Padding(5, 0))
-            .AddColumn("Done", c => c.Padding(5, 0))
-            .AddColumn("Due", c => c.Padding(5, 0))
-            .AddColumn("Name");
+        const string trueNameId = $"{WellKnownSchemas.TaskGuid}.id";
+        const string trueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
+        const string trueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
+        const string trueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
+        const string trueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
+        const string trueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
+
+        // Parse filters
+        List<FilterDelegate> filters = [];
+        FilterDelegate? dueFilter = null;
+        GroupingDelegate grouping = (t) => Task.FromResult("all");
+
+        foreach (var flagValue in settings.Flags)
+        {
+            // Flag convenience replacements
+            var flag = flagValue;
+            if (flag.Equals("done", StringComparison.CurrentCultureIgnoreCase)
+                || flag.Equals("closed", StringComparison.CurrentCultureIgnoreCase)
+                || flag.Equals("complete", StringComparison.CurrentCultureIgnoreCase))
+            {
+                flag = "complete:true";
+            }
+            else if (flag.Equals("undone", StringComparison.CurrentCultureIgnoreCase)
+                || flag.Equals("todo", StringComparison.CurrentCultureIgnoreCase)
+                || flag.Equals("open", StringComparison.CurrentCultureIgnoreCase))
+            {
+                flag = "complete:false";
+            }
+            else if (flag.Equals("archived", StringComparison.CurrentCultureIgnoreCase))
+            {
+                flag = "archived:true";
+            }
+
+            if (!flag.Contains(':'))
+            {
+                continue;
+            }
+
+            var split = flag.Split(':');
+            if (split.Length != 2)
+            {
+                continue;
+            }
+
+            switch (split[0].ToLowerInvariant())
+            {
+                case "due":
+                    {
+                        var (rangeStart, rangeEnd) = ParseFlagDateValue(split[1]);
+                        dueFilter = async (t) =>
+                        {
+                            var dueProp = await t.GetPropertyByTrueNameAsync(trueNameDue, cancellationToken);
+                            var dueValue = dueProp.Value.AsDateTimeOffset();
+
+                            // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
+                            if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                return dueValue == null;
+                            }
+                            else if (dueValue == null)
+                            {
+                                return false;
+                            }
+
+                            return rangeStart <= dueValue && dueValue <= rangeEnd;
+                        };
+                        break;
+                    }
+
+                case "before":
+                case "duebefore":
+                    {
+                        var (rangeStart, _) = ParseFlagDateValue(split[1]);
+                        dueFilter = async (t) =>
+                        {
+                            var dueProp = await t.GetPropertyByTrueNameAsync(trueNameDue, cancellationToken);
+                            var dueValue = dueProp.Value.AsDateTimeOffset();
+
+                            // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
+                            if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                return dueValue == null;
+                            }
+                            else if (dueValue == null)
+                            {
+                                return false;
+                            }
+
+                            return dueValue <= rangeStart;
+                        };
+                        break;
+                    }
+
+                case "after":
+                case "dueafter":
+                    {
+                        var (_, rangeEnd) = ParseFlagDateValue(split[1]);
+                        dueFilter = async (t) =>
+                        {
+                            var dueProp = await t.GetPropertyByTrueNameAsync(trueNameDue, cancellationToken);
+                            var dueValue = dueProp.Value.AsDateTimeOffset();
+
+                            // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
+                            if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                return dueValue == null;
+                            }
+                            else if (dueValue == null)
+                            {
+                                return false;
+                            }
+
+                            return dueValue >= rangeEnd;
+                        };
+                        break;
+                    }
+
+                case "com":
+                case "comp":
+                case "complete":
+                case "completed":
+                case "done":
+                    async Task<bool> CompletedFilter(Thing t)
+                    {
+                        // This can be a boolean or a date filter, like completed:true, completed:false, or completed:thisweek
+                        var completeProp = await t.GetPropertyByTrueNameAsync(trueNameComplete, cancellationToken);
+                        var completeValue = completeProp?.AsDateTimeOffset();
+                        var specValidBoolean = SchemaBooleanField.TryParseBoolean(split[1], out bool specValue);
+                        if (!specValidBoolean)
+                        {
+                            // Treat it like a date.
+                            var (rangeStart, rangeEnd) = ParseFlagDateValue(split[1]);
+                            var completeValueDate = completeProp?.AsDateTimeOffset();
+
+                            // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
+                            if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                return completeValueDate == null;
+                            }
+                            else if (completeValueDate == null)
+                            {
+                                return false;
+                            }
+
+                            return rangeStart <= completeValueDate && completeValueDate <= rangeEnd;
+                        }
+
+                        return completeValue.HasValue == specValue;
+                    }
+
+                    filters.Add(CompletedFilter);
+                    break;
+
+                case "pr":
+                case "pri":
+                case "prio":
+                case "priority":
+                case "prioritized":
+                    async Task<bool> PriorityFilter(Thing t)
+                    {
+                        var priorityProp = await t.GetPropertyByTrueNameAsync(trueNamePriority, cancellationToken);
+                        var priorityValue = priorityProp?.AsBoolean();
+                        var specValid = SchemaBooleanField.TryParseBoolean(split[1], out bool specValue);
+                        if (!specValid)
+                        {
+                            return true; // User provided unparsable value; do not filter.
+                        }
+
+                        return (priorityValue ?? false) == specValue;
+                    }
+
+                    filters.Add(PriorityFilter);
+                    break;
+
+                case "a":
+                case "ar":
+                case "arc":
+                case "arch":
+                case "archive":
+                case "archived":
+                    async Task<bool> ArchivedFilter(Thing t)
+                    {
+                        var archivedProp = await t.GetPropertyByTrueNameAsync(trueNameArchived, cancellationToken);
+                        var archivedValue = archivedProp?.AsBoolean();
+                        var specValid = SchemaBooleanField.TryParseBoolean(split[1], out bool specValue);
+                        if (!specValid)
+                        {
+                            return true; // User provided unparsable value; do not filter.
+                        }
+
+                        return (archivedValue ?? false) == specValue;
+                    }
+
+                    filters.Add(ArchivedFilter);
+                    break;
+
+                case "group":
+                    {
+                        string grpFieldValue = split[1];
+
+                        // Convienences
+                        string grpField;
+                        if (grpFieldValue.Equals("s", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            grpField = "status";
+                        }
+                        else
+                        {
+                            grpField = grpFieldValue;
+                        }
+
+                        string trueNameGroupField = $"{WellKnownSchemas.TaskGuid}.{grpField}";
+                        grouping = async (t) =>
+                        {
+                            var groupingProp = await t.GetPropertyByTrueNameAsync(trueNameGroupField, cancellationToken);
+                            if (!groupingProp.HasValue)
+                            {
+                                return $"no {grpField}";
+                            }
+
+                            if (!groupingProp.HasValue || groupingProp.Value.Value == null || (groupingProp.Value.Value is string s && string.IsNullOrWhiteSpace(s)))
+                            {
+                                return $"no {groupingProp.Value.SimpleDisplayName}";
+                            }
+
+                            return groupingProp.Value.Value.ToString() ?? $"no {groupingProp.Value.SimpleDisplayName}";
+                        };
+                        break;
+                    }
+
+                default:
+                    AmbientErrorContext.Provider.LogWarning($"Unsupported flag '{split[0]}'");
+                    break;
+            }
+        }
+
+        if (dueFilter != null)
+        {
+            filters.Add(dueFilter);
+        }
 
         // Collect all task references first
         var taskReferences = new List<Reference>();
@@ -63,89 +383,122 @@ public class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings
         // Filter out null results
         var tasks = taskResults.Where(task => task != null).Cast<Thing>().ToList();
 
-        const string trueNameId = $"{WellKnownSchemas.TaskGuid}.id";
-        const string trueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
-        const string trueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
-
         // Extract properties once and cache them with tasks to avoid duplicate lookups
-        var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props)>();
+        var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts)>();
         foreach (var task in tasks)
         {
             var props = await task.GetPropertiesByTrueNameAsync([trueNameId, trueNameComplete, trueNameDue], cancellationToken);
-            tasksWithProps.Add((task, props));
+            string[] projects = [];
+            string[] contexts = [];
+            tasksWithProps.Add((task, props, projects, contexts));
         }
 
-        // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
         var nowDate = DateTime.Now.Date;
-        foreach (var item in tasksWithProps.OrderBy(x => x.Props.TryGetValue(trueNameId, out var idProp) ? idProp?.AsUInt64() : null))
+        foreach (var grp in tasksWithProps
+            .Where(x => filters.All(y => y.Invoke(x.Task).WaitAsync(cancellationToken).Result))
+            .GroupBy(x => grouping.Invoke(x.Task).WaitAsync(cancellationToken).Result))
         {
-            var task = item.Task;
-            var props = item.Props;
+            AnsiConsole.MarkupLineInterpolated($"[blue]{Markup.Escape(grp.Key)}[/]");
+            Table t = new();
+            t = t.HideHeaders()
+                .HideRowSeparators()
+                .Border(TableBorder.None)
+                .AddColumn("ID", c => c.Padding(5, 0))
+                .AddColumn("Done", c => c.Padding(5, 0))
+                .AddColumn("Due", c => c.Padding(5, 0))
+                .AddColumn("Name");
 
-            var id = props[trueNameId]?.AsUInt64();
-            var idValue = id != null
-                ? $"[yellow]{id}[/]"
-                : "[red]<ID MISSING>[/]";
-            var completeValue = props[trueNameComplete]?.Value is bool b ? (b ? "[[[green]x[/]]]" : "[[ ]]") : "[[ ]]";
-            string? dueValue = null;
+            // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
+            foreach (var item in grp
+                .Where(x => filters.All(y => y.Invoke(x.Task).WaitAsync(cancellationToken).Result))
+                .OrderBy(x => x.Props.TryGetValue(trueNameDue, out var dueProp)
+                    ? dueProp?.AsDateTimeOffset()
+                    : null)
+                .ThenBy(x => x.Props.TryGetValue(trueNameId, out var idProp)
+                    ? idProp?.AsUInt64()
+                    : null))
             {
-                DateTime? dueDate = null;
-                if (!props.TryGetValue(trueNameDue, out ThingProperty? dueProp))
+                var task = item.Task;
+                var props = item.Props;
+
+                var id = props[trueNameId]?.AsUInt64();
+                var idValue = id != null
+                    ? $"[darkgoldenrod]{id}[/]"
+                    : "[red]<ID MISSING>[/]";
+
+                bool complete = (props[trueNameComplete]?.AsDateTimeOffset()).HasValue;
+                var completeValue = complete
+                    ? (AnsiConsole.Profile.Capabilities.Unicode ? "[[[green]:check_mark:[/]]]" : "[[[green]x[/]]]")
+                    : "[[ ]]";
+
+                string? dueValue = null;
                 {
-                    dueValue = string.Empty; // No due date
-                }
-                else
-                {
-                    if (dueProp == default)
+                    DateTime? dueDate = null;
+                    if (!props.TryGetValue(trueNameDue, out ThingProperty? dueProp))
                     {
                         dueValue = string.Empty; // No due date
                     }
-                    else if (dueProp!.Value.Value is DateTimeOffset dto)
-                    {
-                        dueDate = dto.DateTime;
-                    }
-                    else if (dueProp.Value.Value is DateTime dt)
-                    {
-                        dueDate = dt;
-                    }
-                    else if (dueProp.Value.Value is string sdt && SchemaDateField.TryParseDate(sdt, out DateTimeOffset dto2))
-                    {
-                        dueDate = dto2.Date;
-                    }
                     else
                     {
-                        dueValue = $"[red]{dueProp.Value.Value}[/]"; // Unparsable due date
+                        if (dueProp == default)
+                        {
+                            dueValue = string.Empty; // No due date
+                        }
+                        else if (dueProp!.Value.Value is DateTimeOffset dto)
+                        {
+                            dueDate = dto.DateTime;
+                        }
+                        else if (dueProp.Value.Value is DateTime dt)
+                        {
+                            dueDate = dt;
+                        }
+                        else if (dueProp.Value.Value is string sdt && SchemaDateField.TryParseDate(sdt, out DateTimeOffset dto2))
+                        {
+                            dueDate = dto2.Date;
+                        }
+                        else
+                        {
+                            dueValue = $"[red]{dueProp.Value.Value}[/]"; // Unparsable due date
+                        }
+                    }
+
+                    if (dueValue == null && dueDate != null)
+                    {
+                        var dueValueInner = DateUtility.GetShortRelativeFutureDateDescription(dueDate.Value);
+                        if (complete)
+                        {
+                            // Don't color the due date if the task is already complete
+                            dueValue = dueValueInner;
+                        }
+                        else if (dueDate < nowDate)
+                        {
+                            // This task is overdue, so color it red.
+                            dueValue = $"[red]{dueValueInner}[/]";
+                        }
+                        else if (dueDate == nowDate)
+                        {
+                            // This task is due today, so color it yellow.
+                            dueValue = $"[yellow]{dueValueInner}[/]";
+                        }
+                        else
+                        {
+                            // This task is not overdue and is not due today, so color it blue.
+                            dueValue = $"[blue]{dueValueInner}[/]";
+                        }
                     }
                 }
 
-                if (dueValue == null && dueDate != null)
-                {
-                    var dueValueInner = DateUtility.GetShortRelativeFutureDateDescription(dueDate.Value);
-                    if (dueDate < nowDate)
-                    {
-                        dueValue = $"[red]{dueValueInner}[/]";
-                    }
-                    else if (dueDate == nowDate)
-                    {
-                        dueValue = $"[yellow]{dueValueInner}[/]";
-                    }
-                    else
-                    {
-                        dueValue = $"[blue]{dueValueInner}[/]";
-                    }
-                }
+                var name = task.Name ?? $"[red]NAME MISSING ({task.Guid})[/]";
+
+                t.AddRow(
+                    idValue,
+                    completeValue,
+                    dueValue ?? string.Empty,
+                    name);
             }
 
-            var name = task.Name ?? $"[red]NAME MISSING ({task.Guid})[/]";
-
-            t.AddRow(
-                idValue,
-                completeValue,
-                dueValue ?? string.Empty,
-                name);
+            AnsiConsole.Write(t);
         }
-
-        AnsiConsole.Write(t);
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
