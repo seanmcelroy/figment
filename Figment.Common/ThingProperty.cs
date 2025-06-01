@@ -193,4 +193,23 @@ public readonly record struct ThingProperty
 
         return null;
     }
+
+    /// <summary>
+    /// Returns the <see cref="Value"/> as a <see cref="string"/>.
+    /// </summary>
+    /// <returns>The value of the property, if it is a <see cref="string"/>.</returns>
+    public string? AsString()
+    {
+        if (Value == null)
+        {
+            return null;
+        }
+
+        if (Value is string s)
+        {
+            return s;
+        }
+
+        return Value.ToString();
+    }
 }

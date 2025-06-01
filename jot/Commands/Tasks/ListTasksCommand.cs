@@ -32,6 +32,15 @@ namespace jot.Commands.Tasks;
 /// </summary>
 public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
 {
+    private const string TrueNameId = $"{WellKnownSchemas.TaskGuid}.id";
+    private const string TrueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
+    private const string TrueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
+    private const string TrueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
+    private const string TrueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
+    private const string TrueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
+    private const string TrueNameContexts = $"{WellKnownSchemas.TaskGuid}.contexts";
+    private const string TrueNameProjects = $"{WellKnownSchemas.TaskGuid}.projects";
+
     private delegate Task<bool> FilterDelegate(Thing task);
     private delegate Task<Dictionary<string, HashSet<Thing>>> GroupingDelegate(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken);
 
@@ -253,6 +262,146 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         return groupedBuckets;
     }
 
+    private static Task<bool> FilterByContext(Thing task, string input, CancellationToken _)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return Task.FromResult(true); // User provided unparsable value; do not filter.
+        }
+
+        var taskContexts = ContextRegex().Matches(task.Name)
+            .Where(m => m.Success)
+            .Select(m => m.Value[1..]) // Ignore preceding '@'
+            .ToArray();
+
+        // This could be one context like 'now', or multiple like 'mom,-dad'
+        var passing = true;
+        foreach (var inputContext in input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string cv;
+
+            // Negation.
+            if (inputContext.StartsWith('-'))
+            {
+                if (inputContext.Length < 2)
+                {
+                    // If the task has no context or if this is a naked negation operator (minus with no context after it), then ignore any negation.
+                    continue;
+                }
+
+                cv = inputContext[1..];
+                passing &= !taskContexts.Any(tc => tc.Equals(cv, StringComparison.CurrentCultureIgnoreCase));
+            }
+            else
+            {
+                if (taskContexts.Length == 0)
+                {
+                    // Task does NOT have any context values, and we are filtering for any one here.
+                    return Task.FromResult(false);
+                }
+
+                passing &= taskContexts.Any(tc => tc.Equals(inputContext, StringComparison.CurrentCultureIgnoreCase));
+            }
+        }
+
+        return Task.FromResult(passing);
+    }
+
+    private static Task<bool> FilterByProject(Thing task, string input, CancellationToken _)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return Task.FromResult(true); // User provided unparsable value; do not filter.
+        }
+
+        var taskProjects = ProjectRegex().Matches(task.Name)
+            .Where(m => m.Success)
+            .Select(m => m.Value[1..]) // Ignore preceding '+'
+            .ToArray();
+
+        // This could be one project like 'project1', or multiple like 'project1,-project2'
+        var passing = true;
+        foreach (var inputProject in input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string pv;
+
+            // Negation.
+            if (inputProject.StartsWith('-'))
+            {
+                if (inputProject.Length < 2)
+                {
+                    // If the task has no project or if this is a naked negation operator (minus with no status after it), then ignore any negation.
+                    continue;
+                }
+
+                pv = inputProject[1..];
+                passing &= !taskProjects.Any(tc => tc.Equals(pv, StringComparison.CurrentCultureIgnoreCase));
+            }
+            else
+            {
+                if (taskProjects.Length == 0)
+                {
+                    // Task does NOT have any project values, and we are filtering for any one here.
+                    return Task.FromResult(false);
+                }
+
+                passing &= taskProjects.Any(tc => tc.Equals(inputProject, StringComparison.CurrentCultureIgnoreCase));
+            }
+        }
+
+        return Task.FromResult(passing);
+    }
+
+    private static async Task<bool> FilterByProperty(Thing task, string truePropertyName, string input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(truePropertyName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(input);
+
+        var statusProp = await task.GetPropertyByTrueNameAsync(truePropertyName, cancellationToken);
+        var statusValue = statusProp?.AsString();
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return true; // User provided unparsable value; do not filter.
+        }
+
+        // This could be one status like 'now', or multiple like 'now,-next'
+        var passing = true;
+        foreach (var status in input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string sv;
+
+            // Negation.
+            if (status.StartsWith('-'))
+            {
+                if (string.IsNullOrWhiteSpace(statusValue) || status.Length < 2)
+                {
+                    // If the task has no status or if this is a naked negation operator (minus with no status after it), then ignore any negation.
+                    continue;
+                }
+
+                sv = status[1..];
+                passing &= !statusValue.Equals(sv, StringComparison.CurrentCultureIgnoreCase);
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(statusValue))
+                {
+                    // Task does NOT have a status value, and we are filtering for any one here.
+                    return false;
+                }
+
+                passing &= statusValue.Equals(status, StringComparison.CurrentCultureIgnoreCase);
+            }
+        }
+
+        return passing;
+    }
+
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ListTasksCommandSettings settings, CancellationToken cancellationToken)
     {
@@ -262,15 +411,6 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
-
-        const string trueNameId = $"{WellKnownSchemas.TaskGuid}.id";
-        const string trueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
-        const string trueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
-        const string trueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
-        const string trueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
-        const string trueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
-        const string trueNameContexts = $"{WellKnownSchemas.TaskGuid}.contexts";
-        const string trueNameProjects = $"{WellKnownSchemas.TaskGuid}.projects";
 
         // Parse filters
         List<FilterDelegate> filters = [];
@@ -320,8 +460,8 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         var (rangeStart, rangeEnd) = ParseFlagDateValue(split[1]);
                         dueFilter = async (t) =>
                         {
-                            var dueProp = await t.GetPropertyByTrueNameAsync(trueNameDue, cancellationToken);
-                            var dueValue = dueProp.Value.AsDateTimeOffset();
+                            var dueProp = await t.GetPropertyByTrueNameAsync(TrueNameDue, cancellationToken);
+                            var dueValue = dueProp?.AsDateTimeOffset();
 
                             // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
                             if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
@@ -344,8 +484,8 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         var (rangeStart, _) = ParseFlagDateValue(split[1]);
                         dueFilter = async (t) =>
                         {
-                            var dueProp = await t.GetPropertyByTrueNameAsync(trueNameDue, cancellationToken);
-                            var dueValue = dueProp.Value.AsDateTimeOffset();
+                            var dueProp = await t.GetPropertyByTrueNameAsync(TrueNameDue, cancellationToken);
+                            var dueValue = dueProp?.AsDateTimeOffset();
 
                             // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
                             if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
@@ -368,8 +508,8 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         var (_, rangeEnd) = ParseFlagDateValue(split[1]);
                         dueFilter = async (t) =>
                         {
-                            var dueProp = await t.GetPropertyByTrueNameAsync(trueNameDue, cancellationToken);
-                            var dueValue = dueProp.Value.AsDateTimeOffset();
+                            var dueProp = await t.GetPropertyByTrueNameAsync(TrueNameDue, cancellationToken);
+                            var dueValue = dueProp?.AsDateTimeOffset();
 
                             // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
                             if (split[1].Equals("none", StringComparison.CurrentCultureIgnoreCase))
@@ -394,10 +534,9 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     async Task<bool> CompletedFilter(Thing t)
                     {
                         // This can be a boolean or a date filter, like completed:true, completed:false, or completed:thisweek
-                        var completeProp = await t.GetPropertyByTrueNameAsync(trueNameComplete, cancellationToken);
+                        var completeProp = await t.GetPropertyByTrueNameAsync(TrueNameComplete, cancellationToken);
                         var completeValue = completeProp?.AsDateTimeOffset();
-                        var specValidBoolean = SchemaBooleanField.TryParseBoolean(split[1], out bool specValue);
-                        if (!specValidBoolean)
+                        if (!SchemaBooleanField.TryParseBoolean(split[1], out bool specValue))
                         {
                             // Treat it like a date.
                             var (rangeStart, rangeEnd) = ParseFlagDateValue(split[1]);
@@ -429,10 +568,9 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 case "prioritized":
                     async Task<bool> PriorityFilter(Thing t)
                     {
-                        var priorityProp = await t.GetPropertyByTrueNameAsync(trueNamePriority, cancellationToken);
+                        var priorityProp = await t.GetPropertyByTrueNameAsync(TrueNamePriority, cancellationToken);
                         var priorityValue = priorityProp?.AsBoolean();
-                        var specValid = SchemaBooleanField.TryParseBoolean(split[1], out bool specValue);
-                        if (!specValid)
+                        if (!SchemaBooleanField.TryParseBoolean(split[1], out bool specValue))
                         {
                             return true; // User provided unparsable value; do not filter.
                         }
@@ -451,10 +589,9 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 case "archived":
                     async Task<bool> ArchivedFilter(Thing t)
                     {
-                        var archivedProp = await t.GetPropertyByTrueNameAsync(trueNameArchived, cancellationToken);
+                        var archivedProp = await t.GetPropertyByTrueNameAsync(TrueNameArchived, cancellationToken);
                         var archivedValue = archivedProp?.AsBoolean();
-                        var specValid = SchemaBooleanField.TryParseBoolean(split[1], out bool specValue);
-                        if (!specValid)
+                        if (!SchemaBooleanField.TryParseBoolean(split[1], out bool specValue))
                         {
                             return true; // User provided unparsable value; do not filter.
                         }
@@ -463,6 +600,18 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     }
 
                     filters.Add(ArchivedFilter);
+                    break;
+
+                case "context":
+                    filters.Add((t) => FilterByContext(t, split[1], cancellationToken));
+                    break;
+
+                case "project":
+                    filters.Add((t) => FilterByProject(t, split[1], cancellationToken));
+                    break;
+
+                case "status":
+                    filters.Add((t) => FilterByProperty(t, TrueNameStatus, split[1], cancellationToken));
                     break;
 
                 case "group":
@@ -489,20 +638,12 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                             groupFieldName = grpFieldValue;
                         }
 
-                        switch (groupFieldName.ToLowerInvariant())
+                        bucketSorter = groupFieldName.ToLowerInvariant() switch
                         {
-                            case "context":
-                                bucketSorter = BucketTasksByContext;
-                                break;
-                            case "project":
-                                bucketSorter = BucketTasksByProject;
-                                break;
-                            case "status":
-                            default:
-                                bucketSorter = BucketTasksByProperty;
-                                break;
-                        }
-
+                            "context" => BucketTasksByContext,
+                            "project" => BucketTasksByProject,
+                            _ => BucketTasksByProperty,
+                        };
                         break;
                     }
 
@@ -540,7 +681,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts)>();
         foreach (var task in tasks)
         {
-            var props = await task.GetPropertiesByTrueNameAsync([trueNameId, trueNameComplete, trueNameDue, trueNameArchived, trueNamePriority, trueNameStatus], cancellationToken);
+            var props = await task.GetPropertiesByTrueNameAsync([TrueNameId, TrueNameComplete, TrueNameDue, TrueNameArchived, TrueNamePriority, TrueNameStatus], cancellationToken);
             string[] projects = [];
             string[] contexts = [];
             tasksWithProps.Add((task, props, projects, contexts));
@@ -570,7 +711,6 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         var nowDate = DateTime.Now.Date;
         foreach (var (bucketName, todos) in groupedBuckets)
         {
-            AnsiConsole.MarkupLineInterpolated($"{Environment.NewLine}[teal]{Markup.Escape(bucketName)}[/]");
             Table t = new();
             t = t.HideHeaders()
                 .HideRowSeparators()
@@ -583,22 +723,22 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
             // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
             foreach (var item in todos
                 .Join(filteredTaskGuidsAndProps, t => t.Guid, f => f.Key, (f, t) => new { Task = f, Props = t.Value })
-                .OrderBy(x => x.Props.TryGetValue(trueNameDue, out var dueProp)
+                .OrderBy(x => x.Props.TryGetValue(TrueNameDue, out var dueProp)
                     ? dueProp?.AsDateTimeOffset()
                     : null)
-                .ThenBy(x => x.Props.TryGetValue(trueNameId, out var idProp)
+                .ThenBy(x => x.Props.TryGetValue(TrueNameId, out var idProp)
                     ? idProp?.AsUInt64()
                     : null))
             {
                 var task = item.Task;
                 var props = item.Props;
 
-                var id = props[trueNameId]?.AsUInt64();
+                var id = props[TrueNameId]?.AsUInt64();
                 var idValue = id != null
                     ? $"[darkgoldenrod]{id}[/]"
                     : "[red]<ID MISSING>[/]";
 
-                bool complete = (props[trueNameComplete]?.AsDateTimeOffset()).HasValue;
+                bool complete = (props[TrueNameComplete]?.AsDateTimeOffset()).HasValue;
                 var completeValue = complete
                     ? (AnsiConsole.Profile.Capabilities.Unicode ? "[[[green]:check_mark:[/]]]" : "[[[green]x[/]]]")
                     : "[[ ]]";
@@ -606,7 +746,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 string? dueValue = null;
                 {
                     DateTime? dueDate = null;
-                    if (!props.TryGetValue(trueNameDue, out ThingProperty? dueProp))
+                    if (!props.TryGetValue(TrueNameDue, out ThingProperty? dueProp))
                     {
                         dueValue = string.Empty; // No due date
                     }
@@ -695,7 +835,12 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     renderableName);
             }
 
-            AnsiConsole.Write(t);
+            // Only print the table header and the table if the table has any rows.
+            if (t.Rows.Count > 0)
+            {
+                AnsiConsole.MarkupLineInterpolated($"{Environment.NewLine}[teal]{Markup.Escape(bucketName)}[/]");
+                AnsiConsole.Write(t);
+            }
         }
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
