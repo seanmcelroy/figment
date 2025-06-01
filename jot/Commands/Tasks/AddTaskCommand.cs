@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Text.RegularExpressions;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console.Cli;
@@ -31,6 +32,9 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
     {
         THING_CREATE_ERROR = -2002,
     }
+
+    [GeneratedRegex(@"(?<=\b)due:(?:.+)$")]
+    private static partial Regex DueRegex();
 
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, AddTaskCommandSettings settings, CancellationToken cancellationToken)
@@ -56,13 +60,67 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var taskName = string.Join(' ', settings.Segments);
+        var taskName = string.Join(' ', settings.Segments).Trim();
 
         var task = await thingProvider.CreateAsync(taskSchema, taskName, cancellationToken);
         if (task == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to create task.");
             return (int)ERROR_CODES.THING_CREATE_ERROR;
+        }
+
+        if (settings.Priority ?? false)
+        {
+            var tsr = await task.Set("priority", settings.Priority ?? false, cancellationToken);
+            if (!tsr.Success)
+            {
+                // Not fatal, but warn.
+                AmbientErrorContext.Provider.LogWarning($"Unable to set priority '{settings.Priority ?? false}' on task.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.Status))
+        {
+            var tsr = await task.Set("status", settings.Status, cancellationToken);
+            if (!tsr.Success)
+            {
+                // Not fatal, but warn.
+                AmbientErrorContext.Provider.LogWarning($"Unable to set status '{settings.Status}' on task.");
+            }
+        }
+
+        var dueMatch = DueRegex().Match(taskName, 1); // Don't allow the name to ONLY be a due date.
+        if (dueMatch.Success)
+        {
+            var (dueDate, _) = ListTasksCommand.ParseFlagDateValue(dueMatch.Value[4..]);
+
+            // The -1 is okay because the regex asserts a \b preceding.
+#pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
+            task.Name = task.Name[..(dueMatch.Index - 1)];
+#pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
+            var tsr = await task.Set("due", dueDate, cancellationToken);
+            if (!tsr.Success)
+            {
+                // Not fatal, but warn.
+                AmbientErrorContext.Provider.LogWarning($"Unable to set due date '{dueMatch.Value}' on task.");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(settings.DueDate))
+        {
+            // If we could not match a due in the text (and adjust it accordingly, THEN we will respect the command option.)
+            var (dueDate, _) = ListTasksCommand.ParseFlagDateValue(settings.DueDate);
+
+            var tsr = await task.Set("due", dueDate, cancellationToken);
+            if (!tsr.Success)
+            {
+                // Not fatal, but warn.
+                AmbientErrorContext.Provider.LogWarning($"Unable to set due date '{settings.DueDate}' on task.");
+            }
+        }
+
+        if (task.IsDirty)
+        {
+            await task.SaveAsync(cancellationToken);
         }
 
         var taskIdPropValue = await task.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);

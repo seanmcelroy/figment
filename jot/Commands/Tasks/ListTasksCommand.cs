@@ -33,7 +33,7 @@ namespace jot.Commands.Tasks;
 public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
 {
     /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type.
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "id" field.
     /// </summary>
     public const string TrueNameId = $"{WellKnownSchemas.TaskGuid}.id";
     private const string TrueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
@@ -57,7 +57,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
     /// </summary>
     /// <param name="flagValue">The string value to parse, in the ultralist.io format.</param>
     /// <returns>An inclusive range of dates between which tasks must have a date.</returns>
-    private static (DateTimeOffset, DateTimeOffset) ParseFlagDateValue(string flagValue)
+    internal static (DateTimeOffset, DateTimeOffset) ParseFlagDateValue(string flagValue)
     {
         // Ultralist filtering by date
         // due:(tod|today|tom|tomorrow|thisweek|nextweek|lastweek|mon|tue|wed|thu|fri|sat|sun|none|<specific date>)

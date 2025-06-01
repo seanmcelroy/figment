@@ -30,9 +30,30 @@ public class AddTaskCommandSettings : CommandSettings
     /// <summary>
     /// Gets or sets the body (name) of the task.
     /// </summary>
-    [CommandArgument(0, "[BODY]")]
-    [Description("The name (body text) of the task.")]
+    [CommandArgument(0, "<BODY>")]
+    [Description("The name (body text) of the task, using the Ultralist style, which allows a 'due' hint to be provided at the end to also set the due duate, such as 'due:tomorrow' as last characters.  Projects will be inferred by single words with a '+' prefix, like +projectName.  Contexts will be inferred by single words with a '@' prefix, like @sean.")]
     public string[] Segments { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value that only shows tasks with the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none.
+    /// </summary>
+    [CommandOption("-d|--due <DUEDATE>")]
+    [Description("Creates the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none.  If this option is not specified, a due date can be specified with the 'due:value' format as the last characters of the body text.")]
+    public string? DueDate { get; init; } = null;
+
+    /// <summary>
+    /// Gets a value that indicates the task is a priority.
+    /// </summary>
+    [Description("Creates the task as a priority.")]
+    [CommandOption("-p|--priority")]
+    public bool? Priority { get; init; } = null;
+
+    /// <summary>
+    /// Gets a value that indicates the status of the task.
+    /// </summary>
+    [Description("Creates the task with the specified status.")]
+    [CommandOption("--status <STATUSES>")]
+    public string? Status { get; init; } = null;
 
     /// <inheritdoc/>
     public override ValidationResult Validate()
