@@ -27,8 +27,39 @@ namespace Figment.Common.Calculations.Parsing;
 /// </summary>
 public class ExpressionParser
 {
+    /// <summary>
+    /// Maximum input string size that this expression parser will attempt to parse.
+    /// </summary>
+    private const int MAX_INPUT_LENGTH = 32767;
+
+    /// <summary>
+    /// Maximum field name length.
+    /// </summary>
+    private const int MAX_FIELD_NAME_LENGTH = 256;
+
+    /// <summary>
+    /// Maximum recursion depth.
+    /// </summary>
+    private const int MAX_RECURSION_DEPTH = 100;
+
+    /// <summary>
+    /// Maximum string literal length.
+    /// </summary>
+    private const int MAX_STRING_LENGTH = 8192;
+
+    /// <summary>
+    /// Maximum identifier length.
+    /// </summary>
+    private const int MAX_IDENTIFIER_LENGTH = 256;
+
+    /// <summary>
+    /// Maximum number length.
+    /// </summary>
+    private const int MAX_NUMBER_LENGTH = 64;
+
     private string _input = string.Empty;
     private int _pos;
+    private int _recursionDepth = 0;
 
     private char Peek(int count = 1)
     {
@@ -73,6 +104,13 @@ public class ExpressionParser
     /// <returns>A <see cref="NodeBase"/> implementation at the root of the abstract syntax tree.</returns>
     public NodeBase Parse(string input)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(input);
+
+        if (input.Length > MAX_INPUT_LENGTH)
+        {
+            throw new ParseException("Input too long", 0);
+        }
+
         _input = input.StartsWith('=') ? input[1..] : input;
         _pos = 0;
         return ParseExpression();
@@ -109,28 +147,40 @@ public class ExpressionParser
 
     private NodeBase ParseExpression()
     {
-        var left = ParseTerm();
-        SkipWhitespace();
-
-        var peeked = Peek();
-        if (peeked == '&')
+        if (++_recursionDepth > MAX_RECURSION_DEPTH)
         {
-            while (Match('&'))
-            {
-                var right = ParseTerm();
-                left = new ConcatNode(left, right);
-            }
-        }
-        else if (peeked == '=')
-        {
-            while (Match('='))
-            {
-                var right = ParseTerm();
-                left = new LogicalEqualsNode(left, right);
-            }
+            throw new ParseException("Expression too complex; recursion limit reached.", _pos);
         }
 
-        return left;
+        try
+        {
+            var left = ParseTerm();
+            SkipWhitespace();
+
+            var peeked = Peek();
+            if (peeked == '&')
+            {
+                while (Match('&'))
+                {
+                    var right = ParseTerm();
+                    left = new ConcatNode(left, right);
+                }
+            }
+            else if (peeked == '=')
+            {
+                while (Match('='))
+                {
+                    var right = ParseTerm();
+                    left = new LogicalEqualsNode(left, right);
+                }
+            }
+
+            return left;
+        }
+        finally
+        {
+            _recursionDepth--;
+        }
     }
 
     private NodeBase ParseTerm()
@@ -179,8 +229,14 @@ public class ExpressionParser
     {
         Expect('[');
         var sb = new StringBuilder();
+        int charCount = 0;
         while (Peek() != ']')
         {
+            if (++charCount > MAX_FIELD_NAME_LENGTH)
+            {
+                throw new ParseException("Field name too long", _pos);
+            }
+
             sb.Append(Next());
         }
 
@@ -192,9 +248,21 @@ public class ExpressionParser
     {
         Expect('\'');
         var sb = new StringBuilder();
-        while (Peek() != '\'')
+        int charCount = 0;
+        while (Peek() != '\'' && Peek() != '\0')
         {
+            if (++charCount > MAX_STRING_LENGTH)
+            {
+                throw new ParseException("String literal too long", _pos);
+            }
+
             sb.Append(Next());
+        }
+
+        // Handle missing terminator
+        if (Peek() == '\0')
+        {
+            throw new ParseException("Unterminated string literal", _pos);
         }
 
         Expect('\'');
@@ -205,9 +273,21 @@ public class ExpressionParser
     {
         Expect('"');
         var sb = new StringBuilder();
-        while (Peek() != '"')
+        int charCount = 0;
+        while (Peek() != '"' && Peek() != '\0')
         {
+            if (++charCount > MAX_STRING_LENGTH)
+            {
+                throw new ParseException("String literal too long", _pos);
+            }
+
             sb.Append(Next());
+        }
+
+        // Handle missing terminator
+        if (Peek() == '\0')
+        {
+            throw new ParseException("Unterminated string literal", _pos);
         }
 
         Expect('"');
@@ -217,11 +297,17 @@ public class ExpressionParser
     private LiteralNode ParseNumber()
     {
         var sb = new StringBuilder();
+        int charCount = 0;
         bool anySeen = false;
         bool digitSeen = false;
         bool decimalSeen = false;
         while (true)
         {
+            if (++charCount > MAX_NUMBER_LENGTH)
+            {
+                throw new ParseException("Number literal too long", _pos);
+            }
+
             var peeked = Peek();
 
             // Negative symbol
@@ -313,8 +399,14 @@ public class ExpressionParser
     private string ParseIdentifier()
     {
         var sb = new StringBuilder();
+        int charCount = 0;
         while (char.IsLetterOrDigit(Peek()))
         {
+            if (++charCount > MAX_IDENTIFIER_LENGTH)
+            {
+                throw new ParseException("Identifier too long", _pos);
+            }
+
             sb.Append(Next());
         }
 

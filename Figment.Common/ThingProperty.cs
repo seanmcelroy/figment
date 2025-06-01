@@ -217,7 +217,9 @@ public readonly record struct ThingProperty
     /// Returns the <see cref="Value"/> as a <see cref="string"/> array.
     /// </summary>
     /// <returns>The value of the property, if it is a <see cref="string"/> array.</returns>
+#pragma warning disable SA1011 // Closing square brackets should be spaced correctly
     public string[]? AsStringArray()
+#pragma warning restore SA1011 // Closing square brackets should be spaced correctly
     {
         if (Value == null)
         {
