@@ -1076,12 +1076,6 @@ public class Thing
             return false;
         }
 
-        // Cannot start with a symbol.
-        if (char.IsSymbol(thingName, 0))
-        {
-            return false;
-        }
-
         return true;
     }
 

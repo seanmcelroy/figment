@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections;
+
 namespace Figment.Common.Data;
 
 /// <summary>
@@ -65,6 +67,23 @@ public interface IThingStorageProvider
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An enumeration of references to every <see cref="Thing"/> that adheres to the specified <paramref name="schemaGuid"/>.</returns>
     public IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Retrieves an enumeration of references to every <see cref="Thing"/> that adheres to the specified <paramref name="schemaGuid"/>
+    /// and also has a specific property value.
+    /// </summary>
+    /// <param name="schemaGuid">Unique identifier of the schema selected objects must implement.</param>
+    /// <param name="propName">Name of the property on the thing for which to check the property value.</param>
+    /// <param name="propValue">Value of the property on the thing to compare.</param>
+    /// <param name="comparer">The comparer to use when comparing the value in the potential thing's <paramref name="propName"/> value with the comparison value specified in <paramref name="propValue"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The thing, if it was found.  If the thing was not located, <see cref="Reference.EMPTY"/> is returned.</returns>
+    public IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
+        string schemaGuid,
+        string propName,
+        object? propValue,
+        IComparer comparer,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Obtains a reference to a thing if it is located by its <paramref name="exactName"/>.

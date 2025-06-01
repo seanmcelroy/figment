@@ -52,7 +52,7 @@ public class AddTaskCommandSettings : CommandSettings
     /// Gets a value that indicates the status of the task.
     /// </summary>
     [Description("Creates the task with the specified status.")]
-    [CommandOption("--status <STATUSES>")]
+    [CommandOption("-s|--status <STATUS>")]
     public string? Status { get; init; } = null;
 
     /// <inheritdoc/>

@@ -196,26 +196,36 @@ internal class Program
                         .WithAlias("a")
                         .WithExample("task", "add", "Prepare meeting notes about +importantProject for the meeting with @bob due:today")
                         ;
+                    task.AddCommand<CompleteTaskCommand>("complete")
+                        .WithDescription("Marks a task complete")
+                        .WithAlias("c")
+                        .WithExample("task", "complete", "1")
+                        ;
                 });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>
                 {
                     schema.AddCommand<AssociateSchemaWithThingCommand>("associate")
-                        .WithDescription("Associates a thing with a schema");
+                        .WithDescription("Associates a thing with a schema")
+                        ;
                     schema.AddCommand<SetSchemaDescriptionCommand>("describe")
-                        .WithDescription("Changes the description of a schema");
+                        .WithDescription("Changes the description of a schema")
+                        ;
                     schema.AddCommand<DeleteSchemaCommand>("delete")
                         .WithAlias("del") // Have grace.
                         .WithAlias("remove") // Have grace.
-                        .WithDescription("Permanently deletes a schema");
+                        .WithDescription("Permanently deletes a schema")
+                        ;
                     schema.AddCommand<DissociateSchemaFromThingCommand>("dissociate")
-                        .WithDescription("Dissociates a thing from a schema");
+                        .WithDescription("Dissociates a thing from a schema")
+                        ;
                     schema.AddCommand<ImportSchemaThingsCommand>("import")
                         .WithDescription("Imports entities as things of this schema type")
-                        .WithExample("schema", "person", "import", "~/Downloads/contacts.csv", "csv");
-
+                        .WithExample("schema", "person", "import", "~/Downloads/contacts.csv", "csv")
+                        ;
                     schema.AddCommand<ListImportMapsCommand>("import-maps")
-                        .WithDescription("Lists all import maps defined on the schema");
+                        .WithDescription("Lists all import maps defined on the schema")
+                        ;
                     schema.AddBranch<ImportMapCommandSettings>("import-map", map =>
                     {
                         map.AddCommand<NewImportMapCommand>("new")
@@ -237,14 +247,18 @@ internal class Program
                         map.AddCommand<ValidateImportMapCommand>("validate")
                             .WithAlias("val") // Have grace.
                             .WithDescription("Validates an import map on the schema configuration");
-                    }).WithAlias("import-maps");
+                    }).WithAlias("import-maps")
+                    ;
                     schema.AddCommand<ListSchemaMembersCommand>("members")
-                        .WithDescription("Lists all the things associated with a schema");
+                        .WithDescription("Lists all the things associated with a schema")
+                        ;
                     schema.AddCommand<SetSchemaPluralCommand>("plural")
-                        .WithDescription("Sets the plural name for the schema");
+                        .WithDescription("Sets the plural name for the schema")
+                        ;
                     schema.AddCommand<SchemaRenameCommand>("rename")
                         .WithAlias("ren")
-                        .WithDescription("Changes the name of a schema");
+                        .WithDescription("Changes the name of a schema")
+                        ;
                     schema.AddBranch<SchemaPropertyCommandSettings>("set", set =>
                     {
                         // Note, adding one here requires a manual edit to SetSelectedPropertyCommand
@@ -257,17 +271,21 @@ internal class Program
                             .WithDescription("Changes whether a property is required");
                         set.AddCommand<SetSchemaPropertyFormulaCommand>("formula")
                             .WithDescription("Sets the formula expression of a calculated property");
-                    });
+                    })
+                    ;
                     schema.AddCommand<ValidateSchemaCommand>("validate")
                         .WithAlias("val") // Have grace.
-                        .WithDescription("Validates the schema is consistent");
+                        .WithDescription("Validates the schema is consistent")
+                        ;
                     schema.AddCommand<SetSchemaVersionCommand>("version")
-                        .WithDescription("Sets the versioning plan for the schema");
+                        .WithDescription("Sets the versioning plan for the schema")
+                        ;
                     schema.AddCommand<PrintSchemaCommand>("view")
                         .WithAlias("details")
                         .WithAlias("print")
                         .WithAlias("show")
-                        .WithDescription("Views all fields on a schema");
+                        .WithDescription("Views all fields on a schema")
+                        ;
                 });
 
             config.AddBranch<ThingCommandSettings>("thing", thing =>
@@ -275,22 +293,28 @@ internal class Program
                     thing.AddCommand<DeleteThingCommand>("delete")
                         .WithAlias("del") // Have grace.
                         .WithAlias("remove") // Have grace.
-                        .WithDescription("Permanently deletes a thing");
+                        .WithDescription("Permanently deletes a thing")
+                        ;
                     thing.AddCommand<PromoteThingPropertyCommand>("promote")
-                        .WithDescription("Promotes a property on one thing to become a property defined on a schema");
+                        .WithDescription("Promotes a property on one thing to become a property defined on a schema")
+                        ;
                     thing.AddCommand<ThingRenameCommand>("rename")
                         .WithAlias("ren")
-                        .WithDescription("Changes the name of a thing");
+                        .WithDescription("Changes the name of a thing")
+                        ;
                     thing.AddCommand<SetThingPropertyCommand>("set")
-                        .WithDescription("Sets the value of a property on a thing");
+                        .WithDescription("Sets the value of a property on a thing")
+                        ;
                     thing.AddCommand<ValidateThingCommand>("validate")
                         .WithAlias("val") // Have grace.
-                        .WithDescription("Validates a thing is consistent with its schema");
+                        .WithDescription("Validates a thing is consistent with its schema")
+                        ;
                     thing.AddCommand<PrintThingCommand>("view")
                         .WithAlias("details")
                         .WithAlias("print")
                         .WithAlias("show")
-                        .WithDescription("Views the values of all properties on a thing");
+                        .WithDescription("Views the values of all properties on a thing")
+                        ;
                 });
 
             config.AddBranch("configure", configure =>

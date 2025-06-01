@@ -16,6 +16,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections;
+
 namespace Figment.Common.Data;
 
 /// <summary>
@@ -46,6 +48,14 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
 
     /// <inheritdoc/>
     public abstract IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
+       string schemaGuid,
+       string propName,
+       object? propValue,
+       IComparer comparer,
+       CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     public abstract Task<bool> GuidExists(string thingGuid, CancellationToken cancellationToken);

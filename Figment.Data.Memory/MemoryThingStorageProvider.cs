@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections;
 using System.Runtime.CompilerServices;
 using Figment.Common;
 using Figment.Common.Data;
@@ -132,6 +133,46 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
             var thing = await LoadAsync(reference.Guid, cancellationToken);
             if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
                 yield return reference;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
+        string schemaGuid,
+        string propName,
+        object? propValue,
+        IComparer comparer,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propName);
+        ArgumentNullException.ThrowIfNull(comparer);
+
+        async Task<bool> thingMatches(Thing thing)
+        {
+            var prop = await thing.GetPropertyByTrueNameAsync($"{schemaGuid}.{propName}", cancellationToken);
+            if (prop == null)
+                return false; // Property is missing from thing, so it's not a valid thing of the specified schema.
+
+            if (!prop.HasValue && propValue == null)
+                return true; // We want nulls, and this is null.
+
+            if (!prop.HasValue)
+                return false; // We do not want nulls, and this is null.
+
+            return comparer.Compare(prop.Value, propValue) == 0;
+        }
+
+        await foreach (var (reference, name) in GetAll(cancellationToken))
+        {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
+
+            var thing = await LoadAsync(reference.Guid, cancellationToken);
+            if (thing != null
+                && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal))
+                && await thingMatches(thing))
+                yield return thing;
         }
     }
 

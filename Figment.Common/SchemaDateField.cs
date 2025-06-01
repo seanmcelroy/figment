@@ -44,8 +44,15 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
     /// Formats that this date field will attempt to parse exactly, such as RFC 3339 formats.
     /// </summary>
     internal static readonly string[] _completeFormats = [
+        // 2025-06-01T17:12:10.2305983-05:00
         "yyyy-MM-ddTHH:mm:ssK",
+        "yyyy-MM-ddTHH:mm:ss.fffffffK",
+        "yyyy-MM-ddTHH:mm:ss.ffffffK",
+        "yyyy-MM-ddTHH:mm:ss.fffffK",
+        "yyyy-MM-ddTHH:mm:ss.ffffK",
+        "yyyy-MM-ddTHH:mm:ss.fffK",
         "yyyy-MM-ddTHH:mm:ss.ffK",
+        "yyyy-MM-ddTHH:mm:ss.fK",
         "yyyy-MM-ddTHH:mm:ssZ",
         "yyyy-MM-ddTHH:mm:ss.ffZ",
 

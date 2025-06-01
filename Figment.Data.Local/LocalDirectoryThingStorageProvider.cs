@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Figment.Common;
@@ -192,19 +193,88 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                     Type = Reference.ReferenceType.Thing
                 };
             }
+        }
+        else
+        {
+            // No index, so go the expensive route
+            AmbientErrorContext.Provider.LogWarning($"Missing index at: {indexFilePath}");
+            await foreach (var (reference, name) in GetAll(cancellationToken))
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+
+                var thing = await LoadAsync(reference.Guid, cancellationToken);
+                if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
+                    yield return reference;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
+       string schemaGuid,
+       string propName,
+       object? propValue,
+       IComparer comparer,
+       [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // This might look a lot like GetBySchemaAsync, but it is a special version
+        // that holds onto the loaded thing object for property testing.
+        // It also cannot use quite the same index-shortcut in GetBySchemaAsync because
+        // it returns a fully loaded Thing, not just a reference.
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propName);
+        ArgumentNullException.ThrowIfNull(comparer);
+
+        var thingDir = new DirectoryInfo(ThingDirectoryPath);
+        if (!thingDir.Exists)
             yield break;
+
+        async Task<bool> thingMatches(Thing thing)
+        {
+            var prop = await thing.GetPropertyByTrueNameAsync(propName, cancellationToken);
+            if (prop == null)
+                return false; // Property is missing from thing, so it's not a valid thing of the specified schema.
+
+            if (!prop.HasValue && propValue == null)
+                return true; // We want nulls, and this is null.
+
+            if (!prop.HasValue)
+                return false; // We do not want nulls, and this is null.
+
+            return comparer.Compare(prop.Value.Value, propValue) == 0;
         }
 
-        // No index, so go the expensive route
-        AmbientErrorContext.Provider.LogWarning($"Missing index at: {indexFilePath}");
-        await foreach (var thingRef in GetAll(cancellationToken))
+        var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
+        if (File.Exists(indexFilePath))
         {
-            if (cancellationToken.IsCancellationRequested)
-                yield break;
+            // Use index
+            await foreach (var entry in IndexManager.LookupAsync(indexFilePath, e => true, cancellationToken))
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
 
-            var thing = await LoadAsync(thingRef.reference.Guid, cancellationToken);
-            if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
-                yield return thingRef.reference;
+                var guid = Path.GetFileName(entry.Value).Split('.')[0];
+                var thing = await LoadAsync(guid, cancellationToken);
+                if (thing != null && await thingMatches(thing))
+                    yield return thing;
+            }
+        }
+        else
+        {
+            // No index, so go the expensive route
+            AmbientErrorContext.Provider.LogWarning($"Missing index at: {indexFilePath}");
+            await foreach (var (reference, name) in GetAll(cancellationToken))
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+
+                var thing = await LoadAsync(reference.Guid, cancellationToken);
+                if (thing != null
+                    && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal))
+                    && await thingMatches(thing))
+                    yield return thing;
+            }
         }
     }
 
