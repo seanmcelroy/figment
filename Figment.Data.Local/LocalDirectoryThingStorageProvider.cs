@@ -493,12 +493,12 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     }
 
     /// <inheritdoc/>
-    public override async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
+    public override async Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
         {
-            SchemaGuids = [schemaGuid],
+            SchemaGuids = schema == null ? [] : [schema.Guid],
             CreatedOn = DateTime.UtcNow,
             LastModified = DateTime.UtcNow,
             LastAccessed = DateTime.UtcNow,
@@ -531,33 +531,27 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             await IndexManager.AddAsync(indexFilePath, thingName, thingFileName, cancellationToken);
         }
 
-        if (!string.IsNullOrWhiteSpace(schemaGuid))
-            await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
+        if (schema != null)
+            await AssociateWithSchemaInternal(thing, schema, cancellationToken);
 
         // Load fresh to handle any schema defaults/calculated fields
         return await LoadAsync(thingGuid, cancellationToken);
     }
 
-    /// <summary>
-    /// Associates a <see cref="Thing"/> with a <see cref="Schema"/>.
-    /// </summary>
-    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to associate with the <see cref="Schema"/> specified by <paramref name="schemaGuid"/>.</param>
-    /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
-    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
             return (false, null);
 
-        return await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
+        return await AssociateWithSchemaInternal(thing, schema, cancellationToken);
     }
 
-    private async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
+    private async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, Schema schema, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(thing);
-        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+        ArgumentNullException.ThrowIfNull(schema);
 
         var thingFileName = $"{thing.Guid}.thing.json";
         var thingFilePath = Path.Combine(ThingDirectoryPath, thingFileName);
@@ -565,9 +559,9 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         if (!File.Exists(thingFilePath))
             return (false, null); // Thing doesn't exist...
 
-        if (!thing.SchemaGuids.Contains(schemaGuid))
+        if (!thing.SchemaGuids.Contains(schema.Guid))
         {
-            thing.SchemaGuids.Add(schemaGuid);
+            thing.SchemaGuids.Add(schema.Guid);
             var (saved, _) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);
@@ -575,13 +569,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 
         // Add to schema name index, if applicable
         {
-            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.names.schema.{schemaGuid}.csv");
+            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.names.schema.{schema.Guid}.csv");
             await IndexManager.AddAsync(indexFilePath, thing.Name, thingFileName, cancellationToken);
         }
 
         // Add it to the schema index
         {
-            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.schema.{schemaGuid}.csv");
+            var indexFilePath = Path.Combine(ThingDirectoryPath, $"_thing.schema.{schema.Guid}.csv");
             await IndexManager.AddAsync(indexFilePath, thing.Guid, thingFileName, cancellationToken);
         }
 

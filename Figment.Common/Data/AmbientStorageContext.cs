@@ -33,6 +33,11 @@ public static class AmbientStorageContext
     /// </summary>
     public const string RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER = "Unable to load thing storage provider.";
 
+    /// <summary>
+    /// A text resource for displaying an error to the user when the <see cref="ISchemaStorageProvider"/> cannot find a well-known, built-in schema.
+    /// </summary>
+    public const string RESOURCE_ERR_UNABLE_TO_LOAD_BUILT_IN_SCHEMA = "Built-in schema cannot be loaded.";
+
     private static readonly AsyncLocal<IStorageProvider> _StorageProvider = new();
 
     /// <summary>

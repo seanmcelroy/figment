@@ -191,6 +191,11 @@ internal class Program
                         .WithExample("task", "list", "completed:tod") // show tasks that were completed today
                         .WithExample("task", "list", "completed:thisweek") // show tasks that were completed this week
                         ;
+                    task.AddCommand<AddTaskCommand>("add")
+                        .WithDescription("Adds a new task")
+                        .WithAlias("a")
+                        .WithExample("task", "add", "Prepare meeting notes about +importantProject for the meeting with @bob due:today")
+                        ;
                 });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>

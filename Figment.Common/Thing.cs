@@ -943,12 +943,12 @@ public class Thing
     /// <summary>
     /// Associates this <see cref="Thing"/> with a <see cref="Schema"/>.
     /// </summary>
-    /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which this <see cref="Thing"/> shall be associated.</param>
+    /// <param name="schema">the <see cref="Schema"/> to which this <see cref="Thing"/> shall be associated.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
-    public async Task<(bool, Thing?)> AssociateWithSchemaAsync(string schemaGuid, CancellationToken cancellationToken)
+    public async Task<(bool, Thing?)> AssociateWithSchemaAsync(Schema schema, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+        ArgumentNullException.ThrowIfNull(schema);
 
         var provider = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (provider == null)
@@ -958,7 +958,7 @@ public class Thing
 
         MarkDirty();
 
-        var success = await provider.AssociateWithSchemaAsync(Guid, schemaGuid, cancellationToken);
+        var success = await provider.AssociateWithSchemaAsync(Guid, schema, cancellationToken);
         MarkModified();
         return success;
     }

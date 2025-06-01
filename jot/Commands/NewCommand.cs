@@ -116,7 +116,7 @@ public class NewCommand : CancellableAsyncCommand<NewCommandSettings>
         }
 
         var thingName = settings.ThingName;
-        var thing = await tsp.CreateAsync(schema.Guid, thingName, cancellationToken);
+        var thing = await tsp.CreateAsync(schema, thingName, cancellationToken);
         Program.SelectedEntity = thing;
         Program.SelectedEntityName = thing?.Name ?? thing?.Guid ?? string.Empty;
 

@@ -24,7 +24,6 @@ using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using Spectre.Console.Rendering;
 
 namespace jot.Commands.Tasks;
 

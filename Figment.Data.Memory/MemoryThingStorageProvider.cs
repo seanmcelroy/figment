@@ -42,7 +42,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-    private async IAsyncEnumerable<(Reference reference, string name)> FindByNameAsync(Func<string, bool> selector, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private static async IAsyncEnumerable<(Reference reference, string name)> FindByNameAsync(Func<string, bool> selector, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         ArgumentNullException.ThrowIfNull(selector);
@@ -159,43 +159,43 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     }
 
     /// <inheritdoc/>
-    public override async Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken)
+    public override async Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
         {
-            SchemaGuids = [schemaGuid],
+            SchemaGuids = schema == null ? [] : [schema.Guid],
             CreatedOn = DateTime.UtcNow,
             LastModified = DateTime.UtcNow,
             LastAccessed = DateTime.UtcNow,
         };
         ThingCache.Add(thingGuid, thing);
 
-        if (!string.IsNullOrWhiteSpace(schemaGuid))
-            await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
+        if (schema != null)
+            await AssociateWithSchemaInternal(thing, schema, cancellationToken);
 
         // Load fresh to handle any schema defaults/calculated fields
         return await LoadAsync(thingGuid, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
+    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken)
     {
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
             return (false, null);
 
-        return await AssociateWithSchemaInternal(thing, schemaGuid, cancellationToken);
+        return await AssociateWithSchemaInternal(thing, schema, cancellationToken);
     }
 
-    private static async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, string schemaGuid, CancellationToken cancellationToken)
+    private static async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, Schema schema, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(thing);
-        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+        ArgumentNullException.ThrowIfNull(schema);
 
-        if (!thing.SchemaGuids.Contains(schemaGuid))
+        if (!thing.SchemaGuids.Contains(schema.Guid))
         {
-            thing.SchemaGuids.Add(schemaGuid);
+            thing.SchemaGuids.Add(schema.Guid);
             var (saved, _) = await thing.SaveAsync(cancellationToken);
             if (!saved)
                 return (false, null);

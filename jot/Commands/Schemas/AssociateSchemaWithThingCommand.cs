@@ -119,7 +119,7 @@ public class AssociateSchemaWithThingCommand : CancellableAsyncCommand<Associate
             return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
-        var (success, modifiedThing) = await thing.AssociateWithSchemaAsync(schema.Guid, cancellationToken);
+        var (success, modifiedThing) = await thing.AssociateWithSchemaAsync(schema, cancellationToken);
         if (!success || modifiedThing == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to edit thing with Guid '{thing.Guid}'.");

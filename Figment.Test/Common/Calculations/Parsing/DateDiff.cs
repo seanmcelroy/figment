@@ -129,7 +129,7 @@ public sealed class DateDiff
         var sampleThing = new Thing(nameof(DateDiffPropertyExistsButNotSet), nameof(DateDiffPropertyExistsButNotSet));
         var (thingSaved, _) = await sampleThing.SaveAsync(CancellationToken.None);
         Assert.IsTrue(thingSaved);
-        var assocResult = await sampleThing.AssociateWithSchemaAsync(sampleSchema.Name, CancellationToken.None);
+        var assocResult = await sampleThing.AssociateWithSchemaAsync(sampleSchema, CancellationToken.None);
         Assert.IsTrue(assocResult.Item1);
         sampleThing = assocResult.Item2;
         Assert.IsNotNull(sampleThing);
@@ -159,7 +159,7 @@ public sealed class DateDiff
         var sampleThing = new Thing(nameof(DateDiffPropertyExistsButNotSet), nameof(DateDiffPropertyExistsButNotSet));
         var (thingSaved, _) = await sampleThing.SaveAsync(CancellationToken.None);
         Assert.IsTrue(thingSaved);
-        var assocResult = await sampleThing.AssociateWithSchemaAsync($"schema-{nameof(DateDiffPropertyExistsButNotSet)}", CancellationToken.None);
+        var assocResult = await sampleThing.AssociateWithSchemaAsync(sampleSchema, CancellationToken.None);
         Assert.IsTrue(assocResult.Item1);
         sampleThing = assocResult.Item2;
         Assert.IsNotNull(sampleThing);

@@ -24,10 +24,10 @@ namespace Figment.Common.Data;
 public abstract class ThingStorageProviderBase : IThingStorageProvider
 {
     /// <inheritdoc/>
-    public abstract Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
+    public abstract Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
-    public abstract Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken);
+    public abstract Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     public abstract Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken);

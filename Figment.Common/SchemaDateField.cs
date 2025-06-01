@@ -79,8 +79,12 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
     /// Formats that this date field will attempt to parse exactly, such as RFC 3339 formats.
     /// </summary>
     private static readonly string[] _partialMonthDayFormats = [
-        "MMM d",
-        "MMMM d",
+        "MMM d",  // jul 4
+        "MMMd",   // jul4
+        "MMMM d", // july 4
+        "MMMMd",  // july4
+        "dMMM",   // 31oct
+        "d MMM",  // 31 oct
     ];
 
     private static readonly string[] _partialYearMonthFormats = [

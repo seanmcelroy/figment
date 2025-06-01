@@ -27,7 +27,7 @@ namespace jot.Commands.Tasks;
 public class ListTasksCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets or sets a value that only shows tasks with the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none
+    /// Gets or sets a value that only shows tasks with the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none.
     /// </summary>
     [CommandOption("-d|--due <DUEDATE>")]
     [Description("Only shows tasks with the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none")]
@@ -101,7 +101,7 @@ public class ListTasksCommandSettings : CommandSettings
     /// This supports the Ultralist style flags.
     /// </summary>
     [CommandArgument(1, "[FLAGS]")]
-    [Description("Options used to filter or group tasks using the Ultralist style flags.  This is an alternative way to configure this command from the standard options.")]
+    [Description("Options used to filter or group tasks using the Ultralist style flags.  This is an alternative way to configure this command from the standard options.  If you specify options, you do not need to specify FLAGS.")]
     public string[] Flags { get; set; } = [];
 
     /// <summary>

@@ -24,6 +24,9 @@ public sealed class Thing
         Assert.IsNotNull(csr.NewGuid);
         Assert.IsTrue(await ssp.GuidExists(csr.NewGuid, CancellationToken.None));
 
+        var newSchema = await ssp.LoadAsync(csr.NewGuid, CancellationToken.None);
+        Assert.IsNotNull(newSchema);
+
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         Assert.IsNotNull(tsp);
 
@@ -31,7 +34,7 @@ public sealed class Thing
         Assert.IsNotNull(allThings);
         var beginThingsCount = allThings.Count();
 
-        var thing = await tsp.CreateAsync(csr.NewGuid, nameof(ThingCrud), CancellationToken.None);
+        var thing = await tsp.CreateAsync(newSchema, nameof(ThingCrud), CancellationToken.None);
         Assert.IsNotNull(thing);
         Assert.IsTrue(await tsp.GuidExists(thing.Guid, CancellationToken.None));
 

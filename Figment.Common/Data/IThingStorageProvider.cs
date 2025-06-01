@@ -26,20 +26,20 @@ public interface IThingStorageProvider
     /// <summary>
     /// Associates a <see cref="Thing"/> with a <see cref="Schema"/>.
     /// </summary>
-    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to associate with the <see cref="Schema"/> specified by <paramref name="schemaGuid"/>.</param>
-    /// <param name="schemaGuid">Unique identiifer of the <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
+    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to associate with the <paramref name="schema"/>.</param>
+    /// <param name="schema">The <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
-    public Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken);
+    public Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
 
     /// <summary>
     /// Creates a new <see cref="Thing"/> in its underlying data store.
     /// </summary>
-    /// <param name="schemaGuid">The identifier of a <see cref="Schema"/> to which this thing belongs.</param>
+    /// <param name="schema">The <see cref="Schema"/> to which this thing belongs.</param>
     /// <param name="thingName">The name of the thing.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The newly created thing if the operation was successful; otherwise, <c>null</c>.</returns>
-    public Task<Thing?> CreateAsync(string? schemaGuid, string thingName, CancellationToken cancellationToken);
+    public Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Attempts to delete this <see cref="Thing"/> from its underlying data store.
