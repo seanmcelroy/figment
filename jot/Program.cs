@@ -201,6 +201,11 @@ internal class Program
                         .WithAlias("c")
                         .WithExample("task", "complete", "1")
                         ;
+                    task.AddCommand<UncompleteTaskCommand>("uncomplete")
+                        .WithDescription("Marks a task incomplete")
+                        .WithAlias("uc")
+                        .WithExample("task", "uncomplete", "1")
+                        ;
                 });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>
