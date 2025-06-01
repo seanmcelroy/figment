@@ -140,7 +140,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     }
 
     /// <inheritdoc/>
-    public override async IAsyncEnumerable<Thing> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<LocalThing> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
         if (thingDir == null || !thingDir.Exists)
@@ -162,7 +162,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             {
                 var thing = await LoadAsync(thingGuidString[0], cancellationToken);
                 if (thing != null)
-                    yield return thing;
+                    yield return (LocalThing)thing;
             }
         }
     }
@@ -245,7 +245,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         return await LoadFileAsync(filePath, cancellationToken);
     }
 
-    private static async Task<Thing?> LoadFileAsync(string filePath, CancellationToken cancellationToken)
+    private static async Task<LocalThing?> LoadFileAsync(string filePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
@@ -298,7 +298,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 return null;
             }
 
-            var thingLoaded = new Thing(guid, thingName)
+            var thingLoaded = new LocalThing(guid, thingName, filePath)
             {
                 CreatedOn = fileInfo.CreationTimeUtc,
                 LastModified = fileInfo.LastWriteTimeUtc,
@@ -640,28 +640,6 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingIndexes = [];
         Dictionary<string, Dictionary<string, string>> schemaGuidsAndThingNames = [];
-        Dictionary<string, SchemaIncrementField> schemaGuidsAndIncrementFields = [];
-        Dictionary<string, Dictionary<Reference, (long existingId, DateTime createdOn, string path)>> schemaGuidsAndThingIncrementMetadata = [];
-
-        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
-        if (ssp != null)
-            await foreach (var schema in ssp.LoadAll(cancellationToken))
-            {
-                schemaGuidsAndThingIndexes.TryAdd(schema.Guid, []);
-                schemaGuidsAndThingNames.TryAdd(schema.Guid, []);
-
-                // Does this schema have an increment field?
-                var incProperty = schema.Properties
-                    .OrderBy(p => p.Key)
-                    .Where(p => p.Value is SchemaIncrementField)
-                    .Select(p => p.Value)
-                    .Cast<SchemaIncrementField>()
-                    .FirstOrDefault();
-                if (incProperty != default)
-                {
-                    schemaGuidsAndIncrementFields.TryAdd(schema.Guid, incProperty);
-                }
-            }
 
         // Build NAMES index and INCREMENT index
         Dictionary<string, string> namesIndex = [];
@@ -683,44 +661,33 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             {
                 if (thing.SchemaGuids != null)
                     foreach (var schemaGuid in thing.SchemaGuids)
-                        if (!string.IsNullOrWhiteSpace(schemaGuid)
-                            && schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
-                            value?.Add(thing.Guid, thingFileName.Name);
+                        if (!string.IsNullOrWhiteSpace(schemaGuid))
+                        {
+                            if (!schemaGuidsAndThingIndexes.TryAdd(schemaGuid, new Dictionary<string, string>() { { thing.Guid, thingFileName.Name } }))
+                            {
+                                if (schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
+                                {
+                                    value?.Add(thing.Guid, thingFileName.Name);
+                                }
+                            }
+                        }
 
                 if (thing.SchemaGuids != null)
                     foreach (var schemaGuid in thing.SchemaGuids)
-                        if (!string.IsNullOrWhiteSpace(schemaGuid)
-                    && schemaGuidsAndThingNames.TryGetValue(schemaGuid, out Dictionary<string, string>? value2))
-                            value2?.Add(thing.Name, thingFileName.Name);
+                        if (!string.IsNullOrWhiteSpace(schemaGuid))
+                        {
+                            if (!schemaGuidsAndThingNames.TryAdd(schemaGuid, new Dictionary<string, string>() { { thing.Name, thingFileName.Name } }))
+                            {
+                                if (schemaGuidsAndThingNames.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
+                                {
+                                    value?.TryAdd(thing.Name, thingFileName.Name);
+                                }
+                            }
+                        }
             }
             else
             {
                 AmbientErrorContext.Provider.LogError($"Unable to index named thing '{thing.Name}' in '{thingFileName.Name}'.");
-            }
-
-            // INCREMENT index
-            foreach (var schemaGuid in thing.SchemaGuids ?? [])
-            {
-                // Does this schema have an increment field?
-                if (schemaGuidsAndIncrementFields.TryGetValue(schemaGuid, out SchemaIncrementField? incrementProperty))
-                {
-                    // Yes, so do we already have a metadata list?
-                    if (!schemaGuidsAndThingIncrementMetadata.TryGetValue(schemaGuid, out Dictionary<Reference, (long existingId, DateTime createdOn, string path)>? metadata))
-                    {
-                        // No, create one and add it.
-                        metadata = [];
-                        schemaGuidsAndThingIncrementMetadata.TryAdd(schemaGuid, metadata);
-                    }
-
-                    long existingId = 0;
-                    if (thing.Properties.TryGetValue(incrementProperty.Name, out object? eid)
-                        && long.TryParse(eid.ToString(), out long eidLong))
-                    {
-                        existingId = eidLong;
-                    }
-
-                    metadata.Add(thing, (existingId, thing.CreatedOn, thingFileName.Name));
-                }
             }
         }
         indexesToWrite.Add(Path.Combine(thingDir.FullName, NameIndexFileName), namesIndex);
@@ -741,37 +708,104 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.names.schema.{kvp.Key}.csv"), kvp.Value);
         }
 
-        // Write INCREMENT index
-        foreach (var (schemaGuid, incrementField) in schemaGuidsAndIncrementFields)
+        foreach (var index in indexesToWrite)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
-
-            if (!schemaGuidsAndThingIncrementMetadata.TryGetValue(schemaGuid, out Dictionary<Reference, (long existingId, DateTime createdOn, string path)>? metadata))
+            if (index.Value.Count == 0)
             {
-                AmbientErrorContext.Provider.LogWarning($"Consistency issue: Could not get increment metadata for schema {schemaGuid} but did find increment field '{incrementField.Name}'.");
+                if (File.Exists(index.Key)) { }
+                File.Delete(index.Key);
                 continue;
             }
 
-            var reorderedBase = metadata
-                .OrderBy(x => x.Value.existingId)
-                .ThenBy(x => x.Value.createdOn)
-                .Select((x, i) => new { reference = x.Key, index = i + 1, x.Value.path })
-                .ToArray();
+            using var fs = File.Create(index.Key);
+            await IndexManager.AddAsync(fs, index.Value, cancellationToken);
+        }
 
-            var reorderedIndex = reorderedBase
-                .ToDictionary(k => k.index.ToString(), v => v.path);
+        // Renumber increment fields on any associated schemas.
+        foreach (var schemaGuid in schemaGuidsAndThingIndexes.Keys)
+            await RenumberIncrementField(schemaGuid, cancellationToken);
 
-            indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.inc.schema.{schemaGuid}.csv"), reorderedIndex);
+        return true;
+    }
 
-            var reorderedBulk = reorderedBase
-                .ToDictionary(k => k.reference, v => new List<(string, object)>() { (incrementField.Name, v.index) });
+    /// <inheritdoc/>
+    public async Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
-            var (bulkSuccess, _) = await TryBulkUpdate(reorderedBulk, cancellationToken);
-            if (!bulkSuccess)
+        var thingDir = new DirectoryInfo(ThingDirectoryPath);
+        if (thingDir == null || !thingDir.Exists)
+            return false;
+
+        SchemaIncrementField? incrementProperty = null;
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+        if (ssp == null)
+        {
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+            return false;
+        }
+
+        var schema = await ssp.LoadAsync(schemaGuid, cancellationToken);
+        if (schema == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}'.");
+            return false;
+        }
+
+        // Does this schema have an increment field?
+        incrementProperty = schema.Properties
+            .OrderBy(p => p.Key)
+            .Where(p => p.Value is SchemaIncrementField)
+            .Select(p => p.Value)
+            .Cast<SchemaIncrementField>()
+            .FirstOrDefault();
+        if (incrementProperty == default)
+        {
+            return false;
+        }
+
+        Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
+
+        Dictionary<Reference, (long existingId, DateTime createdOn, string path)>? metadata = [];
+
+        await foreach (var thingRef in GetBySchemaAsync(schemaGuid, cancellationToken))
+        {
+            var thing = (LocalThing?)await LoadAsync(thingRef.Guid, cancellationToken);
+            if (thing == null)
+                continue;
+
+            long existingId = 0;
+            if (thing.Properties.TryGetValue(incrementProperty.Name, out object? eid)
+                && long.TryParse(eid.ToString(), out long eidLong))
             {
-                AmbientErrorContext.Provider.LogWarning($"Bulk update of increment values on {schemaGuid} failed.");
+                existingId = eidLong;
             }
+
+            metadata.Add(thing, (existingId, thing.CreatedOn, thing.FilePath));
+        }
+
+        // Write INCREMENT index
+        var reorderedBase = metadata
+            .OrderBy(x => x.Value.existingId)
+            .ThenBy(x => x.Value.createdOn)
+            .Select((x, i) => new { reference = x.Key, index = i + 1, x.Value.path })
+            .ToArray();
+
+        var reorderedIndex = reorderedBase
+            .ToDictionary(k => k.index.ToString(), v => v.path);
+
+        indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.inc.schema.{schemaGuid}.csv"), reorderedIndex);
+
+        var reorderedBulk = reorderedBase
+            .ToDictionary(k => k.reference, v => new List<(string, object)>() { (incrementProperty.Name, v.index) });
+
+        // Update things with updated indexes
+        var (bulkSuccess, _) = await TryBulkUpdate(reorderedBulk, cancellationToken);
+        if (!bulkSuccess)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Bulk update of increment values on {schemaGuid} failed.");
         }
 
         foreach (var index in indexesToWrite)
@@ -789,6 +823,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             await IndexManager.AddAsync(fs, index.Value, cancellationToken);
         }
 
+        AmbientErrorContext.Provider.LogInfo($"Renumbered increments on schema: {schema.Name}");
         return true;
     }
 

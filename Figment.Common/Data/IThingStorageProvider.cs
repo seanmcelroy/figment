@@ -35,7 +35,7 @@ public interface IThingStorageProvider
     /// <summary>
     /// Creates a new <see cref="Thing"/> in its underlying data store.
     /// </summary>
-    /// <param name="schema">The <see cref="Schema"/> to which this thing belongs.</param>
+    /// <param name="schema">The identifier of a <see cref="Schema"/> to which this thing belongs.</param>
     /// <param name="thingName">The name of the thing.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The newly created thing if the operation was successful; otherwise, <c>null</c>.</returns>
