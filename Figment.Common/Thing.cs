@@ -16,7 +16,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -42,7 +41,7 @@ public class Thing
     public Thing(string guid, string newName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(guid, nameof(guid));
-        ArgumentException.ThrowIfNullOrWhiteSpace(newName, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName, nameof(newName));
 
         if (!IsThingNameValid(newName))
         {
@@ -66,6 +65,13 @@ public class Thing
         get => name;
         set
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(Name));
+
+            if (!IsThingNameValid(value))
+            {
+                throw new ArgumentException($"Name '{value}' is not valid for things.", nameof(Name));
+            }
+
             MarkDirty();
             name = value;
         }
@@ -258,26 +264,26 @@ public class Thing
     /// <summary>
     /// Attempts to add a property to a thing by name and value.
     /// </summary>
-    /// <param name="propertyyName">The name of the property to add.</param>
+    /// <param name="propertyName">The name of the property to add.</param>
     /// <param name="value">The value of the property.</param>
     /// <returns>A value indicating whether or not the property was added.</returns>
-    public bool TryAddProperty(string propertyyName, object value)
+    public bool TryAddProperty(string propertyName, object value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
         MarkDirty();
-        return Properties.TryAdd(propertyyName, value);
+        return Properties.TryAdd(propertyName, value);
     }
 
     /// <summary>
     /// Attempts to remove a property from a thing by the property's name.
     /// </summary>
-    /// <param name="propertyyName">The name of the property to remove.</param>
+    /// <param name="propertyName">The name of the property to remove.</param>
     /// <returns>A value indicating whether or not the property was removed.</returns>
-    public bool TryRemoveProperty(string propertyyName)
+    public bool TryRemoveProperty(string propertyName)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(propertyyName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
         MarkDirty();
-        return Properties.Remove(propertyyName);
+        return Properties.Remove(propertyName);
     }
 
     /// <summary>
@@ -623,31 +629,48 @@ public class Thing
             propName = $"[{propName}]";
         }
 
-        // Is this property alerady set?
+        // Is this property already set?
 
         // Step 1, Check EXISTING properties on this thing.
-        var existingProperties = GetPropertyByName(propName, cancellationToken).ToBlockingEnumerable(cancellationToken).ToFrozenSet();
+        var existingProperties = new List<ThingProperty>();
+        await foreach (var prop in GetPropertyByName(propName, cancellationToken))
+        {
+            existingProperties.Add(prop);
+        }
 
         // Step 2, Check properties on associated schemas NOT already set on this object
         Dictionary<string, object?> massagedPropValues = [];
 
-        var associatedSchemas = GetAssociatedSchemas(cancellationToken).ToBlockingEnumerable().ToArray();
+        var associatedSchemas = new List<Schema>();
+        await foreach (var schema in GetAssociatedSchemas(cancellationToken))
+        {
+            associatedSchemas.Add(schema);
+        }
 
         // Massage values using schema field methods.
-        var x = associatedSchemas.SelectMany(s =>
+        var schemaPropertyMatches = associatedSchemas.SelectMany(s =>
             s.Properties.Where(p => string.Equals(p.Key, propName, StringComparison.Ordinal))
             .Select(p => new { SchemaGuid = s.Guid, PropertyName = p.Key, Field = p.Value }))
             .ToArray();
-        foreach (var y in x)
+        foreach (var match in schemaPropertyMatches)
         {
-            if (y.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
+            if (match.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
             {
-                massagedPropValues.Add($"{y.SchemaGuid}.{y.PropertyName}", prePossibleMassaged);
+                massagedPropValues.Add($"{match.SchemaGuid}.{match.PropertyName}", prePossibleMassaged);
             }
         }
 
-        List<ThingProperty> candidateProperties = [.. existingProperties];
+        // Use dictionary for O(1) lookups and maintain index mapping
+        var candidatePropertiesDict = new Dictionary<string, int>(StringComparer.Ordinal);
+        var candidateProperties = new List<ThingProperty>(existingProperties);
 
+        // Build index mapping for existing properties
+        for (int i = 0; i < candidateProperties.Count; i++)
+        {
+            candidatePropertiesDict[candidateProperties[i].TruePropertyName] = i;
+        }
+
+        // Process only matching schema properties to reduce iterations
         foreach (var schema in associatedSchemas)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -655,7 +678,15 @@ public class Thing
                 return new ThingSetResult(false, "Operation canceled.");
             }
 
-            foreach (var schemaProperty in schema.Properties)
+            // Filter schema properties that match the property name upfront
+            var matchingSchemaProperties = schema.Properties.Where(p =>
+                string.Equals(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) ||
+                string.Equals($"[{p.Key}]", propName, StringComparison.CurrentCultureIgnoreCase) ||
+                string.Equals($"{schema.EscapedName}.{p.Key}", propName, StringComparison.CurrentCultureIgnoreCase) ||
+                string.Equals($"{schema.EscapedName}.[{p.Key}]", propName, StringComparison.CurrentCultureIgnoreCase))
+            .ToArray();
+
+            foreach (var schemaProperty in matchingSchemaProperties)
             {
                 var truePropertyName = $"{schema.Guid}.{schemaProperty.Key}";
 
@@ -665,68 +696,52 @@ public class Thing
                 // If this value was for this property, would it be valid?
                 var wouldBeValid = canMassage && await schemaProperty.Value.IsValidAsync(possibleMassagedPropValue, cancellationToken);
 
-                var candidatesMatch = false;
-                for (int i = 0; i < candidateProperties.Count; i++)
+                // Use dictionary lookup for O(1) access
+                if (candidatePropertiesDict.TryGetValue(truePropertyName, out var existingIndex))
                 {
-                    if (string.Equals(candidateProperties[i].TruePropertyName, truePropertyName, StringComparison.Ordinal))
+                    // Update existing property in-place using index
+                    var existingProperty = candidateProperties[existingIndex];
+                    candidateProperties[existingIndex] = new ThingProperty
                     {
-                        candidateProperties[i] = new ThingProperty
-                        {
-                            TruePropertyName = candidateProperties[i].TruePropertyName,
-                            FullDisplayName = candidateProperties[i].FullDisplayName,
-                            SimpleDisplayName = candidateProperties[i].SimpleDisplayName,
-                            SchemaGuid = candidateProperties[i].SchemaGuid,
-                            Value = candidateProperties[i].Value,
-                            Valid = wouldBeValid,
-                            Required = schemaProperty.Value.Required,
-                            SchemaFieldType =
-                                string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
-                                    ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
-                                    : schemaProperty.Value.Type,
-                            SchemaName = candidateProperties[i].SchemaName,
-                        };
-                        candidatesMatch = true;
-                    }
-                }
-
-                if (candidatesMatch)
-                {
-                    // Already set, no need to add a phantom.
+                        TruePropertyName = existingProperty.TruePropertyName,
+                        FullDisplayName = existingProperty.FullDisplayName,
+                        SimpleDisplayName = existingProperty.SimpleDisplayName,
+                        SchemaGuid = existingProperty.SchemaGuid,
+                        Value = existingProperty.Value,
+                        Valid = wouldBeValid,
+                        Required = schemaProperty.Value.Required,
+                        SchemaFieldType = string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
+                            ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                            : schemaProperty.Value.Type,
+                        SchemaName = existingProperty.SchemaName,
+                    };
                     continue;
                 }
 
+                // Create phantom property only if name matches
                 var fullDisplayName = $"{schema.EscapedName}.{schemaProperty.Key}";
                 var simpleDisplayName = schemaProperty.Key.Contains(' ') && !schemaProperty.Key.StartsWith('[') && !schemaProperty.Key.EndsWith(']') ? $"[{schemaProperty.Key}]" : schemaProperty.Key;
-                var phantomProp = new ThingProperty
+
+                if ((string.Equals(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase) ||
+                     string.Equals(propName, simpleDisplayName, StringComparison.CurrentCultureIgnoreCase)) &&
+                    !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase))
                 {
-                    TruePropertyName = truePropertyName,
-                    FullDisplayName = fullDisplayName,
-                    SimpleDisplayName = simpleDisplayName,
-                    SchemaGuid = schema.Guid,
-                    Value = null,
-                    Valid = wouldBeValid,
-                    Required = schemaProperty.Value.Required,
-                    SchemaFieldType =
-                        string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
+                    var phantomProp = new ThingProperty
+                    {
+                        TruePropertyName = truePropertyName,
+                        FullDisplayName = fullDisplayName,
+                        SimpleDisplayName = simpleDisplayName,
+                        SchemaGuid = schema.Guid,
+                        Value = null,
+                        Valid = wouldBeValid,
+                        Required = schemaProperty.Value.Required,
+                        SchemaFieldType = string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
                             ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
                             : schemaProperty.Value.Type,
-                    SchemaName = schema.Name,
-                };
-
-                if (string.Equals(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase)
-                    && !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase) // Ignore schema built-in
-                )
-                {
-                    // For instance, user does set vendor.[Work Phone]=+12125551234
+                        SchemaName = schema.Name,
+                    };
                     candidateProperties.Add(phantomProp);
-                }
-
-                if (string.Equals(propName, simpleDisplayName, StringComparison.CurrentCultureIgnoreCase)
-                    && !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase) // Ignore schema built-in
-                )
-                {
-                    // For instance, user does set [Work Phone]=+12125551234
-                    candidateProperties.Add(phantomProp);
+                    candidatePropertiesDict[truePropertyName] = candidateProperties.Count - 1;
                 }
             }
         }
@@ -793,7 +808,7 @@ public class Thing
                         AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
                     }
 
-                    return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} value wsa removed.");
+                    return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} value was removed.");
                 }
 
                 if (!candidateProperties[0].Valid)
@@ -803,19 +818,22 @@ public class Thing
                         && candidateProperties[0].SchemaGuid != null
                         && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaSchemaField.SCHEMA_FIELD_TYPE) ?? false))
                     {
-                        var disambig = (massagedPropValue == null || massagedPropValue.ToString() == null)
-                            ? []
-                            : ssp.FindByPartialNameAsync(massagedPropValue.ToString()!, cancellationToken)
-                                .ToBlockingEnumerable(cancellationToken)
-                                .ToArray();
+                        var disambig = new List<PossibleNameMatch>();
+                        if (massagedPropValue?.ToString() != null)
+                        {
+                            await foreach (var match in ssp.FindByPartialNameAsync(massagedPropValue.ToString()!, cancellationToken))
+                            {
+                                disambig.Add(match);
+                            }
+                        }
 
-                        if (disambig.Length == 1)
+                        if (disambig.Count == 1)
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
                             AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
                             return new ThingSetResult(true, $"Property {propName} set to '{disambig[0].Reference.Guid}'");
                         }
-                        else if (disambig.Length > 1)
+                        else if (disambig.Count > 1)
                         {
                             var which = chooserHandler(
                                 $"There was more than one schema matching '{propValue}'.  Which do you want to select?",
@@ -845,19 +863,22 @@ public class Thing
                         // This is for name resolution of "ref" fields.
                         var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
 
-                        var disambig = (massagedPropValue == null || massagedPropValue.ToString() == null)
-                            ? []
-                            : tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken)
-                                .ToBlockingEnumerable(cancellationToken)
-                                .ToArray();
+                        var disambig = new List<PossibleNameMatch>();
+                        if (massagedPropValue?.ToString() != null)
+                        {
+                            await foreach (var match in tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken))
+                            {
+                                disambig.Add(match);
+                            }
+                        }
 
-                        if (disambig.Length == 1)
+                        if (disambig.Count == 1)
                         {
                             Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
                             AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
                             return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{disambig[0].Reference.Guid}'");
                         }
-                        else if (disambig.Length > 1)
+                        else if (disambig.Count > 1)
                         {
                             var which = chooserHandler(
                                 $"There was more than one {candidateProperties[0].SchemaName} matching '{propValue}'.  Which do you want to select?",
@@ -910,7 +931,7 @@ public class Thing
 
             default:
                 // Ambiguous
-                var errorMessage = $"Unable to determine which property between {candidateProperties.Select(x => x.TruePropertyName).Aggregate((c, n) => $"{c}, {n}")} to update.";
+                var errorMessage = $"Unable to determine which property between {string.Join(", ", candidateProperties.Select(x => x.TruePropertyName))} to update.";
                 AmbientErrorContext.Provider.LogError(errorMessage);
                 return new ThingSetResult(false, errorMessage);
         }
@@ -1072,25 +1093,34 @@ public class Thing
     /// <returns>This object, which has been modified by the merge.</returns>
     public Thing Merge(Thing incoming)
     {
+        ArgumentNullException.ThrowIfNull(incoming);
+
         // We retain our Guid.
         CreatedOn = incoming.CreatedOn < CreatedOn ? incoming.CreatedOn : CreatedOn;
         IsDirty = true;
         LastAccessed = DateTime.UtcNow;
         LastModified = LastAccessed;
         Name = string.IsNullOrWhiteSpace(Name) ? incoming.Name : Name;
-        foreach (var ip in incoming.Properties)
+
+        if (incoming.Properties != null)
         {
-            if (!Properties.ContainsKey(ip.Key))
+            foreach (var ip in incoming.Properties)
             {
-                Properties.TryAdd(ip.Key, ip.Value);
+                if (!Properties.ContainsKey(ip.Key))
+                {
+                    Properties.TryAdd(ip.Key, ip.Value);
+                }
             }
         }
 
-        foreach (var ig in incoming.SchemaGuids)
+        if (incoming.SchemaGuids != null)
         {
-            if (!SchemaGuids.Contains(ig))
+            foreach (var ig in incoming.SchemaGuids)
             {
-                SchemaGuids.Add(ig);
+                if (!SchemaGuids.Contains(ig))
+                {
+                    SchemaGuids.Add(ig);
+                }
             }
         }
 
