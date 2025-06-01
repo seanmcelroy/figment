@@ -32,7 +32,10 @@ namespace jot.Commands.Tasks;
 /// </summary>
 public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
 {
-    private const string TrueNameId = $"{WellKnownSchemas.TaskGuid}.id";
+    /// <summary>
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type.
+    /// </summary>
+    public const string TrueNameId = $"{WellKnownSchemas.TaskGuid}.id";
     private const string TrueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
     private const string TrueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
     private const string TrueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";

@@ -30,7 +30,7 @@ public class DeleteSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommandSe
 {
     private enum ERROR_CODES : int
     {
-        SCHEMA_DELETE_ERROR = -2002,
+        SCHEMA_DELETE_ERROR = -1003,
     }
 
     /// <summary>

@@ -27,6 +27,11 @@ namespace jot.Commands.Tasks;
 /// </summary>
 public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSettings>
 {
+    private enum ERROR_CODES : int
+    {
+        THING_CREATE_ERROR = -2002,
+    }
+
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, AddTaskCommandSettings settings, CancellationToken cancellationToken)
     {
@@ -54,7 +59,16 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
         var taskName = string.Join(' ', settings.Segments);
 
         var task = await thingProvider.CreateAsync(taskSchema, taskName, cancellationToken);
+        if (task == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to create task.");
+            return (int)ERROR_CODES.THING_CREATE_ERROR;
+        }
 
+        var taskIdPropValue = await task.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+        var taskId = taskIdPropValue?.AsUInt64();
+
+        AmbientErrorContext.Provider.LogDone($"Task #{taskId} created.");
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

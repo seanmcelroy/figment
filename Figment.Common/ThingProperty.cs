@@ -153,6 +153,21 @@ public readonly record struct ThingProperty
             return ul;
         }
 
+        if (Value is long l)
+        {
+            return Convert.ToUInt64(l);
+        }
+
+        if (Value is uint ui)
+        {
+            return Convert.ToUInt64(ui);
+        }
+
+        if (Value is int i)
+        {
+            return Convert.ToUInt64(i);
+        }
+
         return null;
     }
 

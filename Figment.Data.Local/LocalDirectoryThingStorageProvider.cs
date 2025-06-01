@@ -565,6 +565,21 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                     AmbientErrorContext.Provider.LogWarning($"Unable to save increment field {increment.Name} update: {saveMessage}");
                     return thing;
                 }
+
+                // Update schema so next = next + 1.
+                var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+                if (ssp == null)
+                {
+                    AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+                    return thing;
+                }
+
+                increment.NextValue += 1;
+                var (schemaSavedSuccess, schemaSavedMessage) = await ssp.SaveAsync(schema, cancellationToken);
+                if (!schemaSavedSuccess)
+                {
+                    AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {schemaSavedMessage}");
+                }
             }
         }
 
@@ -911,35 +926,65 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             return true;
         }
 
-        // Remove schema name index, if applicable
-        if (thing.SchemaGuids != null)
-            foreach (var schemaGuid in thing.SchemaGuids)
-            {
-                if (!string.IsNullOrWhiteSpace(schemaGuid))
-                {
-                    var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
-                    if (File.Exists(indexFilePath))
-                    {
-                        await IndexManager.RemoveByValueAsync(indexFilePath, thingFileName, cancellationToken);
-                        AmbientErrorContext.Provider.LogProgress($"Deleted from name schema index {Path.GetFileName(indexFilePath)}");
-                    }
-                }
-            }
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+        if (ssp == null)
+        {
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+            AmbientErrorContext.Provider.LogWarning($"Rebuild thing indexes to be sure of consistency.");
+            return false;
+        }
 
-        // If this has a schema, remove it from the schema index
+        // Remove from schema indexes, as applicable.
+        var schemaCache = new Dictionary<string, Schema>();
         if (thing.SchemaGuids != null)
+        {
             foreach (var schemaGuid in thing.SchemaGuids)
             {
                 if (!string.IsNullOrWhiteSpace(schemaGuid))
                 {
-                    var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
-                    if (File.Exists(indexFilePath))
+                    // Remove schema index, if applicable
+                    var schemaIndexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
+                    if (File.Exists(schemaIndexFilePath))
                     {
-                        await IndexManager.RemoveByKeyAsync(indexFilePath, thing.Guid, cancellationToken);
-                        AmbientErrorContext.Provider.LogProgress($"Deleted from schema index {Path.GetFileName(indexFilePath)}");
+                        await IndexManager.RemoveByKeyAsync(schemaIndexFilePath, thing.Guid, cancellationToken);
+                        AmbientErrorContext.Provider.LogProgress($"Deleted from schema index {Path.GetFileName(schemaIndexFilePath)}");
+                    }
+
+                    // Remove schema name index, if applicable
+                    var namesIndexFilePath = Path.Combine(thingDir.FullName, $"_thing.names.schema.{schemaGuid}.csv");
+                    if (File.Exists(namesIndexFilePath))
+                    {
+                        await IndexManager.RemoveByValueAsync(namesIndexFilePath, thingFileName, cancellationToken);
+                        AmbientErrorContext.Provider.LogProgress($"Deleted from name schema index {Path.GetFileName(namesIndexFilePath)}");
+                    }
+
+                    if (!schemaCache.TryGetValue(schemaGuid, out Schema? schema))
+                    {
+                        schema = await ssp.LoadAsync(schemaGuid, cancellationToken);
+                        if (schema != null)
+                        {
+                            schemaCache.TryAdd(schemaGuid, schema);
+                        }
+                    }
+
+                    if (schema != null)
+                    {
+                        var increment = schema.GetIncrementField();
+                        if (increment != null)
+                        {
+                            var incrementIndexFilePath = Path.Combine(thingDir.FullName, $"_thing.inc.schema.{schemaGuid}.csv");
+                            var incrementProp = await thing.GetPropertyByTrueNameAsync($"{schemaGuid}.{increment.Name}", cancellationToken);
+                            var incrementValue = incrementProp?.AsString(); // We cast it as a string here because that is how its stored in the CSV file.
+                            if (incrementValue != null)
+                            {
+                                await IndexManager.RemoveByKeyAsync(incrementIndexFilePath, incrementValue, cancellationToken);
+                                AmbientErrorContext.Provider.LogProgress($"Deleted from name increment index {Path.GetFileName(incrementIndexFilePath)}");
+                            }
+                        }
                     }
                 }
             }
+        }
 
         return true;
     }

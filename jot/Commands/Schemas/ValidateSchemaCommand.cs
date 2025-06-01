@@ -87,6 +87,11 @@ public class ValidateSchemaCommand : SchemaCancellableAsyncCommand<SchemaCommand
             }
         }
 
+        if (schema.Properties.Values.OfType<SchemaIncrementField>().Count() > 1)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Schema defines multiple increment properties, but is only permitted one at max.");
+        }
+
         AmbientErrorContext.Provider.LogDone($"Validation has finished.");
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }

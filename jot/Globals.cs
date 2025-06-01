@@ -71,7 +71,7 @@ public static class Globals
         SCHEMA_SAVE_ERROR = -1001,
 
         // SCHEMA_CREATE_ERROR = -1002
-        // SCHEMA_DELETE_ERROR = -2002
+        // SCHEMA_DELETE_ERROR = -1003
 
         /// <summary>
         /// Unable to load a <see cref="Figment.Common.Thing"/> from the underlying data store.
