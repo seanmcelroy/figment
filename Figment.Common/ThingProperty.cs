@@ -212,4 +212,58 @@ public readonly record struct ThingProperty
 
         return Value.ToString();
     }
+
+    /// <summary>
+    /// Returns the <see cref="Value"/> as a <see cref="string"/> array.
+    /// </summary>
+    /// <returns>The value of the property, if it is a <see cref="string"/> array.</returns>
+    public string[]? AsStringArray()
+    {
+        if (Value == null)
+        {
+            return null;
+        }
+
+        if (Value is string[] sa)
+        {
+            return sa;
+        }
+
+        if (Value is string s)
+        {
+            return [s];
+        }
+
+        if (Value is IEnumerable<string> ies)
+        {
+            return [.. ies];
+        }
+
+        if (Value is IEnumerable<object> ieo)
+        {
+            List<string> ret = [];
+            foreach (var obj in ieo)
+            {
+                if (obj == null)
+                {
+                }
+                else if (obj is string os)
+                {
+                    ret.Add(os);
+                }
+                else
+                {
+                    var oss = obj.ToString();
+                    if (oss != null)
+                    {
+                        ret.Add(oss);
+                    }
+                }
+            }
+
+            return [.. ret];
+        }
+
+        return null;
+    }
 }

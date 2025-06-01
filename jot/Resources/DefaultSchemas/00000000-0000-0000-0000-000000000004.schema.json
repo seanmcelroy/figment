@@ -22,8 +22,11 @@
       "ref": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000001.schema.json"
     },
     "notes": {
-      "$type": "text",
-      "type": "string"
+      "$type": "array",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "archived": {
       "$type": "bool",

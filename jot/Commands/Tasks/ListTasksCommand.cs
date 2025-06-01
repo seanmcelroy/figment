@@ -24,6 +24,7 @@ using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Rendering;
 
 namespace jot.Commands.Tasks;
 
@@ -38,8 +39,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
     private const string TrueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
     private const string TrueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
     private const string TrueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
-    private const string TrueNameContexts = $"{WellKnownSchemas.TaskGuid}.contexts";
-    private const string TrueNameProjects = $"{WellKnownSchemas.TaskGuid}.projects";
+    private const string TrueNameNotes = $"{WellKnownSchemas.TaskGuid}.notes";
 
     private delegate Task<bool> FilterDelegate(Thing task);
     private delegate Task<Dictionary<string, HashSet<Thing>>> GroupingDelegate(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken);
@@ -133,6 +133,21 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
 
                 return (DateTimeOffset.MinValue, DateTimeOffset.MaxValue);
         }
+    }
+
+    private static FilterDelegate CreateArchivedFilter(string flagValue, CancellationToken cancellationToken)
+    {
+        return async t =>
+        {
+            var archivedProp = await t.GetPropertyByTrueNameAsync(TrueNameArchived, cancellationToken);
+            var archivedValue = archivedProp?.AsBoolean();
+            if (!SchemaBooleanField.TryParseBoolean(flagValue, out bool specValue))
+            {
+                return true; // User provided unparsable value; do not filter.
+            }
+
+            return (archivedValue ?? false) == specValue;
+        };
     }
 
     private static Task<Dictionary<string, HashSet<Thing>>> BucketTasksByContext(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken)
@@ -262,7 +277,9 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         return groupedBuckets;
     }
 
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     private static Task<bool> FilterByContext(Thing task, string input, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         ArgumentNullException.ThrowIfNull(task);
 
@@ -309,7 +326,9 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         return Task.FromResult(passing);
     }
 
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
     private static Task<bool> FilterByProject(Thing task, string input, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
         ArgumentNullException.ThrowIfNull(task);
 
@@ -415,6 +434,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         // Parse filters
         List<FilterDelegate> filters = [];
         FilterDelegate? dueFilter = null;
+        FilterDelegate? archiveFilter = null;
         string? groupFieldName = null;
         GroupingDelegate bucketSorter = (fieldName, tasks, ct) =>
         {
@@ -587,19 +607,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 case "arch":
                 case "archive":
                 case "archived":
-                    async Task<bool> ArchivedFilter(Thing t)
-                    {
-                        var archivedProp = await t.GetPropertyByTrueNameAsync(TrueNameArchived, cancellationToken);
-                        var archivedValue = archivedProp?.AsBoolean();
-                        if (!SchemaBooleanField.TryParseBoolean(split[1], out bool specValue))
-                        {
-                            return true; // User provided unparsable value; do not filter.
-                        }
-
-                        return (archivedValue ?? false) == specValue;
-                    }
-
-                    filters.Add(ArchivedFilter);
+                    archiveFilter = CreateArchivedFilter(split[1], cancellationToken);
                     break;
 
                 case "context":
@@ -658,6 +666,10 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
             filters.Add(dueFilter);
         }
 
+        // Implicitly show only archived:false tasks if no override.
+        archiveFilter ??= CreateArchivedFilter("false", cancellationToken);
+        filters.Add(archiveFilter);
+
         // Collect all task references first
         var taskReferences = new List<Reference>();
         await foreach (var reference in thingProvider.GetBySchemaAsync(WellKnownSchemas.TaskGuid, cancellationToken))
@@ -681,7 +693,16 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         var tasksWithProps = new List<(Thing Task, Dictionary<string, ThingProperty?> Props, string[] projects, string[] contexts)>();
         foreach (var task in tasks)
         {
-            var props = await task.GetPropertiesByTrueNameAsync([TrueNameId, TrueNameComplete, TrueNameDue, TrueNameArchived, TrueNamePriority, TrueNameStatus], cancellationToken);
+            var props = await task.GetPropertiesByTrueNameAsync(
+            [
+                TrueNameId,
+                TrueNameComplete,
+                TrueNameDue,
+                TrueNameArchived,
+                TrueNamePriority,
+                TrueNameStatus,
+                TrueNameNotes,
+            ], cancellationToken);
             string[] projects = [];
             string[] contexts = [];
             tasksWithProps.Add((task, props, projects, contexts));
@@ -833,6 +854,23 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     completeValue,
                     dueValue ?? string.Empty,
                     renderableName);
+
+                // Does this task have notes?
+                if (settings.ShowNotes ?? false)
+                {
+                    var notes = props[TrueNameNotes]?.AsStringArray();
+                    if (notes != null)
+                    {
+                        for (var noteIndex = 0; noteIndex < notes.Length; noteIndex++)
+                        {
+                            t.AddRow(
+                                $"  [teal]{noteIndex}[/]",
+                                string.Empty,
+                                string.Empty,
+                                $"  {notes[noteIndex]}");
+                        }
+                    }
+                }
             }
 
             // Only print the table header and the table if the table has any rows.

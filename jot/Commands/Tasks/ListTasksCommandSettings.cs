@@ -32,4 +32,11 @@ public class ListTasksCommandSettings : CommandSettings
     [CommandArgument(0, "[FLAGS]")]
     [Description("Options used to filter or group tasks")]
     public string[] Flags { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether to output the notes on a task in the listing.
+    /// </summary>
+    [Description("Outputs the notes on a task in the listing")]
+    [CommandOption("--notes")]
+    public bool? ShowNotes { get; init; } = false;
 }
