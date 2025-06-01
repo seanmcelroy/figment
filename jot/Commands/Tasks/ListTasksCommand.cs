@@ -441,7 +441,69 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
             return Task.FromResult(new Dictionary<string, HashSet<Thing>>() { { "all", tasks } });
         };
 
-        foreach (var flagValue in settings.Flags)
+        var flags = new List<string>(settings.Flags);
+
+        // If standardized arguments were provided, massage them into Ultralist style flags so we process them uniformally.
+        if (!string.IsNullOrWhiteSpace(settings.DueDate))
+        {
+            flags.Add($"due:{settings.DueDate}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.DueBefore))
+        {
+            flags.Add($"duebefore:{settings.DueBefore}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.DueAfter))
+        {
+            flags.Add($"dueafter:{settings.DueAfter}");
+        }
+
+        if (settings.Completed != null)
+        {
+            flags.Add($"completed:{settings.Completed}");
+        }
+
+        if (settings.Priority != null)
+        {
+            flags.Add($"priority:{settings.Priority}");
+        }
+
+        if (settings.Archived != null)
+        {
+            flags.Add($"archived:{settings.Archived}");
+        }
+
+        if (settings.Context != null && settings.Context.Length > 0)
+        {
+            foreach (var ctx in settings.Context)
+            {
+                flags.Add($"context:{ctx}");
+            }
+        }
+
+        if (settings.Project != null && settings.Project.Length > 0)
+        {
+            foreach (var proj in settings.Project)
+            {
+                flags.Add($"project:{proj}");
+            }
+        }
+
+        if (settings.Status != null && settings.Status.Length > 0)
+        {
+            foreach (var stat in settings.Status)
+            {
+                flags.Add($"status:{stat}");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.GroupBy))
+        {
+            flags.Add($"group:{settings.GroupBy}");
+        }
+
+        foreach (var flagValue in flags)
         {
             // Flag convenience replacements
             var flag = flagValue;
