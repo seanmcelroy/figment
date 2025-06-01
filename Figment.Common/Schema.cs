@@ -345,4 +345,14 @@ public class Schema
 
         return true;
     }
+
+    /// <summary>
+    /// Retrieves the 'increment' field on this schema, if it has one.
+    /// </summary>
+    /// <returns>The incrementing field on this schema, if one is defined on it.</returns>
+    public SchemaIncrementField? GetIncrementField() => Properties
+        .OrderBy(p => p.Key)
+        .Select(p => p.Value)
+        .OfType<SchemaIncrementField>()
+        .FirstOrDefault();
 }

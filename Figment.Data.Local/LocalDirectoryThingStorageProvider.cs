@@ -516,7 +516,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 
         if (File.Exists(thingFilePath))
         {
-            await Console.Error.WriteLineAsync($"ERR: File for thing {thingName} already exists at {thingFilePath}");
+            AmbientErrorContext.Provider.LogError($"File for thing {thingName} already exists at {thingFilePath}");
             return null;
         }
 
@@ -543,7 +543,32 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             await AssociateWithSchemaInternal(thing, schema, cancellationToken);
 
         // Load fresh to handle any schema defaults/calculated fields
-        return await LoadAsync(thingGuid, cancellationToken);
+        thing = await LoadAsync(thingGuid, cancellationToken);
+
+        // If this schema has an increment field, set its value.
+        if (thing != null && schema != null)
+        {
+            var increment = schema.GetIncrementField();
+            if (increment != null)
+            {
+                var next = increment.NextValue;
+                var tsr = await thing.Set(increment.Name, next, cancellationToken);
+                if (!tsr.Success)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Unable to update increment field {increment.Name}: {tsr.Message}");
+                    return thing;
+                }
+
+                var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
+                if (!saveSuccess)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Unable to save increment field {increment.Name} update: {saveMessage}");
+                    return thing;
+                }
+            }
+        }
+
+        return thing;
     }
 
     /// <inheritdoc/>
@@ -747,7 +772,6 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         if (!thingDir.Exists)
             return false;
 
-        SchemaIncrementField? incrementProperty = null;
         var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
         if (ssp == null)
         {
@@ -763,11 +787,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         }
 
         // Does this schema have an increment field?  If so, choose the first, ordered by the key.
-        incrementProperty = schema.Properties
-            .OrderBy(p => p.Key)
-            .Select(p => p.Value)
-            .OfType<SchemaIncrementField>()
-            .FirstOrDefault();
+        var incrementProperty = schema.GetIncrementField();
         if (incrementProperty == default)
         {
             return false;
@@ -829,6 +849,15 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 
             using var fs = File.Create(index.Key);
             await IndexManager.AddAsync(fs, index.Value, cancellationToken);
+        }
+
+        // Save new maximum to the increment field definition on the schema.
+        incrementProperty.NextValue = reorderedBase.Max(x => x.index) + 1;
+        var (schemaSaveSuccess, schemaSaveMessage) = await schema.SaveAsync(cancellationToken);
+        if (!schemaSaveSuccess)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to update increment field {incrementProperty.Name} on {schema.Name}: {schemaSaveMessage}");
+            return false;
         }
 
         AmbientErrorContext.Provider.LogInfo($"Renumbered increments on schema: {schema.Name}");
