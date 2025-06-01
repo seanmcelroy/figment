@@ -143,7 +143,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     public override async IAsyncEnumerable<LocalThing> LoadAll([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (thingDir == null || !thingDir.Exists)
+        if (!thingDir.Exists)
             yield break;
 
         foreach (var file in thingDir.EnumerateFiles("*.thing.json", new EnumerationOptions
@@ -156,7 +156,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             if (cancellationToken.IsCancellationRequested)
                 yield break;
 
-            var thingGuidString = file.Name.Split(".thing.json");
+            var thingGuidString = file.Name.Split(".thing.json"); // We know this is at the end because of the EnumerateFiles() searchPattern above.
             if (!string.IsNullOrWhiteSpace(thingGuidString[0])
                 && Guid.TryParse(thingGuidString[0], out Guid _))
             {
@@ -173,7 +173,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (thingDir == null || !thingDir.Exists)
+        if (!thingDir.Exists)
             yield break;
 
         var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
@@ -307,13 +307,18 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 
             // Legacy
             if (root.TryGetProperty("SchemaGuid", out JsonElement schemaGuidProperty))
-                thingLoaded.SchemaGuids = [schemaGuidProperty.GetString()];
+            {
+                var guidString = schemaGuidProperty.GetString();
+                if (!string.IsNullOrWhiteSpace(guidString))
+                {
+                    thingLoaded.SchemaGuids = [guidString];
+                }
+            }
             else
                 thingLoaded.SchemaGuids = [];
 
             if (root.TryGetProperty(nameof(Thing.SchemaGuids), out JsonElement schemaGuidsProperty))
             {
-                var arrayCount = schemaGuidsProperty.GetArrayLength();
                 foreach (var element in schemaGuidsProperty.EnumerateArray())
                 {
                     var elementValue = element.GetString();
@@ -326,7 +331,6 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                     }
                 }
             }
-
 
             foreach (var prop in root.EnumerateObject())
             {
@@ -400,11 +404,14 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                                                 {
                                                     switch (element.ValueKind)
                                                     {
+                                                        case JsonValueKind.Null:
+                                                            array[ai] = null;
+                                                            break;
                                                         case JsonValueKind.String:
                                                             array[ai] = element.GetString();
                                                             break;
                                                         default:
-                                                            AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' in array position {ai} (value='{element.GetString()}') from: {filePath}");
+                                                            AmbientErrorContext.Provider.LogWarning($"Unable to parse property {sub.Name} with unsupported value type '{Enum.GetName(sub.Value.ValueKind)}' in array position {ai} (value='{element}') from: {filePath}");
                                                             break;
                                                     }
                                                     ai++;
@@ -441,7 +448,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     public override async Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (thingDir == null || !thingDir.Exists)
+        if (!thingDir.Exists)
         {
             return (false, $"Directory '{ThingDirectoryPath}' not found.");
         }
@@ -521,6 +528,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         }
         catch (Exception)
         {
+            fs.Close();
             File.Delete(thingFilePath);
             throw;
         }
@@ -634,7 +642,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     public override async Task<bool> RebuildIndexes(CancellationToken cancellationToken)
     {
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (thingDir == null || !thingDir.Exists)
+        if (!thingDir.Exists)
             return false;
 
         Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
@@ -667,7 +675,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                             {
                                 if (schemaGuidsAndThingIndexes.TryGetValue(schemaGuid, out Dictionary<string, string>? value))
                                 {
-                                    value?.Add(thing.Guid, thingFileName.Name);
+                                    value?.TryAdd(thing.Guid, thingFileName.Name);
                                 }
                             }
                         }
@@ -714,8 +722,8 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 break;
             if (index.Value.Count == 0)
             {
-                if (File.Exists(index.Key)) { }
-                File.Delete(index.Key);
+                if (File.Exists(index.Key))
+                    File.Delete(index.Key);
                 continue;
             }
 
@@ -736,7 +744,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (thingDir == null || !thingDir.Exists)
+        if (!thingDir.Exists)
             return false;
 
         SchemaIncrementField? incrementProperty = null;
@@ -754,12 +762,11 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             return false;
         }
 
-        // Does this schema have an increment field?
+        // Does this schema have an increment field?  If so, choose the first, ordered by the key.
         incrementProperty = schema.Properties
             .OrderBy(p => p.Key)
-            .Where(p => p.Value is SchemaIncrementField)
             .Select(p => p.Value)
-            .Cast<SchemaIncrementField>()
+            .OfType<SchemaIncrementField>()
             .FirstOrDefault();
         if (incrementProperty == default)
         {
@@ -778,7 +785,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 
             long existingId = 0;
             if (thing.Properties.TryGetValue(incrementProperty.Name, out object? eid)
-                && long.TryParse(eid.ToString(), out long eidLong))
+                && long.TryParse(eid.ToString() ?? string.Empty, out long eidLong))
             {
                 existingId = eidLong;
             }
@@ -812,10 +819,11 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
+
             if (index.Value.Count == 0)
             {
-                if (File.Exists(index.Key)) { }
-                File.Delete(index.Key);
+                if (File.Exists(index.Key))
+                    File.Delete(index.Key);
                 continue;
             }
 
@@ -833,7 +841,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
 
         var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (thingDir == null || !thingDir.Exists)
+        if (!thingDir.Exists)
             return false;
 
         var thingFileName = $"{thingGuid}.thing.json";
