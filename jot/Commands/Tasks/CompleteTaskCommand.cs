@@ -48,6 +48,11 @@ public partial class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskC
             cancellationToken))
         {
             anyFound = true;
+            if (settings.Archive ?? false)
+            {
+                await thing.Set("archived", true, cancellationToken);
+            }
+
             var tsr = await thing.Set("complete", DateTimeOffset.Now, cancellationToken);
             if (tsr.Success)
             {
