@@ -57,7 +57,7 @@ public abstract class CancellableAsyncCommand : AsyncCommand
 /// <summary>
 /// An asynchronous command that supports cancellation.
 /// </summary>
-/// <typeparam name="TSettings">The srttings for the command when executed.</typeparam>
+/// <typeparam name="TSettings">The settings for the command when executed.</typeparam>
 public abstract class CancellableAsyncCommand<TSettings> : AsyncCommand<TSettings>
     where TSettings : CommandSettings
 {

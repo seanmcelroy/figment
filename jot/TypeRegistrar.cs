@@ -53,10 +53,7 @@ public sealed class TypeRegistrar(IHostBuilder builder, IHost host) : ITypeRegis
     /// <inheritdoc/>
     public void RegisterLazy(Type service, Func<object> func)
     {
-        if (func is null)
-        {
-            throw new ArgumentNullException(nameof(func));
-        }
+        ArgumentNullException.ThrowIfNull(func);
 
         _builder.ConfigureServices((_, services) => services.AddSingleton(service, _ => func()));
     }

@@ -5,9 +5,9 @@ using Figment.Common.Errors;
 namespace jot.Commands.Schemas;
 
 /// <summary>
-/// The base class implementation for cancelable asynchornous commands used by <see cref="Spectre.Console.Cli"/>.
+/// The base class implementation for cancelable asynchronous commands used by <see cref="Spectre.Console.Cli"/>.
 /// </summary>
-/// <typeparam name="T">The type of the settings this command requireds.</typeparam>
+/// <typeparam name="T">The type of the settings this command requires.</typeparam>
 public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand<T>
     where T : SchemaCommandSettings
 {
