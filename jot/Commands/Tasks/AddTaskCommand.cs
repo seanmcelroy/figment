@@ -24,7 +24,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// Lists all the things in the database.
+/// Adds a new task.
 /// </summary>
 public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSettings>
 {

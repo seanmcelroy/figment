@@ -23,23 +23,16 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// The settings supplied to the <see cref="CompleteTaskCommand"/>.
+/// The settings supplied to the <see cref="UnarchiveTaskCommand"/>.
 /// </summary>
-public class CompleteTaskCommandSettings : CommandSettings
+public class UnarchiveTaskCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the task number to mark completed.
+    /// Gets the task number to unarchive.
     /// </summary>
     [CommandArgument(0, "<ID>")]
-    [Description("The task number to mark completed.")]
+    [Description("The task number to unarchive.")]
     public int TaskNumber { get; init; }
-
-    /// <summary>
-    /// Gets a value that indicates the task shall be archived at the same time is is marked complete.
-    /// </summary>
-    [Description("Specifies the task shall be archived at the same time is is marked complete.")]
-    [CommandOption("-a|--archive")]
-    public bool? Archive { get; init; } = null;
 
     /// <inheritdoc/>
     public override ValidationResult Validate()

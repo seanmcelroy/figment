@@ -181,30 +181,47 @@ internal class Program
                         .WithAlias("ls")
                         .WithAlias("l")
                         .WithExample("task", "list", "due:today") // show tasks due today
-                        .WithExample("task", "list", "duebefore:tom") // show tasks due before tomorrow (today and earlier)
-                        .WithExample("task", "list", "dueafter:tod") // show tasks due after today
-                        .WithExample("task", "list", "completed:true") // show only completed tasks
-                        .WithExample("task", "list", "completed:false") // show only incomplete tasks
-                        .WithExample("task", "list", "priority:true") // show only prioritized tasks
-                        .WithExample("task", "list", "priority:false") // show only non-prioritized tasks
-                        .WithExample("task", "list", "archived:true") // show archived tasks
-                        .WithExample("task", "list", "completed:tod") // show tasks that were completed today
-                        .WithExample("task", "list", "completed:thisweek") // show tasks that were completed this week
+                        .WithExample("task", "ls", "duebefore:tom") // show tasks due before tomorrow (today and earlier)
+                        .WithExample("task", "l", "dueafter:tod") // show tasks due after today
+                        .WithExample("task", "l", "completed:true") // show only completed tasks
+                        .WithExample("task", "l", "completed:false") // show only incomplete tasks
+                        .WithExample("task", "l", "priority:true") // show only prioritized tasks
+                        .WithExample("task", "l", "priority:false") // show only non-prioritized tasks
+                        .WithExample("task", "l", "archived:true") // show archived tasks
+                        .WithExample("task", "l", "completed:tod") // show tasks that were completed today
+                        .WithExample("task", "l", "completed:thisweek") // show tasks that were completed this week
                         ;
                     task.AddCommand<AddTaskCommand>("add")
                         .WithDescription("Adds a new task")
                         .WithAlias("a")
-                        .WithExample("task", "add", "Prepare meeting notes about +importantProject for the meeting with @bob due:today")
+                        .WithExample("task", "a", "Prepare meeting notes about +importantProject for the meeting with @bob due:today")
                         ;
                     task.AddCommand<CompleteTaskCommand>("complete")
                         .WithDescription("Marks a task complete")
                         .WithAlias("c")
-                        .WithExample("task", "complete", "1")
+                        .WithAlias("done")
+                        .WithExample("task", "c", "1")
                         ;
                     task.AddCommand<UncompleteTaskCommand>("uncomplete")
                         .WithDescription("Marks a task incomplete")
                         .WithAlias("uc")
-                        .WithExample("task", "uncomplete", "1")
+                        .WithAlias("undo")
+                        .WithExample("task", "uc", "1")
+                        ;
+                    task.AddCommand<ArchiveTaskCommand>("archive")
+                        .WithDescription("Archives a task")
+                        .WithAlias("ar")
+                        .WithAlias("arc")
+                        .WithAlias("arch")
+                        .WithExample("task", "ar", "1")
+                        ;
+                    task.AddCommand<UnarchiveTaskCommand>("unarchive")
+                        .WithDescription("Unarchives a task")
+                        .WithAlias("unarch")
+                        .WithAlias("uarc")
+                        .WithAlias("uar")
+                        .WithAlias("ua")
+                        .WithExample("task", "uar", "1")
                         ;
                 });
 

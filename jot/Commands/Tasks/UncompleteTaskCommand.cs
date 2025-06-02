@@ -24,7 +24,7 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// Lists all the things in the database.
+/// Marks as task as incomplete.  This is the reverse of <see cref="CompleteTaskCommand"/>.
 /// </summary>
 public partial class UncompleteTaskCommand : CancellableAsyncCommand<UncompleteTaskCommandSettings>
 {

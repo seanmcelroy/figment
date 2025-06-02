@@ -23,29 +23,26 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// The settings supplied to the <see cref="CompleteTaskCommand"/>.
+/// The settings supplied to the <see cref="ArchiveTaskCommand"/>.
 /// </summary>
-public class CompleteTaskCommandSettings : CommandSettings
+public class ArchiveTaskCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the task number to mark completed.
+    /// Gets the task number to archive.
     /// </summary>
     [CommandArgument(0, "<ID>")]
-    [Description("The task number to mark completed.")]
-    public int TaskNumber { get; init; }
-
-    /// <summary>
-    /// Gets a value that indicates the task shall be archived at the same time is is marked complete.
-    /// </summary>
-    [Description("Specifies the task shall be archived at the same time is is marked complete.")]
-    [CommandOption("-a|--archive")]
-    public bool? Archive { get; init; } = null;
+    [Description("The task number to archive.  Alternatively, if this argument is 'c', then it will apply to all completed tasks.")]
+    public string? TaskNumber { get; init; }
 
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
-        return TaskNumber < 1
-            ? ValidationResult.Error("The task number must be greater than 1.")
+        return (string.IsNullOrWhiteSpace(TaskNumber)
+            || (
+                !(ulong.TryParse(TaskNumber, out ulong ul) && ul > 0)
+                && !TaskNumber.Equals("c", StringComparison.CurrentCultureIgnoreCase)
+            ))
+            ? ValidationResult.Error("The task number must be greater than 1 or must be 'c' if it is to apply to all completed tasks.")
             : ValidationResult.Success();
     }
 }

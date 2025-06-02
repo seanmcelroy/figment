@@ -28,7 +28,7 @@ namespace jot.Commands.Tasks;
 public class UncompleteTaskCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the body (name) of the task.
+    /// Gets the task number to mark incomplete.
     /// </summary>
     [CommandArgument(0, "<ID>")]
     [Description("The task number to mark incomplete.")]

@@ -24,12 +24,12 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// Marks a task as complete.
+/// Unarchives a task.  This is the reverse of <see cref="ArchiveTaskCommand"/>.
 /// </summary>
-public partial class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskCommandSettings>
+public partial class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommandSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, CompleteTaskCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, UnarchiveTaskCommandSettings settings, CancellationToken cancellationToken)
     {
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
@@ -48,19 +48,15 @@ public partial class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskC
             cancellationToken))
         {
             anyFound = true;
-            if (settings.Archive ?? false)
-            {
-                await thing.Set("archived", true, cancellationToken);
-            }
 
-            var tsr = await thing.Set("complete", DateTimeOffset.Now, cancellationToken);
+            var tsr = await thing.Set("archived", false, cancellationToken);
             if (tsr.Success)
             {
                 var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
                 var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                 if (saveSuccess)
                 {
-                    AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} completed.");
+                    AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} unarchived.");
                 }
                 else
                 {
