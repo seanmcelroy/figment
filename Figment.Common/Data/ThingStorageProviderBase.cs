@@ -129,4 +129,7 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
 
         return (true, results);
     }
+
+    /// <inheritdoc/>
+    public abstract Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken);
 }

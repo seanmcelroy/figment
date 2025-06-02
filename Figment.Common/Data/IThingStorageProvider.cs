@@ -157,6 +157,16 @@ public interface IThingStorageProvider
     /// </summary>
     /// <param name="thing">The <see cref="Thing"/> to save.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A value indicating whether or not the save attempt was successful.</returns>
+    /// <returns>A value indicating whether or not the save was successful.</returns>
     public Task<(bool success, string? message)> SaveAsync(Thing thing, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Updates every thing belonging to the specified schema and renumbers the increment field, if one exists
+    /// for that schema.  This resets those fields to increment serially starting at one, closing any
+    /// gaps created by deleted things.
+    /// </summary>
+    /// <param name="schemaGuid">The schema for which to update all items with updated increment values.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A value indicating whether or not the renumber was successful.</returns>
+    public Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken);
 }

@@ -201,3 +201,53 @@ You may edit the enum for `status` to use custom statuses for tasks of your choo
 * notes
 
 Deleting or changing the data types of these fields may inhibit the built-in `task` commands from working correctly.  However, changing them back with the built-in commands of `jot` will restore their functionality.
+
+# Adding Tasks
+
+## Creating a new task
+Add a task by running `jot task add` or `jot task a`, and then filling out the details of the task.
+
+A `+project` or `@context` can be inserted into the task name, or body. They can only be one word long. `jot` expects the due date at the _end_, if there is a due date.
+
+### Due date format
+
+For things due today or tomorrow, you can use `due:today` and `due:tomorrow`. You can also use `due:tod` or `due:tom`.
+
+For things due this week, you can use the first 3 letters of the day name. For instance, `due:mon` or `due:thu`. **`jot` will always look forward**. If today is a Wednesday and you specify `due:mon`, the due date will be for the _next Monday_.
+
+For specific dates, you can use either `due:may2` or `due:2may`. The month is always lowercase and 3 letters.
+
+**Examples**
+* `jot task add chat with @bob about +specialProject due:tom`
+* `jot task a "+lunch make turkey sandwich" --priority`
+* `jot task a "+todo respond to @shelly about +mobile due:may3" --status next`
+
+Of note, this format is slightly different than `Ultralist`, since specifying priority or status is done with command line arguments (`--priority` or `--status`) rather than parsing of these values from the text body (such as `priority:true` or `status:next` in that utility).  Contexts and projects, however, are inferred from mentions in task bodies, such as "+lunch" for a project named 'lunch' and "@shelly" for a context involving 'shelly'.  Zero or many contexts and projects can be added in any given task body.
+
+# Managing Tasks
+## Completing/Uncompleting tasks
+
+- `jot task complete [id]` or `jot task c [id]` - complete a task
+- `jot task uncomplete [id]` or `jot task uc [id]` - un-complete a task
+
+**Examples**
+```
+jot task complete 35
+jot task c 35
+jot task uc 35
+```
+
+## Archiving/Unarchiving Tasks
+
+- `jot task archive [id]` or `jot task ar [id]` - archive a task
+- `jot task unarchive [id]` or `jot task uar [id]` - unarchive a task
+- `jot task ar c` - archive all completed tasks (_a great command to run at the end of the day!_)
+- `jot task ar gc` - Garbage collect.  This renumbers all tasks so any holes in the numbering are closed by updating every task sequentially starting from 1.
+
+**Examples**
+```
+jot task archive 35
+jot task ar 35
+jot task uar 35
+jot task ar c
+```

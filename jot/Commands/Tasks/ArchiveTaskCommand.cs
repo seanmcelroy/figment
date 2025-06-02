@@ -27,8 +27,13 @@ namespace jot.Commands.Tasks;
 /// <summary>
 /// Archives a task.
 /// </summary>
-public partial class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSettings>
+public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSettings>
 {
+    /// <summary>
+    /// This is a comparer that will treat a field in the data store as 'true' if it is not null.
+    /// This is useful for the 'complete' field on a Task, which is a nullable date.  If the date
+    /// in complete is not null, it will evaluate to true with this comparer.
+    /// </summary>
     private class BooleanComparerTrueIfNotNull : IComparer
     {
         public int Compare(object? x, object? y)
@@ -92,6 +97,19 @@ public partial class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCom
 
         var foundCount = 0;
         var isNumber = false;
+
+        if ("gc".Equals(settings.TaskNumber, StringComparison.CurrentCultureIgnoreCase))
+        {
+            // Special case for "garbage collecting.
+            var success = await tsp.RenumberIncrementField(WellKnownSchemas.Task.Guid, cancellationToken);
+            if (!success)
+            {
+                AmbientErrorContext.Provider.LogError("Unable to renumber increment fields for tasks.");
+                return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
+            }
+
+            AmbientErrorContext.Provider.LogDone($"Renumbered tasks.");
+        }
 
         if (ulong.TryParse(settings.TaskNumber, out ulong taskNumber))
         {

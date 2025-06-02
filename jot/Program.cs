@@ -213,7 +213,9 @@ internal class Program
                         .WithAlias("ar")
                         .WithAlias("arc")
                         .WithAlias("arch")
-                        .WithExample("task", "ar", "1")
+                        .WithExample("task", "archive", "1")
+                        .WithExample("task", "ar", "c")
+                        .WithExample("task", "ar", "gc")
                         ;
                     task.AddCommand<UnarchiveTaskCommand>("unarchive")
                         .WithDescription("Unarchives a task")

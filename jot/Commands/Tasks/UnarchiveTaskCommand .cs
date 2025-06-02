@@ -26,7 +26,7 @@ namespace jot.Commands.Tasks;
 /// <summary>
 /// Unarchives a task.  This is the reverse of <see cref="ArchiveTaskCommand"/>.
 /// </summary>
-public partial class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommandSettings>
+public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommandSettings>
 {
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, UnarchiveTaskCommandSettings settings, CancellationToken cancellationToken)

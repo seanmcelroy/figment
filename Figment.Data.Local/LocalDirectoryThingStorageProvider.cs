@@ -849,7 +849,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     }
 
     /// <inheritdoc/>
-    public async Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken)
+    public override async Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
 

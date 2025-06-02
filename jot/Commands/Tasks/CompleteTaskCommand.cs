@@ -26,7 +26,7 @@ namespace jot.Commands.Tasks;
 /// <summary>
 /// Marks a task as complete.
 /// </summary>
-public partial class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskCommandSettings>
+public class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskCommandSettings>
 {
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, CompleteTaskCommandSettings settings, CancellationToken cancellationToken)

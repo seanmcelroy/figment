@@ -31,7 +31,7 @@ public class ArchiveTaskCommandSettings : CommandSettings
     /// Gets the task number to archive.
     /// </summary>
     [CommandArgument(0, "<ID>")]
-    [Description("The task number to archive.  Alternatively, if this argument is 'c', then it will apply to all completed tasks.")]
+    [Description("The task number to archive.  Alternatively, if this argument is 'c', then it will apply to all completed tasks.  If this argument is 'gc', then it will 'garbage collect' task numbers, reassigning ID numbers to each starting sequentally from 1.")]
     public string? TaskNumber { get; init; }
 
     /// <inheritdoc/>
@@ -40,6 +40,7 @@ public class ArchiveTaskCommandSettings : CommandSettings
         return (string.IsNullOrWhiteSpace(TaskNumber)
             || (
                 !(ulong.TryParse(TaskNumber, out ulong ul) && ul > 0)
+                && !TaskNumber.Equals("gc", StringComparison.CurrentCultureIgnoreCase)
                 && !TaskNumber.Equals("c", StringComparison.CurrentCultureIgnoreCase)
             ))
             ? ValidationResult.Error("The task number must be greater than 1 or must be 'c' if it is to apply to all completed tasks.")

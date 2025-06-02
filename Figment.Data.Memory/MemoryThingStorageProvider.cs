@@ -20,6 +20,7 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using Figment.Common;
 using Figment.Common.Data;
+using Figment.Common.Errors;
 
 namespace Figment.Data.Memory;
 
@@ -279,5 +280,81 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
         return Task.FromResult(ThingCache.Remove(thingGuid));
+    }
+
+    /// <inheritdoc/>
+    public override async Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+        if (ssp == null)
+        {
+            AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+            return false;
+        }
+
+        var schema = await ssp.LoadAsync(schemaGuid, cancellationToken);
+        if (schema == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to load schema '{schemaGuid}'.");
+            return false;
+        }
+
+        // Does this schema have an increment field?  If so, choose the first, ordered by the key.
+        var incrementProperty = schema.GetIncrementField();
+        if (incrementProperty == default)
+        {
+            return false;
+        }
+
+        Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
+
+        Dictionary<Reference, (long existingId, DateTime createdOn)>? metadata = [];
+
+        await foreach (var thingRef in GetBySchemaAsync(schemaGuid, cancellationToken))
+        {
+            var thing = await LoadAsync(thingRef.Guid, cancellationToken);
+            if (thing == null)
+                continue;
+
+            long existingId = 0;
+            if (thing.Properties.TryGetValue(incrementProperty.Name, out object? eid)
+                && long.TryParse(eid.ToString() ?? string.Empty, out long eidLong))
+            {
+                existingId = eidLong;
+            }
+
+            metadata.Add(thing, (existingId, thing.CreatedOn));
+        }
+
+        // Write INCREMENT index
+        var reorderedBase = metadata
+            .OrderBy(x => x.Value.existingId)
+            .ThenBy(x => x.Value.createdOn)
+            .Select((x, i) => new { reference = x.Key, index = i + 1 })
+            .ToArray();
+
+        var reorderedBulk = reorderedBase
+            .ToDictionary(k => k.reference, v => new List<(string, object)>() { (incrementProperty.Name, v.index) });
+
+        // Update things with updated values
+        var (bulkSuccess, _) = await TryBulkUpdate(reorderedBulk, cancellationToken);
+        if (!bulkSuccess)
+        {
+            AmbientErrorContext.Provider.LogWarning($"Bulk update of increment values on {schemaGuid} failed.");
+        }
+
+        // Save new maximum to the increment field definition on the schema.
+        incrementProperty.NextValue = reorderedBase.Max(x => x.index) + 1;
+        var (schemaSaveSuccess, schemaSaveMessage) = await schema.SaveAsync(cancellationToken);
+        if (!schemaSaveSuccess)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to update increment field {incrementProperty.Name} on {schema.Name}: {schemaSaveMessage}");
+            return false;
+        }
+
+        AmbientErrorContext.Provider.LogInfo($"Renumbered increments on schema: {schema.Name}");
+        return true;
     }
 }

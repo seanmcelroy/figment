@@ -26,7 +26,7 @@ namespace jot.Commands.Tasks;
 /// <summary>
 /// Marks as task as incomplete.  This is the reverse of <see cref="CompleteTaskCommand"/>.
 /// </summary>
-public partial class UncompleteTaskCommand : CancellableAsyncCommand<UncompleteTaskCommandSettings>
+public class UncompleteTaskCommand : CancellableAsyncCommand<UncompleteTaskCommandSettings>
 {
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, UncompleteTaskCommandSettings settings, CancellationToken cancellationToken)
