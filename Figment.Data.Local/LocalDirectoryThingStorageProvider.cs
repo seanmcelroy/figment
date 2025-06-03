@@ -16,7 +16,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Figment.Common;
@@ -206,74 +205,6 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 var thing = await LoadAsync(reference.Guid, cancellationToken);
                 if (thing != null && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal)))
                     yield return reference;
-            }
-        }
-    }
-
-    /// <inheritdoc/>
-    public override async IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
-       string schemaGuid,
-       string propName,
-       object? propValue,
-       IComparer comparer,
-       [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        // This might look a lot like GetBySchemaAsync, but it is a special version
-        // that holds onto the loaded thing object for property testing.
-        // It also cannot use quite the same index-shortcut in GetBySchemaAsync because
-        // it returns a fully loaded Thing, not just a reference.
-        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
-        ArgumentException.ThrowIfNullOrWhiteSpace(propName);
-        ArgumentNullException.ThrowIfNull(comparer);
-
-        var thingDir = new DirectoryInfo(ThingDirectoryPath);
-        if (!thingDir.Exists)
-            yield break;
-
-        async Task<bool> thingMatches(Thing thing)
-        {
-            var prop = await thing.GetPropertyByTrueNameAsync(propName, cancellationToken);
-            if (prop == null)
-                return false; // Property is missing from thing, so it's not a valid thing of the specified schema.
-
-            if (!prop.HasValue && propValue == null)
-                return true; // We want nulls, and this is null.
-
-            if (!prop.HasValue)
-                return false; // We do not want nulls, and this is null.
-
-            return comparer.Compare(prop.Value.Value, propValue) == 0;
-        }
-
-        var indexFilePath = Path.Combine(thingDir.FullName, $"_thing.schema.{schemaGuid}.csv");
-        if (File.Exists(indexFilePath))
-        {
-            // Use index
-            await foreach (var entry in IndexManager.LookupAsync(indexFilePath, e => true, cancellationToken))
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    yield break;
-
-                var guid = Path.GetFileName(entry.Value).Split('.')[0];
-                var thing = await LoadAsync(guid, cancellationToken);
-                if (thing != null && await thingMatches(thing))
-                    yield return thing;
-            }
-        }
-        else
-        {
-            // No index, so go the expensive route
-            AmbientErrorContext.Provider.LogWarning($"Missing index at: {indexFilePath}");
-            await foreach (var (reference, name) in GetAll(cancellationToken))
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    yield break;
-
-                var thing = await LoadAsync(reference.Guid, cancellationToken);
-                if (thing != null
-                    && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal))
-                    && await thingMatches(thing))
-                    yield return thing;
             }
         }
     }
@@ -570,7 +501,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
     }
 
     /// <inheritdoc/>
-    public override async Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken)
+    public override async Task<CreateThingResult> CreateAsync(Schema? schema, string thingName, Dictionary<string, object?> properties, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
@@ -587,7 +518,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         if (File.Exists(thingFilePath))
         {
             AmbientErrorContext.Provider.LogError($"File for thing {thingName} already exists at {thingFilePath}");
-            return null;
+            return new CreateThingResult { Success = false, Message = $"File for thing {thingName} already exists at {thingFilePath}" };
         }
 
         using var fs = new FileStream(thingFilePath, FileMode.CreateNew);
@@ -615,8 +546,13 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         // Load fresh to handle any schema defaults/calculated fields
         thing = await LoadAsync(thingGuid, cancellationToken);
 
+        if (thing == null)
+        {
+            return new CreateThingResult { Success = false, Message = $"Unable to load thing {thingGuid}" };
+        }
+
         // If this schema has an increment field, set its value.
-        if (thing != null && schema != null)
+        if (schema != null)
         {
             var increment = schema.GetIncrementField();
             if (increment != null)
@@ -626,14 +562,14 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 if (!tsr.Success)
                 {
                     AmbientErrorContext.Provider.LogWarning($"Unable to update increment field {increment.Name}: {tsr.Message}");
-                    return thing;
+                    return new CreateThingResult { Success = false, Message = $"Unable to update increment field {increment.Name}: {tsr.Message}" };
                 }
 
                 var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                 if (!saveSuccess)
                 {
                     AmbientErrorContext.Provider.LogWarning($"Unable to save increment field {increment.Name} update: {saveMessage}");
-                    return thing;
+                    return new CreateThingResult { Success = false, Message = $"Unable to save increment field {increment.Name} update: {saveMessage}" };
                 }
 
                 // Update schema so next = next + 1.
@@ -641,7 +577,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 if (ssp == null)
                 {
                     AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
-                    return thing;
+                    return new CreateThingResult { Success = false, Message = AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER };
                 }
 
                 increment.NextValue += 1;
@@ -653,7 +589,22 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             }
         }
 
-        return thing;
+        foreach (var prop in properties)
+        {
+            var tsr = await thing.Set(prop.Key, prop.Value, cancellationToken);
+            if (!tsr.Success)
+            {
+                return new CreateThingResult { Success = tsr.Success, Message = tsr.Message };
+            }
+        }
+
+        var (success, message) = await SaveAsync(thing, cancellationToken);
+        if (!success)
+        {
+            return new CreateThingResult { Success = false, Message = message };
+        }
+
+        return new CreateThingResult { Success = thing != null, NewThing = thing };
     }
 
     /// <inheritdoc/>

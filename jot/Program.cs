@@ -220,10 +220,28 @@ internal class Program
                     task.AddCommand<UnarchiveTaskCommand>("unarchive")
                         .WithDescription("Unarchives a task")
                         .WithAlias("unarch")
+                        .WithAlias("una")
                         .WithAlias("uarc")
                         .WithAlias("uar")
                         .WithAlias("ua")
                         .WithExample("task", "uar", "1")
+                        ;
+                    task.AddCommand<PrioritizeTaskCommand>("prioritize")
+                        .WithDescription("Prioritizes a task")
+                        .WithAlias("p")
+                        .WithAlias("pri")
+                        .WithAlias("prio")
+                        .WithExample("task", "prioritize", "1")
+                        .WithExample("task", "p", "2")
+                        ;
+                    task.AddCommand<UnprioritizeTaskCommand>("unprioritize")
+                        .WithDescription("Unprioritizes a task")
+                        .WithAlias("up")
+                        .WithAlias("unp")
+                        .WithAlias("unpri")
+                        .WithAlias("unprio")
+                        .WithExample("task", "unprioritize", "1")
+                        .WithExample("task", "up", "2")
                         ;
                 });
 

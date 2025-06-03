@@ -39,9 +39,10 @@ public interface IThingStorageProvider
     /// </summary>
     /// <param name="schema">The identifier of a <see cref="Schema"/> to which this thing belongs.</param>
     /// <param name="thingName">The name of the thing.</param>
+    /// <param name="properties">Initial properties to set on the thing.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The newly created thing if the operation was successful; otherwise, <c>null</c>.</returns>
-    public Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken);
+    public Task<CreateThingResult> CreateAsync(Schema? schema, string thingName, Dictionary<string, object?> properties, CancellationToken cancellationToken);
 
     /// <summary>
     /// Attempts to delete this <see cref="Thing"/> from its underlying data store.
@@ -69,6 +70,17 @@ public interface IThingStorageProvider
     public IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Retrieves an enumeration of references to every <see cref="Thing"/> that adheres to the specified <paramref name="schemaGuid"/>.
+    /// </summary>
+    /// <param name="schemaGuid">Unique identifier of the schema selected objects must implement.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An asynchronous enumeration of matching <see cref="Thing"/>s.</returns>
+    /// <remarks>This is simlar to <see cref="GetBySchemaAsync"/>, except it returns loaded objects.</remarks>
+    public IAsyncEnumerable<Thing> LoadAllForSchema(
+        string schemaGuid,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Retrieves an enumeration of references to every <see cref="Thing"/> that adheres to the specified <paramref name="schemaGuid"/>
     /// and also has a specific property value.
     /// </summary>
@@ -77,7 +89,7 @@ public interface IThingStorageProvider
     /// <param name="propValue">Value of the property on the thing to compare.</param>
     /// <param name="comparer">The comparer to use when comparing the value in the potential thing's <paramref name="propName"/> value with the comparison value specified in <paramref name="propValue"/>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The thing, if it was found.  If the thing was not located, <see cref="Reference.EMPTY"/> is returned.</returns>
+    /// <returns>An asynchronous enumeration of matching <see cref="Thing"/>s.</returns>
     public IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
         string schemaGuid,
         string propName,

@@ -23,29 +23,26 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// The settings supplied to the <see cref="CompleteTaskCommand"/>.
+/// The settings supplied to the <see cref="UnprioritizeTaskCommand"/>.
 /// </summary>
-public class CompleteTaskCommandSettings : CommandSettings
+public class UnprioritizeTaskCommandSettings : CommandSettings
 {
     /// <summary>
-    /// Gets the task number to mark completed.
+    /// Gets the task number to unprioritize.
     /// </summary>
     [CommandArgument(0, "<ID>")]
-    [Description("The task number to mark completed.")]
-    public int TaskNumber { get; init; }
-
-    /// <summary>
-    /// Gets a value that indicates the task shall be archived at the same time is is marked complete.
-    /// </summary>
-    [Description("Specifies the task shall be archived at the same time is is marked complete.")]
-    [CommandOption("-a|--archive")]
-    public bool? Archive { get; init; } = null;
+    [Description("The task number to unprioritize.  Alternatively, if this argument is '*', then it will apply to ALL tasks.")]
+    public string? TaskNumber { get; init; }
 
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
-        return TaskNumber < 1
-            ? ValidationResult.Error("The task number must be greater than zero.")
+        return (string.IsNullOrWhiteSpace(TaskNumber)
+            || (
+                !(ulong.TryParse(TaskNumber, out ulong ul) && ul > 0)
+                && !TaskNumber.Equals("*", StringComparison.CurrentCultureIgnoreCase)
+            ))
+            ? ValidationResult.Error("The task number must be greater than zero, or '*' if it should apply to ALL tasks.")
             : ValidationResult.Success();
     }
 }

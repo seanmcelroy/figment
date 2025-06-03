@@ -16,7 +16,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Collections;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -25,66 +24,12 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// Unarchives a task.  This is the reverse of <see cref="ArchiveTaskCommand"/>.
+/// Unprioritizes a task.  This is the reverse of <see cref="PrioritizeTaskCommand"/>.
 /// </summary>
-public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommandSettings>
+public class UnprioritizeTaskCommand : CancellableAsyncCommand<UnprioritizeTaskCommandSettings>
 {
-    /// <summary>
-    /// This is a comparer that will treat a field in the data store as 'true' if it is null.
-    /// This is useful for the 'complete' field on a Task, which is a nullable date.  If the date
-    /// in complete is null, it will evaluate to true with this comparer.
-    /// </summary>
-    private class BooleanComparerTrueIfNull : IComparer
-    {
-        public int Compare(object? x, object? y)
-        {
-            if (x == null && y == null)
-            {
-                return 0;
-            }
-
-            bool xx, yy;
-
-            if (x == null)
-            {
-                xx = true;
-            }
-            else if (x is bool xb)
-            {
-                xx = xb;
-            }
-            else if (SchemaBooleanField.TryParseBoolean(x.ToString(), out bool xtpb))
-            {
-                xx = xtpb;
-            }
-            else
-            {
-                xx = false; // False if not null.
-            }
-
-            if (y == null)
-            {
-                yy = true; // True if null.
-            }
-            else if (y is bool yb)
-            {
-                yy = yb;
-            }
-            else if (SchemaBooleanField.TryParseBoolean(y.ToString(), out bool ytpb))
-            {
-                yy = ytpb;
-            }
-            else
-            {
-                yy = false; // False if not null.
-            }
-
-            return xx.CompareTo(yy);
-        }
-    }
-
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, UnarchiveTaskCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, UnprioritizeTaskCommandSettings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.TaskNumber))
         {
@@ -113,14 +58,14 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
                 new UnsignedNumberComparer(),
                 cancellationToken))
             {
-                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNamePriority, cancellationToken))?.AsBoolean() ?? false)
                 {
                     foundCount++;
-                    AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} is already unarchived.");
+                    AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} is already unprioritized.");
                     break; // Only one can match.
                 }
 
-                var tsr = await thing.Set("archived", false, cancellationToken);
+                var tsr = await thing.Set("priority", false, cancellationToken);
                 if (tsr.Success)
                 {
                     var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
@@ -128,7 +73,7 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
                     if (saveSuccess)
                     {
                         foundCount++;
-                        AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} unarchived.");
+                        AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} unprioritized.");
                         break; // Only one can match.
                     }
                     else
@@ -141,17 +86,17 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
         }
         else if (settings.TaskNumber.Equals("*", StringComparison.CurrentCultureIgnoreCase))
         {
-            // Mark ALL tasks as archived.
+            // Mark ALL tasks as unprioritized.
             await foreach (var thing in tsp.LoadAllForSchema(
                     WellKnownSchemas.Task.Guid,
                     cancellationToken))
             {
-                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNamePriority, cancellationToken))?.AsBoolean() ?? false)
                 {
                     continue;
                 }
 
-                var tsr = await thing.Set("archived", false, cancellationToken);
+                var tsr = await thing.Set("priority", false, cancellationToken);
                 if (tsr.Success)
                 {
                     var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
@@ -168,37 +113,7 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
                 }
             }
 
-            AmbientErrorContext.Provider.LogDone($"Unarchived {foundCount} tasks.");
-        }
-        else if ("uc".Equals(settings.TaskNumber, StringComparison.CurrentCultureIgnoreCase))
-        {
-            // Archive every completed task.
-            // settings.TaskNumber is actually a number.
-            await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                    WellKnownSchemas.Task.Guid,
-                    ListTasksCommand.TrueNameComplete,
-                    null,
-                    new BooleanComparerTrueIfNull(),
-                    cancellationToken))
-            {
-                var tsr = await thing.Set("archived", false, cancellationToken);
-                if (tsr.Success)
-                {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
-                    var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
-                    if (saveSuccess)
-                    {
-                        foundCount++;
-                    }
-                    else
-                    {
-                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{id.Value.Value}: {saveMessage}");
-                        return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
-                    }
-                }
-            }
-
-            AmbientErrorContext.Provider.LogDone($"Unarchived {foundCount} incomplete tasks.");
+            AmbientErrorContext.Provider.LogDone($"Unprioritized {foundCount} tasks.");
         }
 
         if (foundCount == 0 && isNumber)

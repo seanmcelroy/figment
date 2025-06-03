@@ -61,6 +61,7 @@ public class UncompleteTaskCommand : CancellableAsyncCommand<UncompleteTaskComma
                 if (saveSuccess)
                 {
                     AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} un-completed.");
+                    break; // Only one can match.
                 }
                 else
                 {

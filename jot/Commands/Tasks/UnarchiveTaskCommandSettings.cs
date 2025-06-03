@@ -31,14 +31,19 @@ public class UnarchiveTaskCommandSettings : CommandSettings
     /// Gets the task number to unarchive.
     /// </summary>
     [CommandArgument(0, "<ID>")]
-    [Description("The task number to unarchive.")]
-    public int TaskNumber { get; init; }
+    [Description("The task number to unarchive.  Alternatively, if this argument is 'uc', then it will apply to all incomplete tasks.  If '*' it will apply to ALL tasks.")]
+    public string? TaskNumber { get; init; }
 
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
-        return TaskNumber < 1
-            ? ValidationResult.Error("The task number must be greater than 1.")
+        return (string.IsNullOrWhiteSpace(TaskNumber)
+            || (
+                !(ulong.TryParse(TaskNumber, out ulong ul) && ul > 0)
+                && !TaskNumber.Equals("uc", StringComparison.CurrentCultureIgnoreCase)
+                && !TaskNumber.Equals("*", StringComparison.CurrentCultureIgnoreCase)
+            ))
+            ? ValidationResult.Error("The task number must be greater than zero, 'uc' if it is to apply to all incomplete tasks, or '*' if it should apply to ALL tasks.")
             : ValidationResult.Success();
     }
 }

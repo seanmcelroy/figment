@@ -42,8 +42,16 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
     /// </summary>
     public const string TrueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
     private const string TrueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
-    private const string TrueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
-    private const string TrueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
+
+    /// <summary>
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "priority" field.
+    /// </summary>
+    public const string TrueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
+
+    /// <summary>
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "archived" field.
+    /// </summary>
+    public const string TrueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
     private const string TrueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
     private const string TrueNameNotes = $"{WellKnownSchemas.TaskGuid}.notes";
 
@@ -812,7 +820,10 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
             // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
             foreach (var item in todos
                 .Join(filteredTaskGuidsAndProps, t => t.Guid, f => f.Key, (f, t) => new { Task = f, Props = t.Value })
-                .OrderBy(x => x.Props.TryGetValue(TrueNameDue, out var dueProp)
+                .OrderBy(x => x.Props.TryGetValue(TrueNamePriority, out var duePrio)
+                    ? ((duePrio?.AsBoolean() ?? false) ? 0 : 1)
+                    : 1)
+                .ThenBy(x => x.Props.TryGetValue(TrueNameDue, out var dueProp)
                     ? dueProp?.AsDateTimeOffset()
                     : null)
                 .ThenBy(x => x.Props.TryGetValue(TrueNameId, out var idProp)
@@ -822,14 +833,17 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 var task = item.Task;
                 var props = item.Props;
 
+                bool prioritized = props[TrueNamePriority]?.AsBoolean() ?? false;
+                var beBold = prioritized ? " bold" : string.Empty;
+
                 var id = props[TrueNameId]?.AsUInt64();
                 var idValue = id != null
-                    ? $"[darkgoldenrod]{id}[/]"
-                    : "[red]<ID MISSING>[/]";
+                    ? $"[darkgoldenrod{beBold}]{id}[/]"
+                    : $"[red{beBold}]<ID MISSING>[/]";
 
                 bool complete = (props[TrueNameComplete]?.AsDateTimeOffset()).HasValue;
                 var completeValue = complete
-                    ? (AnsiConsole.Profile.Capabilities.Unicode ? "[[[green]:check_mark:[/]]]" : "[[[green]x[/]]]")
+                    ? (AnsiConsole.Profile.Capabilities.Unicode ? $"[[[green{beBold}]:check_mark:[/]]]" : "[[[green]x[/]]]")
                     : "[[ ]]";
 
                 string? dueValue = null;
@@ -859,7 +873,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         }
                         else
                         {
-                            dueValue = $"[red]{dueProp.Value.Value}[/]"; // Unparsable due date
+                            dueValue = $"[red{beBold}]{dueProp.Value.Value}[/]"; // Unparsable due date
                         }
                     }
 
@@ -874,17 +888,17 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         else if (dueDate < nowDate)
                         {
                             // This task is overdue, so color it red.
-                            dueValue = $"[red]{dueValueInner}[/]";
+                            dueValue = $"[red{beBold}]{dueValueInner}[/]";
                         }
                         else if (dueDate == nowDate)
                         {
                             // This task is due today, so color it yellow.
-                            dueValue = $"[yellow]{dueValueInner}[/]";
+                            dueValue = $"[yellow{beBold}]{dueValueInner}[/]";
                         }
                         else
                         {
                             // This task is not overdue and is not due today, so color it blue.
-                            dueValue = $"[blue]{dueValueInner}[/]";
+                            dueValue = $"[blue{beBold}]{dueValueInner}[/]";
                         }
                     }
                 }
@@ -892,7 +906,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 string renderableName;
                 if (string.IsNullOrWhiteSpace(task.Name))
                 {
-                    renderableName = $"[red]NAME MISSING ({task.Guid})[/]";
+                    renderableName = $"[red{beBold}]NAME MISSING ({task.Guid})[/]";
                 }
                 else
                 {
@@ -902,11 +916,15 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     {
                         if (entry.StartsWith('@'))
                         {
-                            sb.AppendFormat($"[hotpink]{Markup.Escape(entry)}[/] ");
+                            sb.AppendFormat($"[hotpink{beBold}]{Markup.Escape(entry)}[/] ");
                         }
                         else if (entry.StartsWith('+'))
                         {
-                            sb.AppendFormat($"[lightslateblue]{Markup.Escape(entry)}[/] ");
+                            sb.AppendFormat($"[lightslateblue{beBold}]{Markup.Escape(entry)}[/] ");
+                        }
+                        else if (prioritized)
+                        {
+                            sb.AppendFormat($"[bold]{Markup.Escape(entry)}[/] ");
                         }
                         else
                         {

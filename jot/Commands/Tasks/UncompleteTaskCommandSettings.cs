@@ -45,7 +45,7 @@ public class UncompleteTaskCommandSettings : CommandSettings
     public override ValidationResult Validate()
     {
         return TaskNumber < 1
-            ? ValidationResult.Error("The task number must be greater than 1.")
+            ? ValidationResult.Error("The task number must be greater than zero.")
             : ValidationResult.Success();
     }
 }

@@ -61,6 +61,7 @@ public class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskCommandSe
                 if (saveSuccess)
                 {
                     AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} completed.");
+                    break; // Only one can match.
                 }
                 else
                 {

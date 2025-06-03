@@ -34,13 +34,16 @@ public sealed class Thing
         Assert.IsNotNull(allThings);
         var beginThingsCount = allThings.Count();
 
-        var thing = await tsp.CreateAsync(newSchema, nameof(ThingCrud), CancellationToken.None);
-        Assert.IsNotNull(thing);
-        Assert.IsTrue(await tsp.GuidExists(thing.Guid, CancellationToken.None));
+        var tcr = await tsp.CreateAsync(newSchema, nameof(ThingCrud), [], CancellationToken.None);
+        Assert.IsTrue(tcr.Success);
+        Assert.IsNotNull(tcr.NewThing);
+        Assert.IsTrue(await tsp.GuidExists(tcr.NewThing.Guid, CancellationToken.None));
 
         allThings = tsp.GetAll(CancellationToken.None).ToBlockingEnumerable();
         Assert.IsNotNull(allThings);
         Assert.AreEqual(beginThingsCount + 1, allThings.Count());
+
+        var thing = tcr.NewThing;
 
         // Set
         var tsr = await thing.Set("random", "value", CancellationToken.None);

@@ -88,6 +88,12 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, ArchiveTaskCommandSettings settings, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(settings.TaskNumber))
+        {
+            AmbientErrorContext.Provider.LogError("Task number not provided.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
@@ -109,6 +115,7 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
             }
 
             AmbientErrorContext.Provider.LogDone($"Renumbered tasks.");
+            return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
         }
 
         if (ulong.TryParse(settings.TaskNumber, out ulong taskNumber))
@@ -122,6 +129,44 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
                     new UnsignedNumberComparer(),
                     cancellationToken))
             {
+                if ((await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                {
+                    foundCount++;
+                    AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} is already archived.");
+                    break; // Only one can match.
+                }
+
+                var tsr = await thing.Set("archived", true, cancellationToken);
+                if (tsr.Success)
+                {
+                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+                    var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
+                    if (saveSuccess)
+                    {
+                        foundCount++;
+                        AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} archived.");
+                        break; // Only one can match.
+                    }
+                    else
+                    {
+                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{id.Value.Value}: {saveMessage}");
+                        return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
+                    }
+                }
+            }
+        }
+        else if (settings.TaskNumber.Equals("*", StringComparison.CurrentCultureIgnoreCase))
+        {
+            // Mark ALL tasks as archived.
+            await foreach (var thing in tsp.LoadAllForSchema(
+                    WellKnownSchemas.Task.Guid,
+                    cancellationToken))
+            {
+                if ((await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                {
+                    continue;
+                }
+
                 var tsr = await thing.Set("archived", true, cancellationToken);
                 if (tsr.Success)
                 {
@@ -152,6 +197,11 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
                     new BooleanComparerTrueIfNotNull(),
                     cancellationToken))
             {
+                if ((await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                {
+                    continue;
+                }
+
                 var tsr = await thing.Set("archived", true, cancellationToken);
                 if (tsr.Success)
                 {

@@ -33,8 +33,11 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
         THING_CREATE_ERROR = -2002,
     }
 
-    [GeneratedRegex(@"(?<=\b)due:(?:.+)$")]
+    [GeneratedRegex(@"\b(?:due:[^\s\b]+)")]
     private static partial Regex DueRegex();
+
+    [GeneratedRegex(@"(?<=^|\b)status:(?:$|[^\s\b]+)")]
+    private static partial Regex StatusRegex();
 
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, AddTaskCommandSettings settings, CancellationToken cancellationToken)
@@ -61,69 +64,65 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
         }
 
         var taskName = string.Join(' ', settings.Segments).Trim();
+        var priority = settings.Priority;
+        string? status = null;
+        DateTimeOffset? due = null;
 
-        var task = await thingProvider.CreateAsync(taskSchema, taskName, cancellationToken);
-        if (task == null)
+        var statusMatch = StatusRegex().Match(taskName);
+        if (statusMatch.Success)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to create task.");
-            return (int)ERROR_CODES.THING_CREATE_ERROR;
+#pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
+            taskName = $"{taskName[..statusMatch.Index]}{taskName[(statusMatch.Index + statusMatch.Value.Length)..]}".Trim();
+#pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
+            status = statusMatch.Value[7..];
+        }
+        else if (!string.IsNullOrWhiteSpace(settings.Status))
+        {
+            status = settings.Status;
         }
 
-        if (settings.Priority ?? false)
-        {
-            var tsr = await task.Set("priority", settings.Priority ?? false, cancellationToken);
-            if (!tsr.Success)
-            {
-                // Not fatal, but warn.
-                AmbientErrorContext.Provider.LogWarning($"Unable to set priority '{settings.Priority ?? false}' on task.");
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(settings.Status))
-        {
-            var tsr = await task.Set("status", settings.Status, cancellationToken);
-            if (!tsr.Success)
-            {
-                // Not fatal, but warn.
-                AmbientErrorContext.Provider.LogWarning($"Unable to set status '{settings.Status}' on task.");
-            }
-        }
-
-        var dueMatch = DueRegex().Match(taskName, 1); // Don't allow the name to ONLY be a due date.
+        var dueMatch = DueRegex().Match(taskName);
         if (dueMatch.Success)
         {
             var (dueDate, _) = ListTasksCommand.ParseFlagDateValue(dueMatch.Value[4..]);
 
-            // The -1 is okay because the regex asserts a \b preceding.
 #pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
-            task.Name = task.Name[..(dueMatch.Index - 1)];
+            taskName = $"{taskName[..dueMatch.Index]}{taskName[(dueMatch.Index + dueMatch.Value.Length)..]}".Trim();
 #pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            var tsr = await task.Set("due", dueDate, cancellationToken);
-            if (!tsr.Success)
-            {
-                // Not fatal, but warn.
-                AmbientErrorContext.Provider.LogWarning($"Unable to set due date '{dueMatch.Value}' on task.");
-            }
+            due = dueDate;
         }
         else if (!string.IsNullOrWhiteSpace(settings.DueDate))
         {
             // If we could not match a due in the text (and adjust it accordingly, THEN we will respect the command option.)
             var (dueDate, _) = ListTasksCommand.ParseFlagDateValue(settings.DueDate);
-
-            var tsr = await task.Set("due", dueDate, cancellationToken);
-            if (!tsr.Success)
-            {
-                // Not fatal, but warn.
-                AmbientErrorContext.Provider.LogWarning($"Unable to set due date '{settings.DueDate}' on task.");
-            }
+            due = dueDate;
         }
 
-        if (task.IsDirty)
+        if (string.IsNullOrWhiteSpace(taskName))
         {
-            await task.SaveAsync(cancellationToken);
+            // Don't allow the task to be ONLY a status:value or due:value entry.
+            AmbientErrorContext.Provider.LogError($"Task name was not provided.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
         }
 
-        var taskIdPropValue = await task.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+        var tcr = await thingProvider.CreateAsync(
+            taskSchema,
+            taskName,
+            new Dictionary<string, object?>()
+            {
+                { "priority", priority },
+                { "status", status },
+                { "due", due },
+            },
+            cancellationToken);
+
+        if (!tcr.Success || tcr.NewThing == null)
+        {
+            AmbientErrorContext.Provider.LogError($"Unable to create task: {tcr.Message}");
+            return (int)ERROR_CODES.THING_CREATE_ERROR;
+        }
+
+        var taskIdPropValue = await tcr.NewThing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
         var taskId = taskIdPropValue?.AsUInt64();
 
         AmbientErrorContext.Provider.LogDone($"Task #{taskId} created.");

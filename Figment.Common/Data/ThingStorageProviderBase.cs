@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace Figment.Common.Data;
 
@@ -29,7 +30,7 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
     public abstract Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
-    public abstract Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken);
+    public abstract Task<CreateThingResult> CreateAsync(Schema? schema, string thingName, Dictionary<string, object?> properties, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     public abstract Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken);
@@ -50,12 +51,75 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
     public abstract IAsyncEnumerable<Reference> GetBySchemaAsync(string schemaGuid, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
-    public abstract IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
-       string schemaGuid,
-       string propName,
-       object? propValue,
-       IComparer comparer,
-       CancellationToken cancellationToken);
+    public virtual async IAsyncEnumerable<Thing> LoadAllForSchema(
+        string schemaGuid,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // This may not be an efficient implementation for a database that can fully hydrate objects on an enumeration.
+        // It happens to be efficient for CSV+Index (Local) and in-memory caches.
+        await foreach (var reference in GetBySchemaAsync(schemaGuid, cancellationToken))
+        {
+            var thing = await LoadAsync(reference.Guid, cancellationToken);
+            if (thing != null)
+            {
+                yield return thing;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
+        string schemaGuid,
+        string propName,
+        object? propValue,
+        IComparer comparer,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // This may not be an efficient implementation for a database that can fully hydrate objects on an enumeration.
+        // It happens to be efficient for CSV+Index (Local) and in-memory caches.
+
+        // This might look a lot like GetBySchemaAsync, but it is a special version
+        // that holds onto the loaded thing object for property testing.
+        // It also cannot use quite the same index-shortcut in GetBySchemaAsync because
+        // it returns a fully loaded Thing, not just a reference.
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propName);
+        ArgumentNullException.ThrowIfNull(comparer);
+
+        async Task<bool> ThingMatches(Thing thing)
+        {
+            var prop = await thing.GetPropertyByTrueNameAsync(propName, cancellationToken);
+            if (prop == null)
+            {
+                return propValue == null; // Property is missing from thing (but maybe we wanted nulls).
+            }
+
+            if (!prop.HasValue && propValue == null)
+            {
+                return true; // We want nulls, and this is null.
+            }
+
+            if (!prop.HasValue)
+            {
+                return false; // We do not want nulls, and this is null.
+            }
+
+            return comparer.Compare(prop.Value.Value, propValue) == 0;
+        }
+
+        await foreach (var thing in LoadAllForSchema(schemaGuid, cancellationToken))
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                yield break;
+            }
+
+            if (thing != null && await ThingMatches(thing))
+            {
+                yield return thing;
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public abstract Task<bool> GuidExists(string thingGuid, CancellationToken cancellationToken);

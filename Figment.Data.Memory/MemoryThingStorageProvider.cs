@@ -16,7 +16,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Collections;
 using System.Runtime.CompilerServices;
 using Figment.Common;
 using Figment.Common.Data;
@@ -138,46 +137,6 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     }
 
     /// <inheritdoc/>
-    public override async IAsyncEnumerable<Thing> FindBySchemaAndPropertyValue(
-        string schemaGuid,
-        string propName,
-        object? propValue,
-        IComparer comparer,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
-        ArgumentException.ThrowIfNullOrWhiteSpace(propName);
-        ArgumentNullException.ThrowIfNull(comparer);
-
-        async Task<bool> thingMatches(Thing thing)
-        {
-            var prop = await thing.GetPropertyByTrueNameAsync($"{schemaGuid}.{propName}", cancellationToken);
-            if (prop == null)
-                return false; // Property is missing from thing, so it's not a valid thing of the specified schema.
-
-            if (!prop.HasValue && propValue == null)
-                return true; // We want nulls, and this is null.
-
-            if (!prop.HasValue)
-                return false; // We do not want nulls, and this is null.
-
-            return comparer.Compare(prop.Value, propValue) == 0;
-        }
-
-        await foreach (var (reference, name) in GetAll(cancellationToken))
-        {
-            if (cancellationToken.IsCancellationRequested)
-                yield break;
-
-            var thing = await LoadAsync(reference.Guid, cancellationToken);
-            if (thing != null
-                && thing.SchemaGuids.Any(s => string.Equals(s, schemaGuid, StringComparison.Ordinal))
-                && await thingMatches(thing))
-                yield return thing;
-        }
-    }
-
-    /// <inheritdoc/>
     public override Task<bool> GuidExists(string thingGuid, CancellationToken _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
@@ -201,7 +160,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     }
 
     /// <inheritdoc/>
-    public override async Task<Thing?> CreateAsync(Schema? schema, string thingName, CancellationToken cancellationToken)
+    public override async Task<CreateThingResult> CreateAsync(Schema? schema, string thingName, Dictionary<string, object?> properties, CancellationToken cancellationToken)
     {
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
@@ -216,8 +175,25 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
         if (schema != null)
             await AssociateWithSchemaInternal(thing, schema, cancellationToken);
 
+        foreach (var prop in properties)
+        {
+            var tsr = await thing.Set(prop.Key, prop.Value, cancellationToken);
+            if (!tsr.Success)
+            {
+                return new CreateThingResult { Success = false, Message = tsr.Message };
+            }
+        }
+
+        var (success, message) = await SaveAsync(thing, cancellationToken);
+        if (!success)
+        {
+            return new CreateThingResult { Success = false, Message = message };
+        }
+
         // Load fresh to handle any schema defaults/calculated fields
-        return await LoadAsync(thingGuid, cancellationToken);
+        thing = await LoadAsync(thingGuid, cancellationToken);
+
+        return new CreateThingResult { Success = true, NewThing = thing };
     }
 
     /// <inheritdoc/>
@@ -312,12 +288,8 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
 
         Dictionary<Reference, (long existingId, DateTime createdOn)>? metadata = [];
 
-        await foreach (var thingRef in GetBySchemaAsync(schemaGuid, cancellationToken))
+        await foreach (var thing in LoadAllForSchema(schemaGuid, cancellationToken))
         {
-            var thing = await LoadAsync(thingRef.Guid, cancellationToken);
-            if (thing == null)
-                continue;
-
             long existingId = 0;
             if (thing.Properties.TryGetValue(incrementProperty.Name, out object? eid)
                 && long.TryParse(eid.ToString() ?? string.Empty, out long eidLong))
