@@ -243,6 +243,14 @@ internal class Program
                         .WithExample("task", "unprioritize", "1")
                         .WithExample("task", "up", "2")
                         ;
+                    task.AddCommand<DeleteTaskCommand>("delete")
+                        .WithDescription("Permanently deletes a task")
+                        .WithAlias("d") // Have grace.
+                        .WithAlias("del") // Have grace.
+                        .WithAlias("remove") // Have grace.
+                        .WithExample("task", "delete", "1")
+                        .WithExample("task", "d", "2")
+                        ;
                 });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>

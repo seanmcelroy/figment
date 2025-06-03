@@ -139,17 +139,16 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
                 var tsr = await thing.Set("archived", true, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {
                         foundCount++;
-                        AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} archived.");
+                        AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} archived.");
                         break; // Only one can match.
                     }
                     else
                     {
-                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{id.Value.Value}: {saveMessage}");
+                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{taskNumber}: {saveMessage}");
                         return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
                     }
                 }

@@ -304,7 +304,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
         var reorderedBase = metadata
             .OrderBy(x => x.Value.existingId)
             .ThenBy(x => x.Value.createdOn)
-            .Select((x, i) => new { reference = x.Key, index = i + 1 })
+            .Select((x, i) => new { reference = x.Key, index = (ulong)i + 1 })
             .ToArray();
 
         var reorderedBulk = reorderedBase

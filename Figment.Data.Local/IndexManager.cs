@@ -184,7 +184,7 @@ public static class IndexManager
 
         {
             // Exclusively read this index.
-            using var fsRead = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+            using var fsRead = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var sr = new StreamReader(fsRead, Encoding.UTF8);
             var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {

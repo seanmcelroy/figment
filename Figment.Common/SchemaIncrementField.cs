@@ -47,8 +47,11 @@ public class SchemaIncrementField(string Name) : SchemaIntegerField(Name)
     /// Gets or sets the allowable values for the enum.
     /// </summary>
     [JsonPropertyName("next")]
-    public long NextValue { get; set; } = 1;
+    public ulong NextValue { get; set; } = 1;
 
     /// <inheritdoc/>
-    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
+    public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken)
+    {
+        return Task.FromResult($"{SCHEMA_FIELD_TYPE} (next={NextValue})");
+    }
 }

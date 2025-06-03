@@ -109,7 +109,7 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
                 WellKnownSchemas.Task.Guid,
                 ListTasksCommand.TrueNameId,
-                settings.TaskNumber,
+                taskNumber,
                 new UnsignedNumberComparer(),
                 cancellationToken))
             {
@@ -123,17 +123,16 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
                 var tsr = await thing.Set("archived", false, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {
                         foundCount++;
-                        AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} unarchived.");
+                        AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} unarchived.");
                         break; // Only one can match.
                     }
                     else
                     {
-                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{id.Value.Value}: {saveMessage}");
+                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{taskNumber}: {saveMessage}");
                         return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
                     }
                 }
@@ -175,11 +174,11 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
             // Archive every completed task.
             // settings.TaskNumber is actually a number.
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                    WellKnownSchemas.Task.Guid,
-                    ListTasksCommand.TrueNameComplete,
-                    null,
-                    new BooleanComparerTrueIfNull(),
-                    cancellationToken))
+                WellKnownSchemas.Task.Guid,
+                ListTasksCommand.TrueNameComplete,
+                null,
+                new BooleanComparerTrueIfNull(),
+                cancellationToken))
             {
                 var tsr = await thing.Set("archived", false, cancellationToken);
                 if (tsr.Success)

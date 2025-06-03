@@ -60,16 +60,15 @@ public class PrioritizeTaskCommand : CancellableAsyncCommand<PrioritizeTaskComma
                 var tsr = await thing.Set("priority", true, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {
-                        AmbientErrorContext.Provider.LogDone($"Task #{id.Value.Value} prioritized.");
+                        AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} prioritized.");
                         break; // Only one can match.
                     }
                     else
                     {
-                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{id.Value.Value}: {saveMessage}");
+                        AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{taskNumber}: {saveMessage}");
                         return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
                     }
                 }

@@ -84,7 +84,11 @@ public static class Globals
         THING_SAVE_ERROR = -2001,
 
         // THING_CREATE_ERROR = -2002
-        // THING_DELETE_ERROR = -2003,
+
+        /// <summary>
+        /// Unable to delete a <see cref="Figment.Common.Thing"/> from the underlying data store.
+        /// </summary>
+        THING_DELETE_ERROR = -2004,
     }
 
     /// <summary>

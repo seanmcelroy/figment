@@ -853,7 +853,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         var reorderedBase = metadata
             .OrderBy(x => x.Value.existingId)
             .ThenBy(x => x.Value.createdOn)
-            .Select((x, i) => new { reference = x.Key, index = i + 1, x.Value.path })
+            .Select((x, i) => new { reference = x.Key, index = (ulong)i + 1, x.Value.path })
             .ToArray();
 
         var reorderedIndex = reorderedBase
@@ -952,7 +952,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
             AmbientErrorContext.Provider.LogWarning($"Rebuild thing indexes to be sure of consistency.");
-            return false;
+            return true;
         }
 
         // Remove from schema indexes, as applicable.
@@ -1000,6 +1000,17 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                             {
                                 await IndexManager.RemoveByKeyAsync(incrementIndexFilePath, incrementValue, cancellationToken);
                                 AmbientErrorContext.Provider.LogProgress($"Deleted from name increment index {Path.GetFileName(incrementIndexFilePath)}");
+
+                                // If the value we are deleting happens to be next-1, then reset schema next to next-1 for an immediate recycle.
+                                var sif = schema.GetIncrementField();
+                                if (sif != null)
+                                {
+                                    if (sif.NextValue == incrementProp!.Value.AsUInt64() + 1)
+                                    {
+                                        sif.NextValue--;
+                                        await schema.SaveAsync(cancellationToken);
+                                    }
+                                }
                             }
                         }
                     }

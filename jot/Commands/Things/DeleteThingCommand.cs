@@ -28,11 +28,6 @@ namespace jot.Commands.Things;
 /// </summary>
 public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        THING_DELETE_ERROR = -2004,
-    }
-
     /// <summary>
     /// Attempts to delete the <see cref="Thing"/> by its name or identifier.
     /// </summary>
@@ -103,7 +98,7 @@ public class DeleteThingCommand : CancellableAsyncCommand<ThingCommandSettings>
         }
         else
         {
-            return (int)ERROR_CODES.THING_DELETE_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_DELETE_ERROR;
         }
     }
 

@@ -26,10 +26,10 @@ namespace jot.Commands.Tasks;
 /// <summary>
 /// Marks a task as complete.
 /// </summary>
-public class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskCommandSettings>
+public class DeleteTaskCommand : CancellableAsyncCommand<DeleteTaskCommandSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, CompleteTaskCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DeleteTaskCommandSettings settings, CancellationToken cancellationToken)
     {
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
@@ -48,25 +48,17 @@ public class CompleteTaskCommand : CancellableAsyncCommand<CompleteTaskCommandSe
             cancellationToken))
         {
             anyFound = true;
-            if (settings.Archive ?? false)
-            {
-                await thing.Set("archived", true, cancellationToken);
-            }
 
-            var tsr = await thing.Set("complete", DateTimeOffset.Now, cancellationToken);
-            if (tsr.Success)
+            var deleted = await tsp.DeleteAsync(thing.Guid, cancellationToken);
+            if (deleted)
             {
-                var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
-                if (saveSuccess)
-                {
-                    AmbientErrorContext.Provider.LogDone($"Task #{settings.TaskNumber} completed.");
-                    break; // Only one can match.
-                }
-                else
-                {
-                    AmbientErrorContext.Provider.LogError($"Unable to save changes to Task #{settings.TaskNumber}: {saveMessage}");
-                    return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
-                }
+                AmbientErrorContext.Provider.LogDone($"Task #{settings.TaskNumber} deleted.");
+                break; // Only one can match.
+            }
+            else
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to delete Task #{settings.TaskNumber}");
+                return (int)Globals.GLOBAL_ERROR_CODES.THING_DELETE_ERROR;
             }
         }
 
