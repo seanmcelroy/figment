@@ -145,7 +145,7 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
     /// similar to the signature and use of <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}.TryUpdate(TKey, TValue, TValue)"/>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A tuple containing a value whether the operations was successful at all, and individual results for each of the <see cref="Reference"/> keys passed in to <paramref name="changes"/>.</returns>
-    public async Task<(bool, Dictionary<Reference, (bool success, string message)> results)> TryBulkUpdate(Dictionary<Reference, List<(string propertyName, object newValue)>> changes, CancellationToken cancellationToken)
+    public async Task<(bool, Dictionary<Reference, (bool success, string message)> results)> TryBulkUpdate(Dictionary<Reference, Dictionary<string, object?>> changes, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(changes);
 
@@ -164,20 +164,10 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
                 continue;
             }
 
-            var anyError = false;
-            foreach (var (propertyName, newValue) in change.Value)
+            var tsr = await thing.Set(change.Value, cancellationToken);
+            if (!tsr.Success)
             {
-                var tsr = await thing.Set(propertyName, newValue, cancellationToken);
-                if (!tsr.Success)
-                {
-                    results.TryAdd(change.Key, (false, tsr.Message ?? $"Unable to set property '{propertyName}' to '{newValue}'"));
-                    anyError = true;
-                    break;
-                }
-            }
-
-            if (anyError)
-            {
+                results.TryAdd(change.Key, (false, tsr.Messages == null || tsr.Messages.Length == 0 ? "No error message provided." : string.Join("; ", tsr.Messages)));
                 continue;
             }
 
@@ -192,6 +182,45 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
         }
 
         return (true, results);
+    }
+
+    /// <summary>
+    /// Attempts to update multiple properties on a thing.
+    /// </summary>
+    /// <param name="thingGuid">Unique identifier of the <see cref="Thing"/> to update.</param>
+    /// <param name="changes">The properties and values to update on the thing.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A tuple containing a value whether the operations was successful.</returns>
+    public async Task<(bool success, string message)> TryUpdate(string thingGuid, Dictionary<string, object?> changes, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
+        ArgumentNullException.ThrowIfNull(changes);
+
+        var results = new Dictionary<Reference, (bool success, string message)>();
+        if (changes.Count == 0)
+        {
+            return (true, "No changes provided.");
+        }
+
+        var thing = await LoadAsync(thingGuid, cancellationToken);
+        if (thing == null)
+        {
+            return (false, "Unable to load from underlying data store.");
+        }
+
+        var tsr = await thing.Set(changes, cancellationToken);
+        if (!tsr.Success)
+        {
+            return (false, tsr.Messages == null || tsr.Messages.Length == 0 ? "No error message provided." : string.Join("; ", tsr.Messages));
+        }
+
+        var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
+        if (!saveSuccess)
+        {
+            return (false, saveMessage ?? "Unable to save thing to underlying data store.");
+        }
+
+        return (true, "Update successful");
     }
 
     /// <inheritdoc/>

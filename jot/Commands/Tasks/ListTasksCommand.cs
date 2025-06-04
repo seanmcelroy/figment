@@ -138,6 +138,9 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 var saturdaySOD = nowDT.AddDays(((int)DayOfWeek.Saturday - (int)nowDO.DayOfWeek + 7) % 7);
                 return (saturdaySOD, DateOnly.FromDateTime(saturdaySOD).ToDateTime(TimeOnly.MaxValue));
 
+            case "none":
+                return (DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+
             default:
                 if (SchemaDateField.TryParseDate(flagValue, out DateTimeOffset dto))
                 {

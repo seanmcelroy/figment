@@ -175,13 +175,10 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
         if (schema != null)
             await AssociateWithSchemaInternal(thing, schema, cancellationToken);
 
-        foreach (var prop in properties)
+        var tsr = await thing.Set(properties, cancellationToken);
+        if (!tsr.Success)
         {
-            var tsr = await thing.Set(prop.Key, prop.Value, cancellationToken);
-            if (!tsr.Success)
-            {
-                return new CreateThingResult { Success = false, Message = tsr.Message };
-            }
+            return new CreateThingResult { Success = false, Message = tsr.Messages == null || tsr.Messages.Length == 0 ? "No error message provided." : string.Join("; ", tsr.Messages) };
         }
 
         var (success, message) = await SaveAsync(thing, cancellationToken);
@@ -308,7 +305,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
             .ToArray();
 
         var reorderedBulk = reorderedBase
-            .ToDictionary(k => k.reference, v => new List<(string, object)>() { (incrementProperty.Name, v.index) });
+            .ToDictionary(k => k.reference, v => new Dictionary<string, object?> { { incrementProperty.Name, v.index } });
 
         // Update things with updated values
         var (bulkSuccess, _) = await TryBulkUpdate(reorderedBulk, cancellationToken);

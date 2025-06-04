@@ -243,6 +243,14 @@ internal class Program
                         .WithExample("task", "unprioritize", "1")
                         .WithExample("task", "up", "2")
                         ;
+                    task.AddCommand<EditTaskCommand>("edit")
+                        .WithDescription("Edits a task")
+                        .WithAlias("e") // Have grace.
+                        .WithAlias("ed") // Have grace.
+                        .WithAlias("edit") // Have grace.
+                        .WithExample("task", "edit", "1", "Don't forget the milk @grocery due:tomorrow")
+                        .WithExample("task", "e", "2", "Call @Mike about the +specialProject")
+                        ;
                     task.AddCommand<DeleteTaskCommand>("delete")
                         .WithDescription("Permanently deletes a task")
                         .WithAlias("d") // Have grace.

@@ -240,7 +240,9 @@ jot task uc 35
 ## Archiving/Unarchiving Tasks
 
 - `jot task archive [id]` or `jot task ar [id]` - archive a task
-- `jot task unarchive [id]` or `jot task uar [id]` - unarchive a task
+	- In addition, you can archive all tasks by using `jot task ar *`
+- `jot task unarchive [id]` or `jot task uar [id]` - un-archive a task
+	- In addition, you can un-archive all tasks by using `jot task uar *`
 - `jot task ar c` - archive all completed tasks (_a great command to run at the end of the day!_)
 - `jot task ar gc` - Garbage collect.  This renumbers all tasks so any holes in the numbering are closed by updating every task sequentially starting from 1.
 
@@ -250,4 +252,55 @@ jot task archive 35
 jot task ar 35
 jot task uar 35
 jot task ar c
+jot task ar *
+jot task uar *
+```
+
+## Prioritizing/Unprioritizing Tasks
+
+- `jot task prioritize [id]` or `jot task p [id]` - prioritize a task
+- `jot task unprioritize [id]` or `jot task up [id]` - un-prioritize a task
+	- In addition, you can un-prioritize all tasks by using `jot task up *`
+
+**Examples**
+```
+jot task prioritize 35
+jot task p 35
+jot task up 35
+jot task up *
+```
+
+## Editing Tasks
+
+You can edit a task’s name (body) or due date with the following syntax:
+
+`jot task edit [id] <subject> <due:[due]> <status:[status]> <completed:[true|false> <priority:[true|false]> <archived:[true|false]>`
+
+### Editing a task name
+
+When if you do not include other labels, like `due:[date]`, then just the body text will be edited.
+
+**Example**
+```
+jot task e 3 chat with @bob
+```
+
+The above will edit just the task’s name, and leave the due date alone.
+
+### Editing a task's due date
+If you only pass `due:[date]`, the task’s due date will be updated, and the name will remain the same.
+
+**Example**
+```
+jot task e 3 due:tom
+```
+
+The above will set the task item with id of `3`'s due date to tomorrow, and it will leave the name alone.
+
+### Removing a task’s due date
+You can also specify `due:none` to un-set an existing due date.
+
+**Example**
+```
+jot task e 3 due:none
 ```

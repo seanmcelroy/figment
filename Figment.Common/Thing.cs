@@ -600,6 +600,380 @@ public class Thing
     }
 
     /// <summary>
+    /// Sets the values of properties.
+    /// </summary>
+    /// <param name="properties">The names and values of the properties to update.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="chooserHandler">The function that selects which entity to use when setting a property which is a reference, when multiple entities are located by the given property name.</param>
+    /// <returns>The result of this operation.</returns>
+    public async Task<ThingSetResult> Set(
+        Dictionary<string, object?> properties,
+        CancellationToken cancellationToken,
+        Func<string, IEnumerable<PossibleNameMatch>, PossibleNameMatch>? chooserHandler = null)
+    {
+        ArgumentNullException.ThrowIfNull(properties);
+
+        foreach (var (propName, _) in properties)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(propName, nameof(propName));
+
+            // Check if the property name is valid.
+            if (!ThingProperty.IsPropertyNameValid(propName, out string? message))
+            {
+                return new ThingSetResult(false, [message]);
+            }
+        }
+
+        MarkAccessed();
+
+        // Reusable values across each property set.
+        var associatedSchemas = new List<Schema>();
+        await foreach (var schema in GetAssociatedSchemas(cancellationToken))
+        {
+            associatedSchemas.Add(schema);
+        }
+
+        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+        if (ssp == null)
+        {
+            return new ThingSetResult(false, [AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER]);
+        }
+
+        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
+        if (tsp == null)
+        {
+            return new ThingSetResult(false, [AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER]);
+        }
+
+        // Is this property already set?
+
+        // Step 1, Check EXISTING properties on this thing.
+        var messages = new List<string>();
+        foreach (var (propName, propValue) in properties)
+        {
+            var existingProperties = new List<ThingProperty>();
+            await foreach (var prop in GetPropertyByName(propName, cancellationToken))
+            {
+                existingProperties.Add(prop);
+            }
+
+            // Step 2, Check properties on associated schemas NOT already set on this object
+            Dictionary<string, object?> massagedPropValues = [];
+
+            // Massage values using schema field methods.
+            var schemaPropertyMatches = associatedSchemas.SelectMany(s =>
+                s.Properties.Where(p => string.Equals(p.Key, propName, StringComparison.Ordinal))
+                .Select(p => new { SchemaGuid = s.Guid, PropertyName = p.Key, Field = p.Value }))
+                .ToArray();
+            foreach (var match in schemaPropertyMatches)
+            {
+                if (match.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
+                {
+                    massagedPropValues.Add($"{match.SchemaGuid}.{match.PropertyName}", prePossibleMassaged);
+                }
+            }
+
+            // Use dictionary for O(1) lookups and maintain index mapping
+            var candidatePropertiesDict = new Dictionary<string, int>(StringComparer.Ordinal);
+            var candidateProperties = new List<ThingProperty>(existingProperties);
+
+            // Build index mapping for existing properties
+            for (int i = 0; i < candidateProperties.Count; i++)
+            {
+                candidatePropertiesDict[candidateProperties[i].TruePropertyName] = i;
+            }
+
+            // Process only matching schema properties to reduce iterations
+            foreach (var schema in associatedSchemas)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    messages.Add("Operation canceled.");
+                    return new ThingSetResult(false, [.. messages]);
+                }
+
+                // Filter schema properties that match the property name upfront
+                var matchingSchemaProperties = schema.Properties.Where(p =>
+                    string.Equals(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) ||
+                    string.Equals($"[{p.Key}]", propName, StringComparison.CurrentCultureIgnoreCase) ||
+                    string.Equals($"{schema.EscapedName}.{p.Key}", propName, StringComparison.CurrentCultureIgnoreCase) ||
+                    string.Equals($"{schema.EscapedName}.[{p.Key}]", propName, StringComparison.CurrentCultureIgnoreCase))
+                .ToArray();
+
+                foreach (var schemaProperty in matchingSchemaProperties)
+                {
+                    var truePropertyName = $"{schema.Guid}.{schemaProperty.Key}";
+
+                    // Does this schema field massage the string input?
+                    var canMassage = schemaProperty.Value.TryMassageInput(propValue, out object? possibleMassagedPropValue);
+
+                    // If this value was for this property, would it be valid?
+                    var wouldBeValid = canMassage && await schemaProperty.Value.IsValidAsync(possibleMassagedPropValue, cancellationToken);
+
+                    // Use dictionary lookup for O(1) access
+                    if (candidatePropertiesDict.TryGetValue(truePropertyName, out var existingIndex))
+                    {
+                        // Update existing property in-place using index
+                        var existingProperty = candidateProperties[existingIndex];
+                        candidateProperties[existingIndex] = new ThingProperty
+                        {
+                            TruePropertyName = existingProperty.TruePropertyName,
+                            FullDisplayName = existingProperty.FullDisplayName,
+                            SimpleDisplayName = existingProperty.SimpleDisplayName,
+                            SchemaGuid = existingProperty.SchemaGuid,
+                            Value = existingProperty.Value,
+                            Valid = wouldBeValid,
+                            Required = schemaProperty.Value.Required,
+                            SchemaFieldType = string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
+                                ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                                : schemaProperty.Value.Type,
+                            SchemaName = existingProperty.SchemaName,
+                        };
+                        continue;
+                    }
+
+                    // Create phantom property only if name matches
+                    var fullDisplayName = $"{schema.EscapedName}.{schemaProperty.Key}";
+                    var simpleDisplayName = schemaProperty.Key.Contains(' ') && !schemaProperty.Key.StartsWith('[') && !schemaProperty.Key.EndsWith(']') ? $"[{schemaProperty.Key}]" : schemaProperty.Key;
+
+                    if ((string.Equals(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase) ||
+                         string.Equals(propName, simpleDisplayName, StringComparison.CurrentCultureIgnoreCase)) &&
+                        !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var phantomProp = new ThingProperty
+                        {
+                            TruePropertyName = truePropertyName,
+                            FullDisplayName = fullDisplayName,
+                            SimpleDisplayName = simpleDisplayName,
+                            SchemaGuid = schema.Guid,
+                            Value = null,
+                            Valid = wouldBeValid,
+                            Required = schemaProperty.Value.Required,
+                            SchemaFieldType = string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
+                                ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
+                                : schemaProperty.Value.Type,
+                            SchemaName = schema.Name,
+                        };
+                        candidateProperties.Add(phantomProp);
+                        candidatePropertiesDict[truePropertyName] = candidateProperties.Count - 1;
+                    }
+                }
+            }
+
+            MarkDirty();
+
+            switch (candidateProperties.Count)
+            {
+                case 0:
+                    {
+                        // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
+                        if (propValue == null || (propValue is string pvs && string.IsNullOrWhiteSpace(pvs)))
+                        {
+                            Properties.Remove(propName);
+                        }
+                        else
+                        {
+                            Properties[propName] = propValue;
+                        }
+
+                        // Special case for Name.
+                        if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (propValue == null || propValue is not string pvs2 || string.IsNullOrWhiteSpace(pvs2))
+                            {
+                                AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
+                                messages.Add($"Value of {nameof(Name)} cannot be empty.");
+                                return new ThingSetResult(false, [.. messages]);
+                            }
+
+                            Name = pvs2;
+                            continue;
+
+                            // return new ThingSetResult(true, $"Property {nameof(Name)} set to '{propValue}'");
+                        }
+                        else
+                        {
+                            continue;
+
+                            // return new ThingSetResult(true, $"Property {propName} set to '{propValue}'");
+                        }
+                    }
+
+                case 1:
+                    // Exactly one, we need to update:
+                    var massagedPropValue = massagedPropValues
+                        .Where(m => string.Equals(m.Key, candidateProperties[0].TruePropertyName, StringComparison.Ordinal))
+                        .Select(m => m.Value)
+                        .FirstOrDefault(propValue);
+
+                    // Unset (null it out) case
+                    if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
+                    {
+                        if (Properties.Remove(candidateProperties[0].TruePropertyName)
+                            && candidateProperties[0].Required)
+                        {
+                            AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
+                        }
+
+                        continue;
+
+                        // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} value was removed.");
+                    }
+
+                    if (!candidateProperties[0].Valid)
+                    {
+                        // This is for name resolution of "schema" fields.
+                        if (chooserHandler != null
+                            && candidateProperties[0].SchemaGuid != null
+                            && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaSchemaField.SCHEMA_FIELD_TYPE) ?? false))
+                        {
+                            var disambig = new List<PossibleNameMatch>();
+                            if (massagedPropValue?.ToString() != null)
+                            {
+                                await foreach (var match in ssp.FindByPartialNameAsync(massagedPropValue.ToString()!, cancellationToken))
+                                {
+                                    disambig.Add(match);
+                                }
+                            }
+
+                            if (disambig.Count == 1)
+                            {
+                                Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
+                                AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
+                                continue;
+
+                                // return new ThingSetResult(true, $"Property {propName} set to '{disambig[0].Reference.Guid}'");
+                            }
+                            else if (disambig.Count > 1)
+                            {
+                                var which = chooserHandler(
+                                    $"There was more than one schema matching '{propValue}'.  Which do you want to select?",
+                                    disambig);
+
+                                Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
+                                continue;
+
+                                // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{which.Reference.Guid}'");
+                            }
+                            else
+                            {
+                                if (massagedPropValue == null)
+                                {
+                                    Properties.Remove(candidateProperties[0].TruePropertyName);
+                                    continue;
+
+                                    // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} was removed.");
+                                }
+                                else
+                                {
+                                    Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                                    continue;
+
+                                    // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
+                                }
+                            }
+                        }
+                        else if (chooserHandler != null
+                            && candidateProperties[0].SchemaGuid != null
+                            && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.SCHEMA_FIELD_TYPE) ?? false))
+                        {
+                            // This is for name resolution of "ref" fields.
+                            var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
+
+                            var disambig = new List<PossibleNameMatch>();
+                            if (massagedPropValue?.ToString() != null)
+                            {
+                                await foreach (var match in tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken))
+                                {
+                                    disambig.Add(match);
+                                }
+                            }
+
+                            if (disambig.Count == 1)
+                            {
+                                Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
+                                AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
+                                continue;
+
+                                // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{disambig[0].Reference.Guid}'");
+                            }
+                            else if (disambig.Count > 1)
+                            {
+                                var which = chooserHandler(
+                                    $"There was more than one {candidateProperties[0].SchemaName} matching '{propValue}'.  Which do you want to select?",
+                                    disambig);
+
+                                Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
+                                continue;
+
+                                // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{which.Reference.Guid}'");
+                            }
+                            else
+                            {
+                                if (massagedPropValue == null)
+                                {
+                                    Properties.Remove(candidateProperties[0].TruePropertyName);
+                                    continue;
+
+                                    // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} was removed.");
+                                }
+                                else
+                                {
+                                    Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                                    continue;
+
+                                    // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                            AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
+                            continue;
+
+                            // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
+                        }
+                    }
+
+                    // Special case for Name.
+                    {
+                        if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
+                            {
+                                AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
+                                messages.Add($"Value of {nameof(Name)} cannot be empty.");
+                                return new ThingSetResult(false, [.. messages]);
+                            }
+
+                            Name = massagedPropValue.ToString()!;
+                            continue;
+
+                            // return new ThingSetResult(true, $"Property {nameof(Name)} set to '{massagedPropValue}'");
+                        }
+                        else
+                        {
+                            Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
+                            continue;
+
+                            // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
+                        }
+                    }
+
+                default:
+                    // Ambiguous
+                    var errorMessage = $"Unable to determine which property between {string.Join(", ", candidateProperties.Select(x => x.TruePropertyName))} to update.";
+                    AmbientErrorContext.Provider.LogError(errorMessage);
+                    messages.Add(errorMessage);
+                    return new ThingSetResult(false, [.. messages]);
+            }
+        }
+
+        return new ThingSetResult(true, [.. messages]);
+    }
+
+    /// <summary>
     /// Sets the value of a property.
     /// </summary>
     /// <param name="propName">The name of the property to update.</param>
@@ -615,326 +989,7 @@ public class Thing
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(propName, nameof(propName));
 
-        // Check if the property name is valid.
-        if (!ThingProperty.IsPropertyNameValid(propName, out string? message))
-        {
-            return new ThingSetResult(false, message);
-        }
-
-        MarkAccessed();
-
-        // If prop name came in unescaped, and it should be escaped, then escape it here for comparisons.
-        if (propName.Contains(' ') && !propName.StartsWith('[') && !propName.EndsWith(']'))
-        {
-            propName = $"[{propName}]";
-        }
-
-        // Is this property already set?
-
-        // Step 1, Check EXISTING properties on this thing.
-        var existingProperties = new List<ThingProperty>();
-        await foreach (var prop in GetPropertyByName(propName, cancellationToken))
-        {
-            existingProperties.Add(prop);
-        }
-
-        // Step 2, Check properties on associated schemas NOT already set on this object
-        Dictionary<string, object?> massagedPropValues = [];
-
-        var associatedSchemas = new List<Schema>();
-        await foreach (var schema in GetAssociatedSchemas(cancellationToken))
-        {
-            associatedSchemas.Add(schema);
-        }
-
-        // Massage values using schema field methods.
-        var schemaPropertyMatches = associatedSchemas.SelectMany(s =>
-            s.Properties.Where(p => string.Equals(p.Key, propName, StringComparison.Ordinal))
-            .Select(p => new { SchemaGuid = s.Guid, PropertyName = p.Key, Field = p.Value }))
-            .ToArray();
-        foreach (var match in schemaPropertyMatches)
-        {
-            if (match.Field.TryMassageInput(propValue, out object? prePossibleMassaged))
-            {
-                massagedPropValues.Add($"{match.SchemaGuid}.{match.PropertyName}", prePossibleMassaged);
-            }
-        }
-
-        // Use dictionary for O(1) lookups and maintain index mapping
-        var candidatePropertiesDict = new Dictionary<string, int>(StringComparer.Ordinal);
-        var candidateProperties = new List<ThingProperty>(existingProperties);
-
-        // Build index mapping for existing properties
-        for (int i = 0; i < candidateProperties.Count; i++)
-        {
-            candidatePropertiesDict[candidateProperties[i].TruePropertyName] = i;
-        }
-
-        // Process only matching schema properties to reduce iterations
-        foreach (var schema in associatedSchemas)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return new ThingSetResult(false, "Operation canceled.");
-            }
-
-            // Filter schema properties that match the property name upfront
-            var matchingSchemaProperties = schema.Properties.Where(p =>
-                string.Equals(p.Key, propName, StringComparison.CurrentCultureIgnoreCase) ||
-                string.Equals($"[{p.Key}]", propName, StringComparison.CurrentCultureIgnoreCase) ||
-                string.Equals($"{schema.EscapedName}.{p.Key}", propName, StringComparison.CurrentCultureIgnoreCase) ||
-                string.Equals($"{schema.EscapedName}.[{p.Key}]", propName, StringComparison.CurrentCultureIgnoreCase))
-            .ToArray();
-
-            foreach (var schemaProperty in matchingSchemaProperties)
-            {
-                var truePropertyName = $"{schema.Guid}.{schemaProperty.Key}";
-
-                // Does this schema field massage the string input?
-                var canMassage = schemaProperty.Value.TryMassageInput(propValue, out object? possibleMassagedPropValue);
-
-                // If this value was for this property, would it be valid?
-                var wouldBeValid = canMassage && await schemaProperty.Value.IsValidAsync(possibleMassagedPropValue, cancellationToken);
-
-                // Use dictionary lookup for O(1) access
-                if (candidatePropertiesDict.TryGetValue(truePropertyName, out var existingIndex))
-                {
-                    // Update existing property in-place using index
-                    var existingProperty = candidateProperties[existingIndex];
-                    candidateProperties[existingIndex] = new ThingProperty
-                    {
-                        TruePropertyName = existingProperty.TruePropertyName,
-                        FullDisplayName = existingProperty.FullDisplayName,
-                        SimpleDisplayName = existingProperty.SimpleDisplayName,
-                        SchemaGuid = existingProperty.SchemaGuid,
-                        Value = existingProperty.Value,
-                        Valid = wouldBeValid,
-                        Required = schemaProperty.Value.Required,
-                        SchemaFieldType = string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
-                            ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
-                            : schemaProperty.Value.Type,
-                        SchemaName = existingProperty.SchemaName,
-                    };
-                    continue;
-                }
-
-                // Create phantom property only if name matches
-                var fullDisplayName = $"{schema.EscapedName}.{schemaProperty.Key}";
-                var simpleDisplayName = schemaProperty.Key.Contains(' ') && !schemaProperty.Key.StartsWith('[') && !schemaProperty.Key.EndsWith(']') ? $"[{schemaProperty.Key}]" : schemaProperty.Key;
-
-                if ((string.Equals(propName, fullDisplayName, StringComparison.CurrentCultureIgnoreCase) ||
-                     string.Equals(propName, simpleDisplayName, StringComparison.CurrentCultureIgnoreCase)) &&
-                    !string.Equals(propName, "plural", StringComparison.OrdinalIgnoreCase))
-                {
-                    var phantomProp = new ThingProperty
-                    {
-                        TruePropertyName = truePropertyName,
-                        FullDisplayName = fullDisplayName,
-                        SimpleDisplayName = simpleDisplayName,
-                        SchemaGuid = schema.Guid,
-                        Value = null,
-                        Valid = wouldBeValid,
-                        Required = schemaProperty.Value.Required,
-                        SchemaFieldType = string.Equals(schemaProperty.Value.Type, SchemaRefField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal)
-                            ? $"{SchemaRefField.SCHEMA_FIELD_TYPE}.{((SchemaRefField)schemaProperty.Value).SchemaGuid}"
-                            : schemaProperty.Value.Type,
-                        SchemaName = schema.Name,
-                    };
-                    candidateProperties.Add(phantomProp);
-                    candidatePropertiesDict[truePropertyName] = candidateProperties.Count - 1;
-                }
-            }
-        }
-
-        var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
-        if (ssp == null)
-        {
-            return new ThingSetResult(false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
-        }
-
-        var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
-        if (tsp == null)
-        {
-            return new ThingSetResult(false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
-        }
-
-        MarkDirty();
-
-        switch (candidateProperties.Count)
-        {
-            case 0:
-                {
-                    // No existing property by this name on the thing (nor in any associated schema), so we're going to add it.
-                    if (propValue == null || (propValue is string pvs && string.IsNullOrWhiteSpace(pvs)))
-                    {
-                        Properties.Remove(propName);
-                    }
-                    else
-                    {
-                        Properties[propName] = propValue;
-                    }
-
-                    // Special case for Name.
-                    if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (propValue == null || propValue is not string pvs2 || string.IsNullOrWhiteSpace(pvs2))
-                        {
-                            AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
-                            return new ThingSetResult(false, $"Value of {nameof(Name)} cannot be empty.");
-                        }
-
-                        Name = pvs2;
-                        return new ThingSetResult(true, $"Property {nameof(Name)} set to '{propValue}'");
-                    }
-                    else
-                    {
-                        return new ThingSetResult(true, $"Property {propName} set to '{propValue}'");
-                    }
-                }
-
-            case 1:
-                // Exactly one, we need to update:
-                var massagedPropValue = massagedPropValues
-                    .Where(m => string.Equals(m.Key, candidateProperties[0].TruePropertyName, StringComparison.Ordinal))
-                    .Select(m => m.Value)
-                    .FirstOrDefault(propValue);
-
-                // Unset (null it out) case
-                if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
-                {
-                    if (Properties.Remove(candidateProperties[0].TruePropertyName)
-                        && candidateProperties[0].Required)
-                    {
-                        AmbientErrorContext.Provider.LogWarning($"Required {propName} was removed.");
-                    }
-
-                    return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} value was removed.");
-                }
-
-                if (!candidateProperties[0].Valid)
-                {
-                    // This is for name resolution of "schema" fields.
-                    if (chooserHandler != null
-                        && candidateProperties[0].SchemaGuid != null
-                        && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaSchemaField.SCHEMA_FIELD_TYPE) ?? false))
-                    {
-                        var disambig = new List<PossibleNameMatch>();
-                        if (massagedPropValue?.ToString() != null)
-                        {
-                            await foreach (var match in ssp.FindByPartialNameAsync(massagedPropValue.ToString()!, cancellationToken))
-                            {
-                                disambig.Add(match);
-                            }
-                        }
-
-                        if (disambig.Count == 1)
-                        {
-                            Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                            AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
-                            return new ThingSetResult(true, $"Property {propName} set to '{disambig[0].Reference.Guid}'");
-                        }
-                        else if (disambig.Count > 1)
-                        {
-                            var which = chooserHandler(
-                                $"There was more than one schema matching '{propValue}'.  Which do you want to select?",
-                                disambig);
-
-                            Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{which.Reference.Guid}'");
-                        }
-                        else
-                        {
-                            if (massagedPropValue == null)
-                            {
-                                Properties.Remove(candidateProperties[0].TruePropertyName);
-                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} was removed.");
-                            }
-                            else
-                            {
-                                Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
-                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
-                            }
-                        }
-                    }
-                    else if (chooserHandler != null
-                        && candidateProperties[0].SchemaGuid != null
-                        && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaRefField.SCHEMA_FIELD_TYPE) ?? false))
-                    {
-                        // This is for name resolution of "ref" fields.
-                        var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
-
-                        var disambig = new List<PossibleNameMatch>();
-                        if (massagedPropValue?.ToString() != null)
-                        {
-                            await foreach (var match in tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken))
-                            {
-                                disambig.Add(match);
-                            }
-                        }
-
-                        if (disambig.Count == 1)
-                        {
-                            Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                            AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
-                            return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{disambig[0].Reference.Guid}'");
-                        }
-                        else if (disambig.Count > 1)
-                        {
-                            var which = chooserHandler(
-                                $"There was more than one {candidateProperties[0].SchemaName} matching '{propValue}'.  Which do you want to select?",
-                                disambig);
-
-                            Properties[candidateProperties[0].TruePropertyName] = which.Reference.Guid;
-                            return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{which.Reference.Guid}'");
-                        }
-                        else
-                        {
-                            if (massagedPropValue == null)
-                            {
-                                Properties.Remove(candidateProperties[0].TruePropertyName);
-                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} was removed.");
-                            }
-                            else
-                            {
-                                Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
-                                return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
-                        AmbientErrorContext.Provider.LogWarning($"Value of {propName} is invalid.");
-                        return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
-                    }
-                }
-
-                // Special case for Name.
-                {
-                    if (string.Equals(propName, nameof(Name), StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (massagedPropValue == null || string.IsNullOrWhiteSpace(massagedPropValue.ToString()))
-                        {
-                            AmbientErrorContext.Provider.LogError($"Value of {nameof(Name)} cannot be empty.");
-                            return new ThingSetResult(false, $"Value of {nameof(Name)} cannot be empty.");
-                        }
-
-                        Name = massagedPropValue.ToString()!;
-                        return new ThingSetResult(true, $"Property {nameof(Name)} set to '{massagedPropValue}'");
-                    }
-                    else
-                    {
-                        Properties[candidateProperties[0].TruePropertyName] = massagedPropValue;
-                        return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{massagedPropValue}'");
-                    }
-                }
-
-            default:
-                // Ambiguous
-                var errorMessage = $"Unable to determine which property between {string.Join(", ", candidateProperties.Select(x => x.TruePropertyName))} to update.";
-                AmbientErrorContext.Provider.LogError(errorMessage);
-                return new ThingSetResult(false, errorMessage);
-        }
+        return await Set(new Dictionary<string, object?> { { propName, propValue } }, cancellationToken, chooserHandler);
     }
 
     /// <summary>

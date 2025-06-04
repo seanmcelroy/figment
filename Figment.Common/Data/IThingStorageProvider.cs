@@ -162,7 +162,7 @@ public interface IThingStorageProvider
     /// similar to the signature and use of <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}.TryUpdate(TKey, TValue, TValue)"/>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A tuple containing a value whether the operations was successful at all, and individual results for each of the <see cref="Reference"/> keys passed in to <paramref name="changes"/>.</returns>
-    public Task<(bool, Dictionary<Reference, (bool success, string message)> results)> TryBulkUpdate(Dictionary<Reference, List<(string propertyName, object newValue)>> changes, CancellationToken cancellationToken);
+    public Task<(bool, Dictionary<Reference, (bool success, string message)> results)> TryBulkUpdate(Dictionary<Reference, Dictionary<string, object?>> changes, CancellationToken cancellationToken);
 
     /// <summary>
     /// Attempts to save the thing to the underlying data store.

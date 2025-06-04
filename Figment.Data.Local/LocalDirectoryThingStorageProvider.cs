@@ -558,11 +558,11 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             if (increment != null)
             {
                 var next = increment.NextValue;
-                var tsr = await thing.Set(increment.Name, next, cancellationToken);
-                if (!tsr.Success)
+                var tsrIncrement = await thing.Set(increment.Name, next, cancellationToken);
+                if (!tsrIncrement.Success)
                 {
-                    AmbientErrorContext.Provider.LogWarning($"Unable to update increment field {increment.Name}: {tsr.Message}");
-                    return new CreateThingResult { Success = false, Message = $"Unable to update increment field {increment.Name}: {tsr.Message}" };
+                    AmbientErrorContext.Provider.LogWarning($"Unable to update increment field {increment.Name}: {((tsrIncrement.Messages == null || tsrIncrement.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsrIncrement.Messages))}");
+                    return new CreateThingResult { Success = false, Message = $"Unable to update increment field {increment.Name}: {((tsrIncrement.Messages == null || tsrIncrement.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsrIncrement.Messages))}" };
                 }
 
                 var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
@@ -589,13 +589,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             }
         }
 
-        foreach (var prop in properties)
+        var tsr = await thing.Set(properties, cancellationToken);
+        if (!tsr.Success)
         {
-            var tsr = await thing.Set(prop.Key, prop.Value, cancellationToken);
-            if (!tsr.Success)
-            {
-                return new CreateThingResult { Success = tsr.Success, Message = tsr.Message };
-            }
+            return new CreateThingResult { Success = false, Message = (tsr.Messages == null || tsr.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsr.Messages) };
         }
 
         var (success, message) = await SaveAsync(thing, cancellationToken);
@@ -862,7 +859,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         indexesToWrite.Add(Path.Combine(thingDir.FullName, $"_thing.inc.schema.{schemaGuid}.csv"), reorderedIndex);
 
         var reorderedBulk = reorderedBase
-            .ToDictionary(k => k.reference, v => new List<(string, object)>() { (incrementProperty.Name, v.index) });
+            .ToDictionary(k => k.reference, v => new Dictionary<string, object?> { { incrementProperty.Name, v.index } });
 
         // Update things with updated indexes
         var (bulkSuccess, _) = await TryBulkUpdate(reorderedBulk, cancellationToken);
