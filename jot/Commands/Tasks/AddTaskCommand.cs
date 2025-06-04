@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Text.RegularExpressions;
+using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Spectre.Console.Cli;
@@ -34,10 +35,13 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
     }
 
     [GeneratedRegex(@"\b(?:due:[^\s\b]+)")]
-    private static partial Regex DueRegex();
+    internal static partial Regex DueRegex();
+
+    [GeneratedRegex(@"(?<=^|\b)priority:(?:$|[^\s\b]+)")]
+    internal static partial Regex PriorityRegex();
 
     [GeneratedRegex(@"(?<=^|\b)status:(?:$|[^\s\b]+)")]
-    private static partial Regex StatusRegex();
+    internal static partial Regex StatusRegex();
 
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, AddTaskCommandSettings settings, CancellationToken cancellationToken)
@@ -64,23 +68,11 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
         }
 
         var taskName = string.Join(' ', settings.Segments).Trim();
-        var priority = settings.Priority;
+        bool? priority = null;
         string? status = null;
         DateTimeOffset? due = null;
 
-        var statusMatch = StatusRegex().Match(taskName);
-        if (statusMatch.Success)
-        {
-#pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
-            taskName = $"{taskName[..statusMatch.Index]}{taskName[(statusMatch.Index + statusMatch.Value.Length)..]}".Trim();
-#pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            status = statusMatch.Value[7..];
-        }
-        else if (!string.IsNullOrWhiteSpace(settings.Status))
-        {
-            status = settings.Status;
-        }
-
+        // Is due:value specified?
         var dueMatch = DueRegex().Match(taskName);
         if (dueMatch.Success)
         {
@@ -96,6 +88,34 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
             // If we could not match a due in the text (and adjust it accordingly, THEN we will respect the command option.)
             var (dueDate, _) = ListTasksCommand.ParseFlagDateValue(settings.DueDate);
             due = dueDate;
+        }
+
+        // Is priority:value specified?
+        var priorityMatch = PriorityRegex().Match(taskName);
+        if (priorityMatch.Success && SchemaBooleanField.TryParseBoolean(priorityMatch.Value[9..], out bool p))
+        {
+#pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
+            taskName = $"{taskName[..priorityMatch.Index]}{taskName[(priorityMatch.Index + priorityMatch.Value.Length)..]}".Trim();
+#pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
+            priority = p;
+        }
+        else if (settings.Priority.HasValue)
+        {
+            priority = settings.Priority.Value;
+        }
+
+        // Is status:value specified?
+        var statusMatch = StatusRegex().Match(taskName);
+        if (statusMatch.Success)
+        {
+#pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
+            taskName = $"{taskName[..statusMatch.Index]}{taskName[(statusMatch.Index + statusMatch.Value.Length)..]}".Trim();
+#pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
+            status = statusMatch.Value[7..];
+        }
+        else if (!string.IsNullOrWhiteSpace(settings.Status))
+        {
+            status = settings.Status;
         }
 
         if (string.IsNullOrWhiteSpace(taskName))
@@ -126,6 +146,10 @@ public partial class AddTaskCommand : CancellableAsyncCommand<AddTaskCommandSett
         var taskId = taskIdPropValue?.AsUInt64();
 
         AmbientErrorContext.Provider.LogDone($"Task #{taskId} created.");
+
+        Program.SelectedEntity = tcr.NewThing;
+        Program.SelectedEntityName = tcr.NewThing.Name;
+
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
     }
 }

@@ -38,20 +38,20 @@ public class AddTaskCommandSettings : CommandSettings
     /// Gets a value that only shows tasks with the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none.
     /// </summary>
     [CommandOption("-d|--due <DUEDATE>")]
-    [Description("Creates the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none.  If this option is not specified, a due date can be specified with the 'due:value' format as the last characters of the body text.")]
+    [Description("Creates the specified due date.  This can be a specific date or a relative or special term, such as: tod today tom tomorrow thisweek nextweek lastweek mon tue wed thu fri sat sun none.  If this option is not specified, a due date can be specified with the 'due:value' in the body text.")]
     public string? DueDate { get; init; } = null;
 
     /// <summary>
     /// Gets a value that indicates the task is a priority.
     /// </summary>
-    [Description("Creates the task as a priority.")]
+    [Description("Creates the task as a priority.  If this option is not specified, a priority can be specified with the 'priority:value' in the body text, where value is true or false.")]
     [CommandOption("-p|--priority")]
     public bool? Priority { get; init; } = null;
 
     /// <summary>
     /// Gets a value that indicates the status of the task.
     /// </summary>
-    [Description("Creates the task with the specified status.")]
+    [Description("Creates the task with the specified status.  If this option is not specified, a status can be specified with the 'status:value' in the body text.")]
     [CommandOption("-s|--status <STATUS>")]
     public string? Status { get; init; } = null;
 

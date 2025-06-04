@@ -53,6 +53,12 @@ public class DeleteTaskCommand : CancellableAsyncCommand<DeleteTaskCommandSettin
             if (deleted)
             {
                 AmbientErrorContext.Provider.LogDone($"Task #{settings.TaskNumber} deleted.");
+                if (Program.SelectedEntity == thing)
+                {
+                    Program.SelectedEntity = Reference.EMPTY;
+                    Program.SelectedEntityName = string.Empty;
+                }
+
                 break; // Only one can match.
             }
             else
