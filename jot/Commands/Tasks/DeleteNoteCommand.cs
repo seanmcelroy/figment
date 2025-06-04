@@ -24,56 +24,20 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// Edits the detalis of an existing task.
+/// Deletes a note from a task.
 /// </summary>
-internal class EditTaskCommand : TaskCommandBase<EditTaskCommandSettings>
+internal class DeleteNoteCommand : NoteCommandBase<DeleteNoteCommandSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, EditTaskCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DeleteNoteCommandSettings settings, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_THING_STORAGE_PROVIDER);
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
-        }
-
-        var (archived, completed, priority, status, due, taskName) = ParseBodyForValues(string.Join(' ', settings.Segments).Trim(), settings);
-
-        var propertiesToUpdate = new Dictionary<string, object?>();
-
-        if (archived != null)
-        {
-            propertiesToUpdate.Add("archived", archived);
-        }
-
-        if (completed != null)
-        {
-            propertiesToUpdate.Add("completed", completed);
-        }
-
-        if (priority != null)
-        {
-            propertiesToUpdate.Add("priority", priority);
-        }
-
-        if (status != null)
-        {
-            propertiesToUpdate.Add("status", status);
-        }
-
-        if (due == DateTimeOffset.MinValue)
-        {
-            propertiesToUpdate.Add("due", null);
-        }
-        else if (due != null)
-        {
-            propertiesToUpdate.Add("due", due);
-        }
-
-        if (!string.IsNullOrWhiteSpace(taskName))
-        {
-            propertiesToUpdate.Add("name", taskName);
         }
 
         var anyFound = false;
@@ -87,22 +51,40 @@ internal class EditTaskCommand : TaskCommandBase<EditTaskCommandSettings>
         {
             anyFound = true;
 
-            var tsr = await task.Set(propertiesToUpdate, cancellationToken);
+            var notesList = await GetNotesAsync(task, cancellationToken);
+            if (notesList == null)
+            {
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+            }
+
+            if (notesList.Count == 0)
+            {
+                AmbientErrorContext.Provider.LogError($"There are no notes on Task #{settings.TaskNumber}.");
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+            }
+            else if (settings.NoteNumber >= notesList.Count)
+            {
+                AmbientErrorContext.Provider.LogError($"There is no Note #{settings.NoteNumber} on Task #{settings.TaskNumber}.");
+                return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+            }
+
+            notesList.RemoveAt(settings.NoteNumber);
+            var tsr = await task.Set("notes", notesList.ToArray(), cancellationToken);
             if (!tsr.Success)
             {
                 var errorMessage = tsr.Messages == null || tsr.Messages.Length == 0 ? "No error message provided." : string.Join("; ", tsr.Messages);
-                AmbientErrorContext.Provider.LogError($"Unable to edit Task #{settings.TaskNumber}: {errorMessage}");
+                AmbientErrorContext.Provider.LogError($"Unable to delete Note #{settings.NoteNumber} on Task #{settings.TaskNumber}: {errorMessage}");
                 return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
             }
 
             var (success, message) = await task.SaveAsync(cancellationToken);
             if (!success)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to edit Task #{settings.TaskNumber}: {message}");
+                AmbientErrorContext.Provider.LogError($"Unable to save Task #{settings.TaskNumber}: {message}");
                 return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
             }
 
-            AmbientErrorContext.Provider.LogDone($"Task #{settings.TaskNumber} edited.");
+            AmbientErrorContext.Provider.LogDone($"Note deleted.");
             break; // Only one can match.
         }
 

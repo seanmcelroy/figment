@@ -53,7 +53,11 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
     /// </summary>
     public const string TrueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
     private const string TrueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
-    private const string TrueNameNotes = $"{WellKnownSchemas.TaskGuid}.notes";
+
+    /// <summary>
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "notes" field.
+    /// </summary>
+    public const string TrueNameNotes = $"{WellKnownSchemas.TaskGuid}.notes";
 
     private delegate Task<bool> FilterDelegate(Thing task);
     private delegate Task<Dictionary<string, HashSet<Thing>>> GroupingDelegate(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken);

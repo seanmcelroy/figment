@@ -24,13 +24,15 @@ using Spectre.Console.Cli;
 namespace jot.Commands.Tasks;
 
 /// <summary>
-/// Permanently deletes a task.
+/// Adds a note to an existing task.
 /// </summary>
-public class DeleteTaskCommand : CancellableAsyncCommand<DeleteTaskCommandSettings>
+internal class AddNoteCommand : NoteCommandBase<AddNoteCommandSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, DeleteTaskCommandSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, AddNoteCommandSettings settings, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
         var tsp = AmbientStorageContext.StorageProvider?.GetThingStorageProvider();
         if (tsp == null)
         {
@@ -38,9 +40,17 @@ public class DeleteTaskCommand : CancellableAsyncCommand<DeleteTaskCommandSettin
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
+        var noteText = string.Join(' ', settings.Segments).Trim();
+
+        if (string.IsNullOrWhiteSpace(noteText))
+        {
+            AmbientErrorContext.Provider.LogError($"Note text missing.");
+            return (int)Globals.GLOBAL_ERROR_CODES.ARGUMENT_ERROR;
+        }
+
         var anyFound = false;
 
-        await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
+        await foreach (var task in tsp.FindBySchemaAndPropertyValue(
             WellKnownSchemas.Task.Guid,
             ListTasksCommand.TrueNameId,
             settings.TaskNumber,
@@ -49,23 +59,30 @@ public class DeleteTaskCommand : CancellableAsyncCommand<DeleteTaskCommandSettin
         {
             anyFound = true;
 
-            var deleted = await tsp.DeleteAsync(thing.Guid, cancellationToken);
-            if (deleted)
+            var notesList = await GetNotesAsync(task, cancellationToken);
+            if (notesList == null)
             {
-                AmbientErrorContext.Provider.LogDone($"Task #{settings.TaskNumber} deleted.");
-                if (Program.SelectedEntity == thing)
-                {
-                    Program.SelectedEntity = Reference.EMPTY;
-                    Program.SelectedEntityName = string.Empty;
-                }
+                return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+            }
 
-                break; // Only one can match.
-            }
-            else
+            notesList.Add(noteText);
+            var tsr = await task.Set("notes", notesList.ToArray(), cancellationToken);
+            if (!tsr.Success)
             {
-                AmbientErrorContext.Provider.LogError($"Unable to delete Task #{settings.TaskNumber}");
-                return (int)Globals.GLOBAL_ERROR_CODES.THING_DELETE_ERROR;
+                var errorMessage = tsr.Messages == null || tsr.Messages.Length == 0 ? "No error message provided." : string.Join("; ", tsr.Messages);
+                AmbientErrorContext.Provider.LogError($"Unable to add note to Task #{settings.TaskNumber}: {errorMessage}");
+                return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
             }
+
+            var (success, message) = await task.SaveAsync(cancellationToken);
+            if (!success)
+            {
+                AmbientErrorContext.Provider.LogError($"Unable to save Task #{settings.TaskNumber}: {message}");
+                return (int)Globals.GLOBAL_ERROR_CODES.THING_SAVE_ERROR;
+            }
+
+            AmbientErrorContext.Provider.LogDone($"Note added.");
+            break; // Only one can match.
         }
 
         if (!anyFound)

@@ -85,7 +85,6 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
             propertiesToAdd.Add("due", due);
         }
 
-
         var tcr = await thingProvider.CreateAsync(
             taskSchema,
             taskName,

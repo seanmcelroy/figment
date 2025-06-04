@@ -259,6 +259,28 @@ internal class Program
                         .WithExample("task", "delete", "1")
                         .WithExample("task", "d", "2")
                         ;
+                    task.AddCommand<AddNoteCommand>("addnote")
+                        .WithDescription("Appends a new note to a task")
+                        .WithAlias("an") // Have grace.
+                        .WithAlias("addn") // Have grace.
+                        .WithAlias("note") // Have grace.
+                        .WithExample("task", "addnote", "1", "Call hotel ext 555")
+                        ;
+                    task.AddCommand<EditNoteCommand>("editnote")
+                        .WithDescription("Edits an existing note on a task")
+                        .WithAlias("en") // Have grace.
+                        .WithAlias("ednote") // Have grace.
+                        .WithExample("task", "editnote", "1", "Call hotel ext 555")
+                        .WithExample("task", "en", "2", "Pick up after 4 PM")
+                        ;
+                    task.AddCommand<DeleteNoteCommand>("deletenote")
+                        .WithDescription("Delets a note from a task")
+                        .WithAlias("dn") // Have grace.
+                        .WithAlias("dnote") // Have grace.
+                        .WithAlias("delnote") // Have grace.
+                        .WithExample("task", "deletenote", "1")
+                        .WithExample("task", "dn", "2")
+                        ;
                 });
 
             config.AddBranch<SchemaCommandSettings>("schema", schema =>

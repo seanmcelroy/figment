@@ -37,7 +37,7 @@ internal class EditTaskCommandSettings : CommandSettings, ITaskCommandSettings
     /// <summary>
     /// Gets the body (name) of the task.
     /// </summary>
-    [CommandArgument(0, "<BODY>")]
+    [CommandArgument(1, "<BODY>")]
     [Description("The name (body text) of the task, using the Ultralist style, which allows a 'due', 'status', and/or 'priority' hints to be provided inline, such as 'due:tomorrow' as last characters.  Projects will be inferred by single words with a '+' prefix, like +projectName.  Contexts will be inferred by single words with a '@' prefix, like @sean.")]
     public string[] Segments { get; init; } = [];
 
