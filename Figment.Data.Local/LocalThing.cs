@@ -23,16 +23,11 @@ namespace Figment.Data.Local;
 /// <summary>
 /// A version of a <see cref="Thing"/> that was loaded from <see cref="LocalDirectoryThingStorageProvider"/>
 /// </summary>
-public class LocalThing : Thing
+/// <inheritdoc/>
+public class LocalThing(string guid, string newName, string filePath) : Thing(guid, newName)
 {
     /// <summary>
     /// The file from which this thing was loaded.
     /// </summary>
-    public string FilePath { get; init; }
-
-    /// <inheritdoc/>
-    public LocalThing(string guid, string newName, string filePath) : base(guid, newName)
-    {
-        FilePath = filePath;
-    }
+    public string FilePath { get; init; } = filePath;
 }

@@ -89,12 +89,11 @@ public class LocalDirectoryStorageProvider() : IStorageProvider
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (!settings.ContainsKey(SETTINGS_KEY_DB_PATH))
+        if (!settings.TryGetValue(SETTINGS_KEY_DB_PATH, out string? tentative))
         {
             throw new ArgumentException($"Settings do not contain required key {SETTINGS_KEY_DB_PATH}", nameof(settings));
         }
 
-        var tentative = settings[SETTINGS_KEY_DB_PATH];
         if (string.IsNullOrWhiteSpace(tentative))
         {
             throw new ArgumentException($"Setting {SETTINGS_KEY_DB_PATH} must be specified.", nameof(settings));

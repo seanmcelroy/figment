@@ -552,41 +552,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         }
 
         // If this schema has an increment field, set its value.
-        if (schema != null)
+        var caifi = await CreateAsyncIncrementFieldInternal(schema, thing, cancellationToken);
+        if (!caifi.success)
         {
-            var increment = schema.GetIncrementField();
-            if (increment != null)
-            {
-                var next = increment.NextValue;
-                var tsrIncrement = await thing.Set(increment.Name, next, cancellationToken);
-                if (!tsrIncrement.Success)
-                {
-                    AmbientErrorContext.Provider.LogWarning($"Unable to update increment field {increment.Name}: {((tsrIncrement.Messages == null || tsrIncrement.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsrIncrement.Messages))}");
-                    return new CreateThingResult { Success = false, Message = $"Unable to update increment field {increment.Name}: {((tsrIncrement.Messages == null || tsrIncrement.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsrIncrement.Messages))}" };
-                }
-
-                var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
-                if (!saveSuccess)
-                {
-                    AmbientErrorContext.Provider.LogWarning($"Unable to save increment field {increment.Name} update: {saveMessage}");
-                    return new CreateThingResult { Success = false, Message = $"Unable to save increment field {increment.Name} update: {saveMessage}" };
-                }
-
-                // Update schema so next = next + 1.
-                var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
-                if (ssp == null)
-                {
-                    AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
-                    return new CreateThingResult { Success = false, Message = AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER };
-                }
-
-                increment.NextValue += 1;
-                var (schemaSavedSuccess, schemaSavedMessage) = await ssp.SaveAsync(schema, cancellationToken);
-                if (!schemaSavedSuccess)
-                {
-                    AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {schemaSavedMessage}");
-                }
-            }
+            return new CreateThingResult { Success = caifi.success, Message = caifi.message };
         }
 
         var tsr = await thing.Set(properties, cancellationToken);

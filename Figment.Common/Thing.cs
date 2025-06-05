@@ -111,6 +111,7 @@ public class Thing
     /// <summary>
     /// Gets a value indicating whether this object has been changed since it was loaded.
     /// </summary>
+    [JsonIgnore]
     public bool IsDirty { get; private set; }
 
     /// <summary>

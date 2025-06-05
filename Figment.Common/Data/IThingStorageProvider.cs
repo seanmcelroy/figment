@@ -32,7 +32,7 @@ public interface IThingStorageProvider
     /// <param name="schema">The <see cref="Schema"/> to which the <see cref="Thing"/> specified by <paramref name="thingGuid"/> shall be associated.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task returning a <see cref="bool"/> indicating whether the operation was successful and an updated <see cref="Thing"/> loaded from the data store after the modification was made, if successful.</returns>
-    public Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
+    public Task<(bool success, Thing? thing)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
 
     /// <summary>
     /// Creates a new <see cref="Thing"/> in its underlying data store.

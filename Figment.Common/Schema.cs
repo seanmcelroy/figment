@@ -229,6 +229,28 @@ public class Schema
     }
 
     /// <summary>
+    /// Creates a new <see cref="SchemaIncrementField"/> and adds it as a field of this schema.
+    /// </summary>
+    /// <param name="name">The name of the new increment field.</param>
+    /// <returns>The new increment field.</returns>
+    /// <exception cref="ArgumentException">Thrown if the <paramref name="name"/> is null or if a field of this name already exists on the schema.</exception>
+    public SchemaIncrementField AddIncrementField(string name)
+    {
+        MarkAccessed();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        if (Properties.ContainsKey(name))
+        {
+            throw new ArgumentException($"A field named '{name}' already exists on this schema", nameof(name));
+        }
+
+        var sdf = new SchemaIncrementField(name);
+        Properties.Add(name, sdf);
+        return sdf;
+    }
+
+    /// <summary>
     /// Creates a new <see cref="SchemaMonthDayField"/> and adds it as a field of this schema.
     /// </summary>
     /// <param name="name">The name of the new month+day field.</param>

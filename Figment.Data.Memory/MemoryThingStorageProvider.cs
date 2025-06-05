@@ -162,6 +162,9 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     /// <inheritdoc/>
     public override async Task<CreateThingResult> CreateAsync(Schema? schema, string thingName, Dictionary<string, object?> properties, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(thingName);
+        ArgumentNullException.ThrowIfNull(properties);
+
         var thingGuid = Guid.NewGuid().ToString();
         var thing = new Thing(thingGuid, thingName)
         {
@@ -174,6 +177,13 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
 
         if (schema != null)
             await AssociateWithSchemaInternal(thing, schema, cancellationToken);
+
+        // If this schema has an increment field, set its value.
+        var caifi = await CreateAsyncIncrementFieldInternal(schema, thing, cancellationToken);
+        if (!caifi.success)
+        {
+            return new CreateThingResult { Success = caifi.success, Message = caifi.message };
+        }
 
         var tsr = await thing.Set(properties, cancellationToken);
         if (!tsr.Success)
@@ -194,8 +204,11 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     }
 
     /// <inheritdoc/>
-    public override async Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken)
+    public override async Task<(bool success, Thing? thing)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
+        ArgumentNullException.ThrowIfNull(schema);
+
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
             return (false, null);
@@ -203,7 +216,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
         return await AssociateWithSchemaInternal(thing, schema, cancellationToken);
     }
 
-    private static async Task<(bool, Thing?)> AssociateWithSchemaInternal(Thing thing, Schema schema, CancellationToken cancellationToken)
+    private static async Task<(bool success, Thing? thing)> AssociateWithSchemaInternal(Thing thing, Schema schema, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(thing);
         ArgumentNullException.ThrowIfNull(schema);
@@ -222,6 +235,9 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     /// <inheritdoc/>
     public override async Task<(bool, Thing?)> DissociateFromSchemaAsync(string thingGuid, string schemaGuid, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaGuid);
+
         var thing = await LoadAsync(thingGuid, cancellationToken);
         if (thing == null)
             return (false, null);

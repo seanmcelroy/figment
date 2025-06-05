@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Collections;
 using System.Runtime.CompilerServices;
+using Figment.Common.Errors;
 
 namespace Figment.Common.Data;
 
@@ -27,7 +28,7 @@ namespace Figment.Common.Data;
 public abstract class ThingStorageProviderBase : IThingStorageProvider
 {
     /// <inheritdoc/>
-    public abstract Task<(bool, Thing?)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
+    public abstract Task<(bool success, Thing? thing)> AssociateWithSchemaAsync(string thingGuid, Schema schema, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     public abstract Task<CreateThingResult> CreateAsync(Schema? schema, string thingName, Dictionary<string, object?> properties, CancellationToken cancellationToken);
@@ -225,4 +226,54 @@ public abstract class ThingStorageProviderBase : IThingStorageProvider
 
     /// <inheritdoc/>
     public abstract Task<bool> RenumberIncrementField(string schemaGuid, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// If this schema has an increment field, set its value.
+    /// </summary>
+    /// <param name="schema">The schema used to create the thing.</param>
+    /// <param name="thing">The thing.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Results of the attempt.</returns>
+    protected async Task<(bool success, string? message)> CreateAsyncIncrementFieldInternal(Schema? schema, Thing thing, CancellationToken cancellationToken)
+    {
+        // If this schema has an increment field, set its value.
+        if (schema != null)
+        {
+            var increment = schema.GetIncrementField();
+            if (increment != null)
+            {
+                var next = increment.NextValue;
+                var tsrIncrement = await thing.Set(increment.Name, next, cancellationToken);
+                if (!tsrIncrement.Success)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Unable to update increment field {increment.Name}: {((tsrIncrement.Messages == null || tsrIncrement.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsrIncrement.Messages))}");
+                    return (false, $"Unable to update increment field {increment.Name}: {((tsrIncrement.Messages == null || tsrIncrement.Messages.Length == 0) ? "No error message provided." : string.Join("; ", tsrIncrement.Messages))}");
+                }
+
+                var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
+                if (!saveSuccess)
+                {
+                    AmbientErrorContext.Provider.LogWarning($"Unable to save increment field {increment.Name} update: {saveMessage}");
+                    return (false, $"Unable to save increment field {increment.Name} update: {saveMessage}");
+                }
+
+                // Update schema so next = next + 1.
+                var ssp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+                if (ssp == null)
+                {
+                    AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+                    return (false, AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+                }
+
+                increment.NextValue += 1;
+                var (schemaSavedSuccess, schemaSavedMessage) = await ssp.SaveAsync(schema, cancellationToken);
+                if (!schemaSavedSuccess)
+                {
+                    AmbientErrorContext.Provider.LogError($"Unable to save schema '{schema.Name}' ({schema.Guid}): {schemaSavedMessage}");
+                }
+            }
+        }
+
+        return (true, null);
+    }
 }
