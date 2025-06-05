@@ -9,6 +9,8 @@ public sealed class Thing : ThingBase
     [TestInitialize]
     public override void Initialize()
     {
+        Assert.IsNotNull(LocalSetup.TemporaryDirectory);
+
         AmbientStorageContext.StorageProvider = new LocalDirectoryStorageProvider();
         _ = AmbientStorageContext.StorageProvider.InitializeAsync(
             new Dictionary<string, string>() { { LocalDirectoryStorageProvider.SETTINGS_KEY_DB_PATH, LocalSetup.TemporaryDirectory } },
