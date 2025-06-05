@@ -96,7 +96,7 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
             || Values.Any(v => v == null));
         }
 
-        throw new InvalidOperationException();
+        throw new NotSupportedException($"Unable to handle value of type {value.GetType().Name} for a schema enum field.");
     }
 
     /// <inheritdoc/>

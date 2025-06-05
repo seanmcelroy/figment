@@ -42,33 +42,36 @@ internal class EditTaskCommand : TaskCommandBase<EditTaskCommandSettings>
 
         var propertiesToUpdate = new Dictionary<string, object?>();
 
-        if (archived != null)
+        if (archived.Specified)
         {
-            propertiesToUpdate.Add("archived", archived);
+            propertiesToUpdate.Add("archived", archived.Value);
         }
 
-        if (completed != null)
+        if (completed.Specified)
         {
-            propertiesToUpdate.Add("completed", completed);
+            propertiesToUpdate.Add("completed", completed.Value);
         }
 
-        if (priority != null)
+        if (priority.Specified)
         {
-            propertiesToUpdate.Add("priority", priority);
+            propertiesToUpdate.Add("priority", priority.Value);
         }
 
-        if (status != null)
+        if (status.Specified)
         {
-            propertiesToUpdate.Add("status", status);
+            propertiesToUpdate.Add("status", status.Value);
         }
 
-        if (due == DateTimeOffset.MinValue)
+        if (due.Specified)
         {
-            propertiesToUpdate.Add("due", null);
-        }
-        else if (due != null)
-        {
-            propertiesToUpdate.Add("due", due);
+            if (due.Value == DateTimeOffset.MinValue)
+            {
+                propertiesToUpdate.Add("due", null);
+            }
+            else
+            {
+                propertiesToUpdate.Add("due", due.Value);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(taskName))

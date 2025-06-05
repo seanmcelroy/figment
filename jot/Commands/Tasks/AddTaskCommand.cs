@@ -66,23 +66,26 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
         }
 
         var propertiesToAdd = new Dictionary<string, object?>();
-        if (priority != null)
+        if (priority.Specified)
         {
-            propertiesToAdd.Add("priority", priority);
+            propertiesToAdd.Add("priority", priority.Value);
         }
 
-        if (status != null)
+        if (status.Specified)
         {
-            propertiesToAdd.Add("status", status);
+            propertiesToAdd.Add("status", status.Value);
         }
 
-        if (due == DateTimeOffset.MinValue)
+        if (due.Specified)
         {
-            propertiesToAdd.Add("due", null);
-        }
-        else if (due != null)
-        {
-            propertiesToAdd.Add("due", due);
+            if (due.Value == DateTimeOffset.MinValue)
+            {
+                propertiesToAdd.Add("due", null);
+            }
+            else
+            {
+                propertiesToAdd.Add("due", due.Value);
+            }
         }
 
         var tcr = await thingProvider.CreateAsync(

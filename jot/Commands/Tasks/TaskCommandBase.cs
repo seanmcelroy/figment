@@ -57,21 +57,21 @@ internal abstract partial class TaskCommandBase<TSettings> : CancellableAsyncCom
     /// tag is not present in the body.</param>
     /// <returns>The parsed values, if available, from the body.</returns>
     protected static (
-        bool? archived,
-        bool? completed,
-        bool? priority,
-        string? status,
-        DateTimeOffset? due,
+        NullableOrMissing<bool> archived,
+        NullableOrMissing<bool> completed,
+        NullableOrMissing<bool> priority,
+        NullableOrMissing<string> status,
+        NullableOrMissing<DateTimeOffset> due,
         string revisedBody)
         ParseBodyForValues(string body, TSettings settings)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(body);
 
-        bool? archived = null;
-        bool? completed = null;
-        bool? priority = null;
-        string? status = null;
-        DateTimeOffset? due = null;
+        NullableOrMissing<bool> archived = default;
+        NullableOrMissing<bool> completed = default;
+        NullableOrMissing<bool> priority = default;
+        NullableOrMissing<string> status = default;
+        NullableOrMissing<DateTimeOffset> due = default;
         string revisedBody = body;
 
         // Is archived:value specified?
@@ -81,11 +81,11 @@ internal abstract partial class TaskCommandBase<TSettings> : CancellableAsyncCom
 #pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
             revisedBody = $"{revisedBody[..archivedMatch.Index]}{revisedBody[(archivedMatch.Index + archivedMatch.Value.Length)..]}".Trim();
 #pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            archived = a;
+            archived = NullableOrMissing<bool>.CreateWithStruct(a);
         }
         else if (settings.Archived.HasValue)
         {
-            archived = settings.Archived.Value;
+            archived = NullableOrMissing<bool>.CreateWithStruct(settings.Archived.Value);
         }
 
         // Is completed:value specified?
@@ -95,11 +95,11 @@ internal abstract partial class TaskCommandBase<TSettings> : CancellableAsyncCom
 #pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
             revisedBody = $"{revisedBody[..completedMatch.Index]}{revisedBody[(completedMatch.Index + completedMatch.Value.Length)..]}".Trim();
 #pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            completed = c;
+            completed = NullableOrMissing<bool>.CreateWithStruct(c);
         }
         else if (settings.Completed.HasValue)
         {
-            completed = settings.Completed.Value;
+            completed = NullableOrMissing<bool>.CreateWithStruct(settings.Completed.Value);
         }
 
         // Is due:value specified?
@@ -111,13 +111,13 @@ internal abstract partial class TaskCommandBase<TSettings> : CancellableAsyncCom
 #pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
             revisedBody = $"{revisedBody[..dueMatch.Index]}{revisedBody[(dueMatch.Index + dueMatch.Value.Length)..]}".Trim();
 #pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            due = dueDate;
+            due = NullableOrMissing<DateTimeOffset>.CreateWithStruct(dueDate);
         }
         else if (!string.IsNullOrWhiteSpace(settings.DueDate))
         {
             // If we could not match a due in the text (and adjust it accordingly, THEN we will respect the command option.)
             var (dueDate, _) = ListTasksCommand.ParseFlagDateValue(settings.DueDate);
-            due = dueDate;
+            due = NullableOrMissing<DateTimeOffset>.CreateWithStruct(dueDate);
         }
 
         // Is priority:value specified?
@@ -127,11 +127,11 @@ internal abstract partial class TaskCommandBase<TSettings> : CancellableAsyncCom
 #pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
             revisedBody = $"{revisedBody[..priorityMatch.Index]}{revisedBody[(priorityMatch.Index + priorityMatch.Value.Length)..]}".Trim();
 #pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            priority = p;
+            priority = NullableOrMissing<bool>.CreateWithStruct(p);
         }
         else if (settings.Priority.HasValue)
         {
-            priority = settings.Priority.Value;
+            priority = NullableOrMissing<bool>.CreateWithStruct(settings.Priority.Value);
         }
 
         // Is status:value specified?
@@ -141,11 +141,18 @@ internal abstract partial class TaskCommandBase<TSettings> : CancellableAsyncCom
 #pragma warning disable SA1008 // Opening parenthesis should be spaced correctly
             revisedBody = $"{revisedBody[..statusMatch.Index]}{revisedBody[(statusMatch.Index + statusMatch.Value.Length)..]}".Trim();
 #pragma warning restore SA1008 // Opening parenthesis should be spaced correctly
-            status = statusMatch.Value[7..];
+            if ("none".Equals(statusMatch.Value[7..].Trim()))
+            {
+                status = NullableOrMissing<string>.CreateWithClass(default(string?));
+            }
+            else
+            {
+                status = NullableOrMissing<string>.CreateWithClass(statusMatch.Value[7..]);
+            }
         }
         else if (!string.IsNullOrWhiteSpace(settings.Status))
         {
-            status = settings.Status;
+            status = NullableOrMissing<string>.CreateWithClass(settings.Status);
         }
 
         return (archived, completed, priority, status, due, revisedBody);

@@ -270,6 +270,20 @@ jot task up 35
 jot task up *
 ```
 
+## Deleting Tasks
+
+`jot task delete [id]` or `ultralist d [id]` will do the job.
+
+**Examples**
+```
+jot task delete 35
+jot task d 35
+```
+
+_Be careful!_ once a task is deleted, it’s gone forever!
+
+Advanced tip: Because tasks are first-class things in Figment, you can also "select" a task thing in `jot`'s interactive mode and delete them through that facility.
+
 ## Editing Tasks
 
 You can edit a task’s name (body) or due date with the following syntax:
@@ -304,3 +318,99 @@ You can also specify `due:none` to un-set an existing due date.
 ```
 jot task e 3 due:none
 ```
+
+## Notes management
+
+Each task can have zero to many notes. Notes are extra info (links, context, etc).
+
+### Adding a note to a task
+Add a note to a task with the following syntax:
+
+`jot task addnote <task_id> <content>` or `jot task an <task_id> <content>`
+
+```
+jot task an 1 here is a note
+Note added.
+```
+
+Then you can list your tasks with notes by using `jot task list --notes`
+
+```
+jot task l --notes
+
+all
+1    [ ]  tomorrow    some important todo for the +project
+  0                     adding a note
+```
+
+The above will add a note to the task with an id of `0`.
+
+### Editing a note
+When you edit a note, you replace all of the contents of the note.
+
+Use the following syntax:
+
+`jot task editnote <task_id> <note_id> <content>`
+
+or
+
+`jot task en <task_id> <note_id> <content>`
+
+**Example**
+
+```
+jot task en 1 0 here is the updated note content.
+Note edited.
+```
+
+### Deleting a note
+Use the following syntax:
+
+`jot task deletenote <task_id> <note_id>`
+
+or
+
+`jot task dn <task_id> <note_id>`
+
+**Example**
+
+```
+jot task dn 1 0
+Note deleted.
+```
+
+
+## Handling task statuses
+A task can have a `status`. This allows you to further customize your task management.
+
+**A status should be a single lower-case word**.
+
+For instance, suppose you like to manage your tasks using a "now, next, later" suggested format from Getting Things Done.  These status can be defined on the enum field `status` on the `Task` built-in schema using the `schema task set status type [now,next,later]`.  Because status are defined for the `status` enum on the schema, setting a task status that is not in the list you define 
+
+#### Adding tasks with a status
+You can set a status when adding a task:
+
+```
+jot task add this is something I need to do right away status:now
+jot task add this is a todo for next week status:next
+jot task add this is a someday todo status:later
+```
+
+#### Listing tasks by status
+You can then build powerful aliases around showing tasks with a particular status. For instance, to get an idea of things you need to work on now:
+
+`jot task list status:now`
+
+Or you can see your whole list, grouped by status:
+
+`jot task list group:status`
+
+In shorthand, this could be expressed as:
+
+`jot task l group:s`
+
+#### Removing a task's status
+Simply set the status of a task to `none`.
+
+`jot task e 33 status:none`
+
