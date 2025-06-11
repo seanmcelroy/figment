@@ -3,8 +3,11 @@
 # Build script for creating multi-platform releases of jot
 set -e
 
+# Set reproducible timestamp
+export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+
 VERSION=${1:-$(grep -oP '<Version>\K[^<]+' src/jot/jot.csproj)}
-echo "Building jot version: $VERSION"
+echo "Building jot version: $VERSION (timestamp: $SOURCE_DATE_EPOCH)"
 
 # Clean previous builds
 sudo rm -rf ./releases
@@ -12,10 +15,10 @@ mkdir -p ./releases
 
 # Define platforms
 declare -a platforms=(
-    "win-x64:windows:.exe"
+#    "win-x64:windows:.exe"
     "linux-x64:linux:"
 #    "osx-x64:macos:"
-    "osx-arm64:macos-arm:"
+#    "osx-arm64:macos-arm:"
 )
 
 echo "Building for all platforms..."
@@ -25,22 +28,41 @@ for platform_info in "${platforms[@]}"; do
     echo "Building for $rid ($os_name)..."
     
     # Publish for the platform
-    dotnet publish src/jot/jot.csproj \
-        --configuration Release \
-        --runtime "$rid" \
-        --self-contained true \
-        --output "./releases/build/$rid" \
-        -p:PublishSingleFile=true \
-        -p:Version="$VERSION" \
-        -p:PublishTrimmed=true
+    if [ "$rid" = "linux-x64" ]; then
+        # Use system zlib instead of allowing embedded library that .NET 9 statically links
+        dotnet publish src/jot/jot.csproj \
+            --configuration Release \
+            --runtime "$rid" \
+            --self-contained true \
+            --output "./releases/build/$rid" \
+            -p:PublishSingleFile=true \
+            -p:Version="$VERSION" \
+            -p:PublishTrimmed=true \
+            -p:UseSystemResourceKeys=true \
+            -p:InvariantGlobalization=true \
+            -p:LinkMode=SdkOnly
+    else
+        dotnet publish src/jot/jot.csproj \
+            --configuration Release \
+            --runtime "$rid" \
+            --self-contained true \
+            --output "./releases/build/$rid" \
+            -p:PublishSingleFile=true \
+            -p:Version="$VERSION" \
+            -p:PublishTrimmed=true
+    fi
     
     # Create archive
     cd "./releases/build/$rid"
     if [ "$rid" = "win-x64" ]; then
-        zip -r "../../jot-$VERSION-$os_name.zip" *
+        # Sort files for consistent zip
+        find . -type f | sort | zip -r -X "../../jot-$VERSION-$os_name.zip" -@
         echo "Created: releases/jot-$VERSION-$os_name.zip"
     else
-        tar -czf "../../jot-$VERSION-$os_name.tar.gz" *
+        # Sort files for consistent tar
+        find . -type f | sort | tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" \
+            --group=0 --owner=0 --numeric-owner \
+            -czf "../../jot-$VERSION-$os_name.tar.gz" -T -
         echo "Created: releases/jot-$VERSION-$os_name.tar.gz"
     fi
     cd - > /dev/null
@@ -76,9 +98,6 @@ cp "./debian/jot.1" "./releases/debian-pkg/usr/share/man/man1/"
 gzip -9n "./releases/debian-pkg/usr/share/man/man1/jot.1"
 chmod 0644 "./releases/debian-pkg/usr/share/man/man1/jot.1.gz"
 
-# Set ownership for dpkg
-sudo chown root:root -R ./releases/debian-pkg/usr
-
 # Calculate installed size (in KB)
 INSTALLED_SIZE=$(du -sk "./releases/debian-pkg" | cut -f1)
 
@@ -89,7 +108,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: amd64
-Depends: libc6 (>= 2.31), libgcc-s1, libstdc++6
+Depends: libc6 (>= 2.31), libgcc-s1, libstdc++6, zlib1g (>= 1:1.2.11)
 Installed-Size: $INSTALLED_SIZE
 Maintainer: Sean McElroy <me@seanmcelroy.com>
 Homepage: https://github.com/seanmcelroy/figment
@@ -105,8 +124,14 @@ Description: Command-line personal information manager and task tracker
   * Interactive command-line interface
 EOF
 
+# Set consistent file times
+find "./releases/debian-pkg" -exec touch -d "@${SOURCE_DATE_EPOCH}" {} \;
+
+# Set ownership for dpkg
+sudo chown root:root -R ./releases/debian-pkg/usr
+
 # Build the .deb package
-dpkg-deb --build "./releases/debian-pkg" "./releases/jot-$VERSION.deb"
+dpkg-deb --build --root-owner-group "./releases/debian-pkg" "./releases/jot-$VERSION.deb"
 echo "Created: releases/jot-$VERSION.deb"
 
 # Clean up build directories
