@@ -17,8 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Text.Json.Serialization;
+using Figment.Common;
 
-namespace Figment.Common.Data;
+namespace Figment.Data.Local;
 
 /// <summary>
 /// This is the definition of a <see cref="Common.Schema"/> when it is persisted

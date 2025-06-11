@@ -38,8 +38,9 @@
       "ref": "https://figment.seanmcelroy.com/00000000-0000-0000-0000-000000000001.schema.json"
     },
     "birthdate": {
-      "$type": "monthday",
-      "type": "integer"
+      "$type": "date",
+      "type": "string",
+      "format": "date"
     },
     "department": {
       "$type": "text",
@@ -56,6 +57,18 @@
       "items": {
         "type": "string"
       }
+    },
+    "birthday": {
+      "$type": "monthday",
+      "type": "integer"
+    },
+    "lastname": {
+      "$type": "text",
+      "type": "string"
+    },
+    "firstname": {
+      "$type": "text",
+      "type": "string"
     }
   },
   "importMaps": []

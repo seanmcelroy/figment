@@ -1,0 +1,76 @@
+jot (0.0.7) unstable; urgency=low
+
+  * Release package build system for win-x64, linux-x64, osx-x64, and osx-
+    arm64 targets
+  * Manual (man) page
+  * CsvHelper removed in favor of Sep for CSV parsing to support AOT /
+    trimmable binary
+
+ -- Sean McElroy <me@seanmcelroy.com>  Tue, 10 Jun 2025 00:00:00 -0500
+
+jot (0.0.6) unstable; urgency=low
+
+  * Setting the value of a schema field on a schema shows a chooser if the
+    name, not the GUID, is provided.
+  * 'jot' now includes commands to manage import-map field configurations
+  * 'jot' now supports relative date parsing, such as setting a due date
+    field to 'tomorrow' or 'next Tuesday'
+  * Home-rooted paths, like "~/Downloads/example.txt" in arguments are now
+    expanded when processed.
+  * Configuration of storage providers is now made via appsettings.json.
+  * 'jot' now supports a --filter option for the things command for complex
+    filtering expressions.
+  * 'jot task' suite fo commands to list, create, update, and delete tasks.
+  * Changed built-in system schema view so it requires fields for and
+    displayColumns.
+  * 'jot' now uses the user's application directory for local storage provider
+  * 'jot' commands 'things' and 'schemas' now take an optional name filter
+    for searching
+  * Updated 'jot' to TextPromptWithHistory 1.0.5, which now provides inline
+    prompt editing
+  * Improve the output of printing schemas and things
+  * 'jot' commands 'initialize', 'verbose', and 'reindex' are now parented
+    under a 'configure' branch.
+  * 'jot' has additional hidden command aliases to make the CLI more intuitive
+  * 'jot' import-maps and import-map command syntax updated
+  * Invalid field values are now rendered with warning colors in views
+  * Setting a month+date field now does not complain about an invalid value.
+
+ -- Sean McElroy <me@seanmcelroy.com>  Mon, 09 Jun 2025 00:00:00 -0500
+
+jot (0.0.5) unstable; urgency=low
+
+  * pomodoro (aka pomo) command added to jot, whch implements Pomodoro timers
+  * Updated documentation, moved to docs/ folder under jot
+
+ -- Sean McElroy <me@seanmcelroy.com>  Sun, 27 Apr 2025 00:00:00 -0500
+
+jot (0.0.4) unstable; urgency=low
+
+  * clear command added to jot
+  * Schemas can now have a version plan (see schema version command)
+  * delete commands can now take a named argument for ease of use
+  * Improved saved messages detailing what changed
+  * Updated README.md
+  * Updated licensing banners in jot
+
+ -- Sean McElroy <me@seanmcelroy.com>  Sun, 13 Apr 2025 00:00:00 -0500
+
+jot (0.0.3) unstable; urgency=low
+
+  * 'initialize schemas' command which provides built-in system schemas.
+
+ -- Sean McElroy <me@seanmcelroy.com>  Fri, 11 Apr 2025 00:00:00 -0500
+
+jot (0.0.2) unstable; urgency=low
+
+  * Added up/down arrow history support to the interactive mode.
+
+ -- Sean McElroy <me@seanmcelroy.com>  Thu, 20 Mar 2025 00:00:00 -0500
+
+jot (0.0.1) unstable; urgency=low
+
+  * Published Github repository as public to denote this is version 0.0.1
+
+ -- Sean McElroy <me@seanmcelroy.com>  Tue, 18 Mar 2025 00:00:00 -0500
+

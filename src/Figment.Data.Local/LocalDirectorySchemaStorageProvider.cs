@@ -56,7 +56,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         using var fs = new FileStream(schemaFilePath, FileMode.CreateNew);
         try
         {
-            await JsonSerializer.SerializeAsync(fs, schemaDefinition, SerializerOptions, cancellationToken);
+            await JsonSerializer.SerializeAsync(fs, schemaDefinition!, JsonSchemaDefinitionSourceGenerationContext.Default.JsonSchemaDefinition, cancellationToken);
             await fs.FlushAsync(cancellationToken);
         }
         catch (Exception)
@@ -250,7 +250,10 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         using var fs = new FileStream(filePath, FileMode.Open);
         try
         {
-            var schemaDefinition = await JsonSerializer.DeserializeAsync<JsonSchemaDefinition>(fs, SerializerOptions, cancellationToken);
+            var schemaDefinition = await JsonSerializer.DeserializeAsync(
+                fs,
+                JsonSchemaDefinitionSourceGenerationContext.Default.JsonSchemaDefinition,
+                cancellationToken);
             if (schemaDefinition == null)
             {
                 AmbientErrorContext.Provider.LogError($"Unable to deserialize schema from {filePath}");
@@ -283,26 +286,6 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         }
     }
 
-    private static async Task<Schema?> LoadContentAsync(string content, CancellationToken cancellationToken)
-    {
-        using var ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        try
-        {
-            var schemaDefinition = await JsonSerializer.DeserializeAsync<JsonSchemaDefinition>(ms, SerializerOptions, cancellationToken);
-            if (schemaDefinition == null)
-            {
-                AmbientErrorContext.Provider.LogError("Unable to deserialize schema from content");
-                return null;
-            }
-            return schemaDefinition.ToSchema();
-        }
-        catch (JsonException je)
-        {
-            AmbientErrorContext.Provider.LogException(je, $"Unable to deserialize schema from content string");
-            return null;
-        }
-    }
-
     /// <inheritdoc/>
     public override async Task<(bool success, string? message)> SaveAsync(Schema schema, CancellationToken cancellationToken)
     {
@@ -322,7 +305,11 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         using var fs = File.Create(filePath);
         try
         {
-            await JsonSerializer.SerializeAsync(fs, schemaDefinition, SerializerOptions, cancellationToken);
+            await JsonSerializer.SerializeAsync(
+                fs,
+                schemaDefinition!,
+                JsonSchemaDefinitionSourceGenerationContext.Default.JsonSchemaDefinition,
+                cancellationToken);
             await fs.FlushAsync(cancellationToken);
 
             if (File.Exists(backupFilePath))
@@ -336,7 +323,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             AmbientErrorContext.Provider.LogException(je, errorMessage);
 
             if (File.Exists(backupFilePath))
-                File.Move(backupFilePath, filePath);
+                File.Move(backupFilePath, filePath, true);
 
             return (false, errorMessage);
         }
@@ -530,6 +517,47 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
                 Type = Reference.ReferenceType.Schema,
                 Guid = guid
             };
+        }
+    }
+
+    /// <summary>
+    /// Loads schema from a serialized Json string.
+    /// </summary>
+    /// <param name="content">Json string to deserialize into a <see cref="Schema"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The deserliazed schema, or null if there was a serialization error.</returns>
+#pragma warning disable CA1822 // Mark members as static
+    public async Task<Schema?> LoadJsonContentAsync(string content, CancellationToken cancellationToken)
+#pragma warning restore CA1822 // Mark members as static
+    {
+        await using var ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
+
+        try
+        {
+            var schemaDefinition = await JsonSerializer.DeserializeAsync(
+                ms,
+                JsonSchemaDefinitionSourceGenerationContext.Default.JsonSchemaDefinition,
+                cancellationToken);
+            if (schemaDefinition == null)
+            {
+                AmbientErrorContext.Provider.LogError("Unable to deserialize schema from content");
+                return null;
+            }
+
+            var schema = schemaDefinition.ToSchema();
+
+            // Set name fields.
+            foreach (var prop in schema.Properties)
+            {
+                prop.Value.Name = prop.Key;
+            }
+
+            return schema;
+        }
+        catch (JsonException je)
+        {
+            AmbientErrorContext.Provider.LogException(je, "Unable to deserialize schema from content string");
+            return null;
         }
     }
 }

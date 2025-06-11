@@ -20,6 +20,7 @@ using System.Runtime.CompilerServices;
 using Figment.Common.Data;
 using Figment.Common.Errors;
 using Figment.Common;
+using System.Text.Json;
 
 namespace Figment.Data.Local;
 
@@ -42,6 +43,16 @@ public class LocalDirectoryStorageProvider() : IStorageProvider
     /// The path to the root of the file system database.
     /// </summary>
     public string? DatabasePath { get; private set; }
+
+    internal static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        // Required for $ref properties with type descriminator
+        AllowOutOfOrderMetadataProperties = true,
+        TypeInfoResolver = JsonSchemaDefinitionSourceGenerationContext.Default,
+#if DEBUG
+        WriteIndented = true,
+#endif
+    };
 
     /// <inheritdoc/>
     public ISchemaStorageProvider? GetSchemaStorageProvider()

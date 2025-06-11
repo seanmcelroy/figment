@@ -97,14 +97,6 @@ public interface ISchemaStorageProvider
     public Task<Schema?> LoadAsync(string schemaGuid, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Loads schema from a serialized Json string.
-    /// </summary>
-    /// <param name="content">Json string to deserialize into a <see cref="Schema"/>.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The deserliazed schema, or null if there was a serialization error.</returns>
-    public Task<Schema?> LoadJsonContentAsync(string content, CancellationToken cancellationToken);
-
-    /// <summary>
     /// Rebuilds the indexes in the underlying data store.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

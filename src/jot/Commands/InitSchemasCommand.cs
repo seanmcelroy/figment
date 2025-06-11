@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Reflection;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using Figment.Data.Local;
 using Microsoft.Extensions.FileProviders;
 using Spectre.Console.Cli;
 
@@ -32,10 +33,16 @@ public class InitSchemasCommand : CancellableAsyncCommand
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
-        var provider = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
-        if (provider == null)
+        var sp = AmbientStorageContext.StorageProvider?.GetSchemaStorageProvider();
+        if (sp == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_SCHEMA_STORAGE_PROVIDER);
+            return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
+        }
+
+        if (sp is not LocalDirectorySchemaStorageProvider provider)
+        {
+            AmbientErrorContext.Provider.LogError("This command is only relevant to the local directory storage provider.");
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 

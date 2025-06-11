@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Figment.Common.Data;
 
 namespace Figment.Common;
 
@@ -47,6 +48,7 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
     /// Gets or sets the allowable values for the enum.
     /// </summary>
     [JsonPropertyName("enum")]
+    [JsonConverter(typeof(SchemaEnumFieldValuesConvertor))]
     public object?[] Values { get; set; } = Values;
 
     /// <inheritdoc/>
@@ -65,6 +67,13 @@ public class SchemaEnumField(string Name, object?[] Values) : SchemaFieldBase(Na
                 .Any(v => v.ValueKind == JsonValueKind.String && string.Equals(v.GetString(), s, StringComparison.Ordinal))
                 || Values.OfType<string>()
                 .Any(v => string.Equals(v, s, StringComparison.Ordinal)));
+        }
+
+        if (value is ulong u)
+        {
+            return Task.FromResult(Values.OfType<JsonElement>()
+                .Any(v => v.ValueKind == JsonValueKind.Number && v.GetUInt64() == u)
+                || Values.OfType<ulong>().Any(v => v == u));
         }
 
         if (value is int i)

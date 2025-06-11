@@ -32,15 +32,6 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 {
     private const string NameIndexFileName = $"_thing.names.csv";
 
-    private static readonly JsonSerializerOptions jsonSerializerOptions = new()
-    {
-        // Required for $ref properties with type descriminator
-        AllowOutOfOrderMetadataProperties = true,
-#if DEBUG
-        WriteIndented = true,
-#endif
-    };
-
     /// <inheritdoc/>
     public override async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
     {
@@ -480,7 +471,11 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         using var fs = File.Create(filePath);
         try
         {
-            await JsonSerializer.SerializeAsync(fs, thing, jsonSerializerOptions, cancellationToken: cancellationToken);
+            await JsonSerializer.SerializeAsync(
+                fs,
+                thing,
+                ThingSourceGenerationContext.Default.Thing,
+                cancellationToken: cancellationToken);
             await fs.FlushAsync(cancellationToken);
 
             if (File.Exists(backupFilePath))
@@ -494,7 +489,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             AmbientErrorContext.Provider.LogException(je, errorMessage);
 
             if (File.Exists(backupFilePath))
-                File.Move(backupFilePath, filePath);
+                File.Move(backupFilePath, filePath, true);
 
             return (false, errorMessage);
         }
@@ -524,7 +519,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         using var fs = new FileStream(thingFilePath, FileMode.CreateNew);
         try
         {
-            await JsonSerializer.SerializeAsync(fs, thing, cancellationToken: cancellationToken);
+            await JsonSerializer.SerializeAsync(fs, thing!, ThingSourceGenerationContext.Default.Thing, cancellationToken: cancellationToken);
             await fs.FlushAsync(cancellationToken);
         }
         catch (Exception)

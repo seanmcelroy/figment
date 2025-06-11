@@ -19,9 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
-using CsvHelper;
-using CsvHelper.Configuration;
 using Figment.Common.Errors;
+using nietras.SeparatedValues;
 
 namespace Figment.Data.Local;
 
@@ -64,16 +63,19 @@ public static class IndexManager
             yield break;
 
         using var sr = new StreamReader(indexFilePath, Encoding.UTF8);
-        var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-        {
-            HasHeaderRecord = false,
-        };
-        using var csvReader = new CsvReader(sr, csvConfig);
+        using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
 
-        await foreach (var entry in csvReader.GetRecordsAsync<Entry>(cancellationToken))
+        await foreach (var row in csvReader)
         {
             if (cancellationToken.IsCancellationRequested)
                 yield break;
+
+            var entry = new Entry
+            {
+                Key = row[0].ToString(),
+                Value = row[1].ToString()
+            };
+
             if (selector.Invoke(entry))
                 yield return entry;
         }
@@ -96,14 +98,18 @@ public static class IndexManager
         try
         {
             using var sw = new StreamWriter(indexFilePath, true, Encoding.UTF8);
-            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+            await using var csvWriter = Sep
+                .Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture })
+                .To(sw);
+
             {
-                HasHeaderRecord = false,
-                NewLine = "\r\n"
-            };
-            using var csv = new CsvWriter(sw, csvConfig);
-            await csv.WriteRecordsAsync([new Entry(key, value)], cancellationToken);
-            await sw.FlushAsync(cancellationToken);
+                var row = csvWriter.NewRow(cancellationToken);
+                row[0].Set(key);
+                row[1].Set(value);
+                await row.DisposeAsync();
+                await csvWriter.FlushAsync(cancellationToken);
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -122,17 +128,20 @@ public static class IndexManager
     /// <returns>A value indicating whether or not the operation was successful.</returns>
     public static async Task<bool> AddAsync(FileStream fs, IEnumerable<KeyValuePair<string, string>> entries, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(fs);
+        ArgumentNullException.ThrowIfNull(entries);
+
         try
         {
             using var sw = new StreamWriter(fs, Encoding.UTF8);
-            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+            await using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
+            foreach (var entry in entries)
             {
-                HasHeaderRecord = false,
-                NewLine = "\r\n"
-            };
-            using var csv = new CsvWriter(sw, csvConfig);
-            await csv.WriteRecordsAsync(entries.Select(e => new Entry(e.Key, e.Value)), cancellationToken);
-            await sw.FlushAsync(cancellationToken);
+                await using var row = csvWriter.NewRow(cancellationToken);
+                row[0].Set(entry.Key);
+                row[1].Set(entry.Value);
+            }
+            await csvWriter.FlushAsync(cancellationToken);
             return true;
         }
         catch (Exception ex)
@@ -154,7 +163,7 @@ public static class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(keyToRemove);
 
-        return await RemoveAsync(indexFilePath, entry => string.Equals(entry.Key, keyToRemove, StringComparison.Ordinal), cancellationToken);
+        return await RemoveAsync(indexFilePath, row => string.Equals(row[0].ToString(), keyToRemove, StringComparison.Ordinal), cancellationToken);
     }
 
     /// <summary>
@@ -169,10 +178,10 @@ public static class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(valueToRemove);
 
-        return await RemoveAsync(indexFilePath, entry => string.Equals(entry.Value, valueToRemove, StringComparison.Ordinal), cancellationToken);
+        return await RemoveAsync(indexFilePath, row => string.Equals(row[1].ToString(), valueToRemove, StringComparison.Ordinal), cancellationToken);
     }
 
-    private static async Task<bool> RemoveAsync(string indexFilePath, Func<Entry, bool> deleteSelector, CancellationToken cancellationToken)
+    private static async Task<bool> RemoveAsync(string indexFilePath, Func<SepReader.Row, bool> deleteSelector, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
         ArgumentNullException.ThrowIfNull(deleteSelector);
@@ -186,29 +195,21 @@ public static class IndexManager
             // Exclusively read this index.
             using var fsRead = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var sr = new StreamReader(fsRead, Encoding.UTF8);
-            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HasHeaderRecord = false
-            };
-            using var csvRead = new CsvReader(sr, csvConfig);
+            using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
             using var sw = new StreamWriter(backupPath, false, Encoding.UTF8);
-            var csvConfigWriter = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HasHeaderRecord = false,
-                NewLine = "\r\n"
-            };
-            using var csvWriter = new CsvWriter(sw, csvConfigWriter);
+            await using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
 
-            await foreach (var entry in csvRead.GetRecordsAsync<Entry>(cancellationToken))
+            await foreach (var row in csvReader)
             {
                 if (cancellationToken.IsCancellationRequested)
                     return false;
-                if (deleteSelector.Invoke(entry))
+                if (deleteSelector.Invoke(row))
                     continue;
-                await csvWriter.WriteRecordsAsync([entry], cancellationToken);
+
+                await using var _ = csvWriter.NewRow(row, cancellationToken);
             }
 
-            await sw.FlushAsync(cancellationToken);
+            await csvWriter.FlushAsync(cancellationToken);
         }
 
         try

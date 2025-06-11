@@ -1,0 +1,19 @@
+Package: jot
+Version: 0.0.7
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.31), libgcc-s1, libstdc++6
+Installed-Size: 7125786
+Maintainer: Sean McElroy <me@seanmcelroy.com>
+Homepage: https://github.com/seanmcelroy/figment
+Description: Command-line personal information manager and task tracker
+ A flexible command-line tool for managing personal information with
+ customizable schemas, task tracking, and Pomodoro timer functionality.
+ .
+ Features include:
+  * Customizable data schemas for different content types
+  * Task management with priorities and due dates  
+  * Built-in Pomodoro timer for productivity
+  * Import/export capabilities
+  * Interactive command-line interface

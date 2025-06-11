@@ -15,7 +15,7 @@
 - [x] Improved getting started documentation
 - [x] Built-in system schemas
 - [x] Pomodoro timer
-- [ ] tasks
+- [x] tasks
 - [ ] Versioned things
 - [ ] default schema values
 - [ ] Schema inheritence

@@ -11,13 +11,47 @@ The purpose of figment is to let individuals build repositories and graphs of kn
 * [Pomodoro Timers](docs/pomodoro.md) on the command line
 
 # Usage
-Compile and run `jot` using the .NET SDK, such as with the command line: `dotnet run --project jot/` from the root of this repository.
+Compile and run `jot` using the .NET SDK, such as with the command line: `dotnet run --project src/jot/` from the root of this repository.
 
 jot runs in two modes, one that takes command line arguments, like most other CLI tools.  Running jot with no arguments on an interactive console runs it in an interactive REPL-style mode.
 
 When run in interactive mode, use `--help` to see the same commands available to non-interactive mode use and use `ihelp` to see additional commands available in interactive mode.
 
 You can find more [documentation online](https://publish.obsidian.md/seanmcelroy/Projects/Figment/Homepage).
+
+## Building Releases
+
+To build distributable releases for multiple platforms:
+
+```bash
+# Build all platforms at once
+make build-releases
+
+# Or use the script directly
+./build-releases.sh
+
+# Build individual platforms
+make build-linux
+make build-windows  
+make build-macos
+```
+
+This creates release packages in the `releases/` directory:
+- `jot-VERSION-windows.zip` - Windows executable
+- `jot-VERSION-linux.tar.gz` - Linux executable  
+- `jot-VERSION-macos.tar.gz` - macOS Intel executable
+- `jot-VERSION-macos-arm.tar.gz` - macOS Apple Silicon executable
+- `jot-VERSION.deb` - Debian/Ubuntu package
+
+### Installing the Debian Package
+
+```bash
+# Install locally
+sudo dpkg -i releases/jot-VERSION.deb
+
+# Or use the make target after building
+make install-deb
+```
 
 # Concepts
 

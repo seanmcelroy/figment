@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console.Cli;
@@ -39,10 +40,17 @@ public sealed class TypeRegistrar(IHostBuilder builder, IHost host) : ITypeRegis
     }
 
     /// <inheritdoc/>
-    public void Register(Type service, Type implementation)
+#pragma warning disable IL2092 // 'DynamicallyAccessedMemberTypes' on the parameter of method don't match overridden parameter of method. All overridden members must have the same 'DynamicallyAccessedMembersAttribute' usage.
+    public void Register(
+        Type service,
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicConstructors |
+            DynamicallyAccessedMemberTypes.PublicFields |
+            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type implementation)
     {
         _builder.ConfigureServices((_, services) => services.AddSingleton(service, implementation));
     }
+#pragma warning restore IL2092 // 'DynamicallyAccessedMemberTypes' on the parameter of method don't match overridden parameter of method. All overridden members must have the same 'DynamicallyAccessedMembersAttribute' usage.
 
     /// <inheritdoc/>
     public void RegisterInstance(Type service, object implementation)

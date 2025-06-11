@@ -1,7 +1,8 @@
 using System.Globalization;
-using CsvHelper;
+using System.Runtime.CompilerServices;
 using Figment.Common;
 using Figment.Common.Errors;
+using nietras.SeparatedValues;
 using Spectre.Console.Cli;
 
 namespace jot.Commands.Schemas.ImportMaps;
@@ -56,7 +57,7 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
         switch (settings.FileType.ToLowerInvariant())
         {
             case "csv":
-                var csvFields = InferImportMapFieldsFromCsv(expandedPath)
+                var csvFields = InferImportMapFieldsFromCsv(expandedPath, cancellationToken)
                     .ToBlockingEnumerable(cancellationToken);
                 importMap.FieldConfiguration.AddRange(csvFields);
                 break;
@@ -87,8 +88,9 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
     /// Infers the <see cref="SchemaImportField"/> objects from reading the header of a CSV file.
     /// </summary>
     /// <param name="filePath">Comma-separated value file with headers to read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An asynchronous enumerator that returns each read file field with no property mapped.</returns>
-    private static async IAsyncEnumerable<SchemaImportField> InferImportMapFieldsFromCsv(string filePath)
+    private static async IAsyncEnumerable<SchemaImportField> InferImportMapFieldsFromCsv(string filePath, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
@@ -97,23 +99,28 @@ public class NewImportMapCommand : SchemaCancellableAsyncCommand<NewImportMapCom
             yield break;
         }
 
-        using var reader = new StreamReader(filePath);
-        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        using var sr = new StreamReader(filePath);
+        using var csvReader = await Sep.Reader(o => o with { CultureInfo = CultureInfo.InvariantCulture }).FromAsync(sr, cancellationToken);
 
-        if (!await csv.ReadAsync())
-        {
-            AmbientErrorContext.Provider.LogError($"Unable to read CSV file {filePath}");
-            yield break;
-        }
-
-        if (!csv.ReadHeader() || csv.HeaderRecord == null || csv.HeaderRecord.Length == 0)
+        if (!csvReader.HasHeader || csvReader.Header == null || csvReader.Header.IsEmpty)
         {
             AmbientErrorContext.Provider.LogError($"Unable to read CSV file headers from {filePath}");
             yield break;
         }
 
-        foreach (var header in csv.HeaderRecord)
+        if (!csvReader.HasRows)
         {
+            AmbientErrorContext.Provider.LogError($"Unable to read CSV file {filePath}: File has no rows.");
+            yield break;
+        }
+
+        foreach (var header in csvReader.Header.ColNames)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                yield break;
+            }
+
             yield return new SchemaImportField(null, header)
             {
                 // By default, the property name is null, and thefore 'skip' settings are false.

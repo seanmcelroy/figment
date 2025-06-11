@@ -16,13 +16,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-using System.Globalization;
 using System.Runtime.CompilerServices;
-using CsvHelper;
 using Figment.Common;
 using Figment.Common.Calculations.Parsing;
 using Figment.Common.Data;
 using Figment.Common.Errors;
+using nietras.SeparatedValues;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -419,17 +418,17 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         fs.Seek(0, SeekOrigin.Begin); // Rewind to beginning of file.
 
         using var reader = new StreamReader(fs);
-        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        using var csvReader = await Sep.Reader().FromAsync(reader, cancellationToken);
 
-        if (!await csv.ReadAsync())
+        if (!csvReader.HasHeader || csvReader.Header == null || csvReader.Header.IsEmpty)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to read CSV file {filePath}");
+            AmbientErrorContext.Provider.LogError($"Unable to read CSV file headers from {filePath}");
             yield break;
         }
 
-        if (!csv.ReadHeader() || csv.HeaderRecord == null || csv.HeaderRecord.Length == 0)
+        if (!csvReader.HasRows)
         {
-            AmbientErrorContext.Provider.LogError($"Unable to read CSV file headers from {filePath}");
+            AmbientErrorContext.Provider.LogError($"Unable to read CSV file {filePath}: File has no rows.");
             yield break;
         }
 
@@ -437,7 +436,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
         // AmbientErrorContext.Provider.LogDebug($"Headers: {string.Join(',', csv.HeaderRecord)}");
 
         // Building index map
-        var propertyNamesHandler = new Dictionary<string, Func<CsvReader, object?>>();
+        var propertyNamesHandler = new Dictionary<string, Func<SepReader, object?>>();
         {
             var buildIndexMapTask = ctx.AddTask("Building index map")
                 .MaxValue(importMap.FieldConfiguration.Count);
@@ -469,10 +468,10 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                     formulaFieldReferences = [.. nb.WalkFieldNames()];
 
                     // Build argument parsers
-                    var argHandlers = new Dictionary<string, Func<CsvReader, string?>>();
+                    var argHandlers = new Dictionary<string, Func<SepReader, string?>>();
                     foreach (var formFieldRef in formulaFieldReferences)
                     {
-                        var matchingCsvColumns = csv.HeaderRecord
+                        var matchingCsvColumns = csvReader.Header.ColNames
                             .Select((hdr, idx) => new { hdr, idx })
                             .Where(x => x.hdr.Equals(formFieldRef, StringComparison.InvariantCultureIgnoreCase))
                             .ToArray();
@@ -494,11 +493,11 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                         }
                         else
                         {
-                            argHandlers.Add(formFieldRef, cr => cr.GetField(matchingCsvColumns[0].idx));
+                            argHandlers.Add(formFieldRef, cr => cr.Current[matchingCsvColumns[0].idx].ToString());
                         }
                     }
 
-                    var bespokeHandler = new Func<CsvReader, object?>(csv =>
+                    var bespokeHandler = new Func<SepReader, object?>(csv =>
                     {
                         var args = argHandlers.ToDictionary(k => k.Key, v => v.Value.Invoke(csv));
                         var bespokeContext = new EvaluationContext(args);
@@ -515,7 +514,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                 else
                 {
                     // This property should match a single CSV header column.
-                    var matchingCsvColumns = csv.HeaderRecord
+                    var matchingCsvColumns = csvReader.Header.ColNames
                         .Select((hdr, idx) => new { hdr, idx })
                         .Where(x => x.hdr.Equals(fc.ImportFieldName, StringComparison.InvariantCultureIgnoreCase))
                         .ToArray();
@@ -532,7 +531,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                             AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' missing in file.  This file will not be imported.");
                             yield break;
                         case 1:
-                            propertyNamesHandler.Add(fc.SchemaPropertyName, new Func<CsvReader, object?>(csv => csv.GetField(matchingCsvColumns[0].idx)));
+                            propertyNamesHandler.Add(fc.SchemaPropertyName, new Func<SepReader, object?>(csv => csv.Current[matchingCsvColumns[0].idx].ToString()));
                             break;
                         default: // > 1
                             AmbientErrorContext.Provider.LogError($"File column '{fc.ImportFieldName}' appears multiple times in the CSV file.  This file will not be imported.");
@@ -574,7 +573,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                 .MaxValue(fileRowCount);
 
             var rowCount = 0;
-            while (await csv.ReadAsync())
+            while (await csvReader.MoveNextAsync(cancellationToken))
             {
                 rowCount++;
 
@@ -607,7 +606,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
                         yield break;
                     }
 
-                    var value = handler.Invoke(csv);
+                    var value = handler.Invoke(csvReader);
                     if (TOMBSTONE.Equals(value))
                     {
                         if (fieldConfig.SkipRecordIfInvalid)

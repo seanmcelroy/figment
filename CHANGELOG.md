@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.6
+## [0.0.7] - 2025-06-10
+
+### Modified
+
+- Release package build system for win-x64, linux-x64, osx-x64, and osx-arm64 targets
+- Manual (man) page
+
+### Modified
+
+- CsvHelper removed in favor of Sep for CSV parsing to support AOT / trimmable binary
+
+## [0.0.6] - 2025-06-09
 
 ### Added
 
@@ -12,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - Home-rooted paths, like "~/Downloads/example.txt" in arguments are now expanded when processed.
 - Configuration of storage providers is now made via appsettings.json.
 - 'jot' now supports a --filter option for the `things` command for complex filtering expressions.
+- 'jot task' suite fo commands to list, create, update, and delete tasks.
 
 ### Modified
 
@@ -29,7 +41,7 @@ All notable changes to this project will be documented in this file.
 
 - Setting a month+date field now does not complain about an invalid value.
 
-## 0.0.5
+## [0.0.5] - 2025-04-27
 
 ### Added
 
@@ -39,7 +51,7 @@ All notable changes to this project will be documented in this file.
 
 - Updated documentation, moved to `docs/` folder under `jot`
 
-## 0.0.4
+## [0.0.4] - 2025-04-13
 
 ### Added
 
@@ -53,19 +65,19 @@ All notable changes to this project will be documented in this file.
 - Updated README.md
 - Updated licensing banners in jot
 
-## 0.0.3
+## [0.0.3] - 2025-04-11
 
 ### Added
 
 - 'initialize schemas' command which provides built-in system schemas.
 
-## 0.0.2
+## [0.0.2] - 2025-03-20
 
 ### Added
 
 - Added up/down arrow history support to the interactive mode.
 
-## 0.0.1
+## [0.0.1] - 2025-03-18
 
 ### Added
 

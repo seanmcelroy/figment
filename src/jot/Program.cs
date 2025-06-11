@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Figment.Common;
 using Figment.Common.Data;
@@ -61,6 +62,7 @@ internal class Program
     internal static bool Verbose = false;
 #pragma warning restore SA1401 // Fields should be private
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandApp<>))]
     private static async Task<int> Main(string[] args)
     {
         using var cts = new CancellationTokenSource();
@@ -99,7 +101,7 @@ internal class Program
             }
             else
             {
-                var spt = storageConfig?.GetValue<string>("Type");
+                var spt = storageConfig.GetValue<string>("Type");
                 if (string.IsNullOrWhiteSpace(spt))
                 {
                     AmbientErrorContext.Provider.LogWarning("Storage provider type not specified.  Proceeding with an in-memory configuration.");

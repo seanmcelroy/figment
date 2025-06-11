@@ -1,0 +1,336 @@
+.TH JOT 1 "June 2025" "jot 0.0.7" "User Commands"
+.SH NAME
+jot \- personal information manager and task tracker
+.SH SYNOPSIS
+.B jot
+[\fIOPTION\fR]... [\fICOMMAND\fR] [\fIARGS\fR]...
+.br
+.B jot
+(interactive mode)
+.SH DESCRIPTION
+.B jot
+is a command-line personal information manager (PIM) that allows users to create customizable data repositories with user-defined schemas. It provides built-in functionality for contact management, task administration, and includes Pomodoro timer functionality.
+
+.B jot
+operates in two modes: command-line mode where it processes arguments directly, and interactive REPL-style mode when run without arguments on an interactive console.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Show help information and exit.
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose output.
+.TP
+.BR \-\-filter " " \fIEXPRESSION\fR
+Filter results using the specified expression (for listing commands).
+.TP
+.BR \-\-as\-table
+Format output as tables.
+.SH COMMANDS
+.SS General Commands
+.TP
+.BR "new " \fISCHEMA\fR " [" \fINAME\fR "]"
+Create new schemas or instances of things.
+.TP
+.BR "schemas " "[" \fIPARTIAL_NAME\fR "]"
+List all schemas in the database, optionally filtered by partial name.
+.TP
+.BR "things " "[" \fIPARTIAL_NAME\fR "]"
+List all things in the database, optionally filtered by partial name.
+
+.SS Task Management
+Task commands are prefixed with
+.BR task " or " t "."
+.TP
+.BR "task list" " [" \fIOPTIONS\fR "]"
+.TQ
+.BR "task ls" " [" \fIOPTIONS\fR "]"
+.TQ
+.BR "task l" " [" \fIOPTIONS\fR "]"
+List tasks with filtering options:
+.RS
+.TP
+.BR \-d ", " \-\-due " " \fIDATE\fR
+Filter by due date.
+.TP
+.BR \-b ", " \-\-due\-before " " \fIDATE\fR
+Filter by due before date.
+.TP
+.BR \-a ", " \-\-due\-after " " \fIDATE\fR
+Filter by due after date.
+.TP
+.BR \-g ", " \-\-group\-by " " \fIPROPERTY\fR
+Group results by property.
+.TP
+.BR \-c ", " \-\-completed
+Filter by completion status.
+.TP
+.BR \-p ", " \-\-priority
+Filter by priority status.
+.TP
+.BR \-\-archived
+Show archived tasks.
+.TP
+.BR \-\-context " " \fICONTEXTS\fR
+Filter by contexts.
+.TP
+.BR \-\-project " " \fIPROJECTS\fR
+Filter by projects.
+.TP
+.BR \-\-status " " \fISTATUSES\fR
+Filter by status.
+.TP
+.BR \-n ", " \-\-notes
+Show notes in task listings.
+.RE
+.TP
+.BR "task add " \fIDESCRIPTION\fR
+.TQ
+.BR "task a " \fIDESCRIPTION\fR
+Add a new task with the specified description.
+.TP
+.BR "task complete " \fIID\fR
+.TQ
+.BR "task c " \fIID\fR
+.TQ
+.BR "task done " \fIID\fR
+Mark the specified task as complete.
+.TP
+.BR "task uncomplete " \fIID\fR
+.TQ
+.BR "task uc " \fIID\fR
+.TQ
+.BR "task undo " \fIID\fR
+Mark the specified task as incomplete.
+.TP
+.BR "task archive " \fIID\fR
+Archive the specified task.
+.TP
+.BR "task unarchive " \fIID\fR
+Unarchive the specified task.
+.TP
+.BR "task prioritize " \fIID\fR
+.TQ
+.BR "task p " \fIID\fR
+Mark the specified task as priority.
+.TP
+.BR "task unprioritize " \fIID\fR
+.TQ
+.BR "task up " \fIID\fR
+Remove priority status from the specified task.
+.TP
+.BR "task edit " \fIID\fR " " \fIDESCRIPTION\fR
+.TQ
+.BR "task e " \fIID\fR " " \fIDESCRIPTION\fR
+Edit the description of the specified task.
+.TP
+.BR "task delete " \fIID\fR
+.TQ
+.BR "task d " \fIID\fR
+.TQ
+.BR "task del " \fIID\fR
+Delete the specified task.
+.TP
+.BR "task addnote " \fIID\fR " " \fINOTE\fR
+.TQ
+.BR "task an " \fIID\fR " " \fINOTE\fR
+Add a note to the specified task.
+.TP
+.BR "task editnote " \fIID\fR " " \fINOTE\fR
+.TQ
+.BR "task en " \fIID\fR " " \fINOTE\fR
+Edit a note on the specified task.
+.TP
+.BR "task deletenote " \fIID\fR
+.TQ
+.BR "task dn " \fIID\fR
+Delete a note from the specified task.
+
+.SS Schema Management
+Schema commands are prefixed with
+.BR schema " or " s "."
+.TP
+.BR "schema associate " \fISCHEMA\fR " " \fITHING\fR
+Associate a thing with a schema.
+.TP
+.BR "schema describe " \fIDESCRIPTION\fR
+Set the description for a schema.
+.TP
+.BR "schema delete " \fISCHEMA\fR
+.TQ
+.BR "schema del " \fISCHEMA\fR
+Delete the specified schema.
+.TP
+.BR "schema dissociate " \fISCHEMA\fR " " \fITHING\fR
+Remove the association between a thing and schema.
+.TP
+.BR "schema import " \fIFILE\fR " " \fIFORMAT\fR
+Import entities from a file as things.
+.TP
+.BR "schema members " \fISCHEMA\fR
+List things associated with the specified schema.
+.TP
+.BR "schema plural " \fINAME\fR
+Set the plural name for a schema.
+.TP
+.BR "schema rename " \fINEW_NAME\fR
+.TQ
+.BR "schema ren " \fINEW_NAME\fR
+Rename a schema.
+.TP
+.BR "schema validate " \fISCHEMA\fR
+.TQ
+.BR "schema val " \fISCHEMA\fR
+Validate schema consistency.
+.TP
+.BR "schema view " \fISCHEMA\fR
+.TQ
+.BR "schema show " \fISCHEMA\fR
+View detailed information about a schema.
+.TP
+.BR "schema version " \fIVERSION\fR
+Set versioning plan for a schema.
+
+.SS Thing Management
+Thing commands are prefixed with
+.BR thing " or " t "."
+.TP
+.BR "thing delete " \fITHING\fR
+.TQ
+.BR "thing del " \fITHING\fR
+Delete the specified thing.
+.TP
+.BR "thing promote " \fIPROPERTY\fR
+Promote a thing property to a schema property.
+.TP
+.BR "thing rename " \fINEW_NAME\fR
+.TQ
+.BR "thing ren " \fINEW_NAME\fR
+Rename a thing.
+.TP
+.BR "thing set " \fIPROPERTY\fR " " \fIVALUE\fR
+Set a property value on a thing.
+.TP
+.BR "thing validate " \fITHING\fR
+.TQ
+.BR "thing val " \fITHING\fR
+Validate a thing against its schemas.
+.TP
+.BR "thing view " \fITHING\fR
+.TQ
+.BR "thing show " \fITHING\fR
+View detailed information about a thing.
+
+.SS Pomodoro Timer
+.TP
+.BR "pomodoro start " "[\fIPOMODORI_TIME\fR] [\fISHORT_BREAK\fR] [\fILONG_BREAK\fR]"
+.TQ
+.BR "pomo start " "[\fIPOMODORI_TIME\fR] [\fISHORT_BREAK\fR] [\fILONG_BREAK\fR]"
+Start a Pomodoro timer with optional custom durations.
+
+.SS Configuration
+Configuration commands are prefixed with
+.BR configure " or " config "."
+.TP
+.BR "configure initialize schemas"
+.TQ
+.BR "configure init schemas"
+Create built-in system schemas.
+.TP
+.BR "configure reindex schemas"
+Rebuild schema indexes.
+.TP
+.BR "configure reindex things"
+Rebuild thing indexes.
+.TP
+.BR "configure verbosity"
+.TQ
+.BR "configure verbose"
+Toggle verbosity mode (interactive mode only).
+
+.SH INTERACTIVE MODE
+When run without arguments on an interactive console,
+.B jot
+enters interactive REPL-style mode. In this mode, additional commands are available:
+
+.TP
+.BR "select " \fINAME\fR
+.TQ
+.BR "sel " \fINAME\fR
+.TQ
+.BR "s " \fINAME\fR
+Select an entity for subsequent operations.
+.TP
+.BR "clear"
+Clear the console screen.
+.TP
+.BR "quit"
+.TQ
+.BR "exit"
+Exit interactive mode.
+.TP
+.BR "help"
+Show main command help.
+.TP
+.BR "ihelp"
+Show interactive mode specific help.
+
+Most commands work on the currently selected entity when in interactive mode, allowing for more streamlined workflows.
+
+.SH EXAMPLES
+.TP
+Create a new task:
+.B jot task add "Prepare meeting notes about +importantProject for @bob due:today"
+.TP
+List all tasks due today:
+.B jot task list due:today
+.TP
+Filter things by email:
+.B jot things --filter "[Email]='me@seanmcelroy.com'"
+.TP
+Import contacts from CSV:
+.B jot schema person import ~/Downloads/contacts.csv csv
+.TP
+Start a 25-minute Pomodoro timer:
+.B jot pomodoro start 25
+.TP
+Enter interactive mode:
+.B jot
+.TP
+List all schemas:
+.B jot schemas
+.TP
+View help:
+.B jot --help
+
+.SH CONFIGURATION
+.B jot
+uses
+.I appsettings.json
+for configuration, including storage provider settings. The application stores data in the user's application directory by default.
+
+.SH FILES
+.TP
+.I ~/.config/jot/
+Default location for jot configuration and data files.
+.TP
+.I appsettings.json
+Configuration file for storage providers and application settings.
+
+.SH EXIT STATUS
+.B jot
+exits with status 0 on success, and non-zero on error.
+
+.SH AUTHOR
+Written by Sean McElroy.
+
+.SH REPORTING BUGS
+Report bugs to: https://github.com/seanmcelroy/figment/issues
+
+.SH COPYRIGHT
+Copyright \(co 2025 Sean McElroy.
+This is free software; see the source for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+.SH SEE ALSO
+Full documentation available at: https://publish.obsidian.md/seanmcelroy/Projects/Figment/Homepage
