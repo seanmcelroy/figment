@@ -6,6 +6,12 @@ set -e
 # Set reproducible timestamp
 export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
 
+# Additional environment variables for reproducible builds
+export DOTNET_DETERMINISTIC=1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export TZ=UTC
+
 VERSION=${1:-$(grep -oP '<Version>\K[^<]+' src/jot/jot.csproj)}
 echo "Building jot version: $VERSION (timestamp: $SOURCE_DATE_EPOCH)"
 
@@ -15,10 +21,10 @@ mkdir -p ./releases
 
 # Define platforms
 declare -a platforms=(
-#    "win-x64:windows:.exe"
+    "win-x64:windows:.exe"
     "linux-x64:linux:"
-#    "osx-x64:macos:"
-#    "osx-arm64:macos-arm:"
+    "osx-x64:macos:"
+    "osx-arm64:macos-arm:"
 )
 
 echo "Building for all platforms..."
@@ -49,14 +55,21 @@ for platform_info in "${platforms[@]}"; do
             --output "./releases/build/$rid" \
             -p:PublishSingleFile=true \
             -p:Version="$VERSION" \
-            -p:PublishTrimmed=true
+            -p:PublishTrimmed=true \
+            -p:Deterministic=true \
+            -p:PathMap="$(pwd)=." \
+            -p:ContinuousIntegrationBuild=true
     fi
     
     # Create archive
     cd "./releases/build/$rid"
+
+    # Set consistent timestamps on all files  
+    find . -exec touch -d "@${SOURCE_DATE_EPOCH}" {} \;
+
     if [ "$rid" = "win-x64" ]; then
-        # Sort files for consistent zip
-        find . -type f | sort | zip -r -X "../../jot-$VERSION-$os_name.zip" -@
+        # Create reproducible zip (method compatible with older zip versions)
+        find . -type f | sort | zip -r -X -q "../../jot-$VERSION-$os_name.zip" -@ -9
         echo "Created: releases/jot-$VERSION-$os_name.zip"
     else
         # Sort files for consistent tar

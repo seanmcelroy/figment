@@ -6,7 +6,7 @@ jot (0.0.7) unstable; urgency=low
   * CsvHelper removed in favor of Sep for CSV parsing to support AOT /
     trimmable binary
 
- -- Sean McElroy <me@seanmcelroy.com>  Tue, 10 Jun 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Tue, 10 Jun 2025 00:00:00 +0000
 
 jot (0.0.6) unstable; urgency=low
 
@@ -36,14 +36,14 @@ jot (0.0.6) unstable; urgency=low
   * Invalid field values are now rendered with warning colors in views
   * Setting a month+date field now does not complain about an invalid value.
 
- -- Sean McElroy <me@seanmcelroy.com>  Mon, 09 Jun 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Mon, 09 Jun 2025 00:00:00 +0000
 
 jot (0.0.5) unstable; urgency=low
 
   * pomodoro (aka pomo) command added to jot, whch implements Pomodoro timers
   * Updated documentation, moved to docs/ folder under jot
 
- -- Sean McElroy <me@seanmcelroy.com>  Sun, 27 Apr 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Sun, 27 Apr 2025 00:00:00 +0000
 
 jot (0.0.4) unstable; urgency=low
 
@@ -54,23 +54,23 @@ jot (0.0.4) unstable; urgency=low
   * Updated README.md
   * Updated licensing banners in jot
 
- -- Sean McElroy <me@seanmcelroy.com>  Sun, 13 Apr 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Sun, 13 Apr 2025 00:00:00 +0000
 
 jot (0.0.3) unstable; urgency=low
 
   * 'initialize schemas' command which provides built-in system schemas.
 
- -- Sean McElroy <me@seanmcelroy.com>  Fri, 11 Apr 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Fri, 11 Apr 2025 00:00:00 +0000
 
 jot (0.0.2) unstable; urgency=low
 
   * Added up/down arrow history support to the interactive mode.
 
- -- Sean McElroy <me@seanmcelroy.com>  Thu, 20 Mar 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Thu, 20 Mar 2025 00:00:00 +0000
 
 jot (0.0.1) unstable; urgency=low
 
   * Published Github repository as public to denote this is version 0.0.1
 
- -- Sean McElroy <me@seanmcelroy.com>  Tue, 18 Mar 2025 00:00:00 -0500
+ -- Sean McElroy <me@seanmcelroy.com>  Tue, 18 Mar 2025 00:00:00 +0000
 
