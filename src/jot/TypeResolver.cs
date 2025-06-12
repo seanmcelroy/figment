@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using Figment.Common.Errors;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console.Cli;
 
@@ -29,7 +30,15 @@ public sealed class TypeResolver(IHost provider) : ITypeResolver, IDisposable
     /// <inheritdoc/>
     public object? Resolve(Type? type)
     {
-        return type != null ? _host.Services.GetService(type) : null;
+        try
+        {
+            return type != null ? _host.Services.GetService(type) : null;
+        }
+        catch (ObjectDisposedException ode)
+        {
+            AmbientErrorContext.Provider.LogException(ode, "Could not resolve type.");
+            throw;
+        }
     }
 
     /// <inheritdoc/>

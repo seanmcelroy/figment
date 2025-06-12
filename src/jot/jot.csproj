@@ -17,7 +17,7 @@
 
     <!-- Reproducible build settings -->
     <Deterministic>true</Deterministic>
-    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <!--PathMap>$(MSBuildProjectDirectory)=.</PathMap-->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <WarningsNotAsErrors />
@@ -63,6 +63,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources/appsettings.json" />
     <EmbeddedResource Include="Resources/DefaultSchemas/00000000-0000-0000-0000-*.schema.json" />
   </ItemGroup>
 

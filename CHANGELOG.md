@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.7] - 2025-06-10
+## [0.0.7] - 2025-06-11
 
-### Modified
+### Added
 
 - Release package build system for win-x64, linux-x64, osx-x64, and osx-arm64 targets
 - Manual (man) page
@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 ### Modified
 
 - CsvHelper removed in favor of Sep for CSV parsing to support AOT / trimmable binary
+
+### Fixed
+
+- When running jot with no default config file, app now creates one with sane defaults
 
 ## [0.0.6] - 2025-06-09
 

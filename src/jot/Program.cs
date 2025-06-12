@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Reflection;
+using System.Text;
 using Figment.Common;
 using Figment.Common.Data;
 using Figment.Common.Errors;
@@ -32,7 +34,9 @@ using jot.Commands.Tasks;
 using jot.Commands.Things;
 using jot.Errors;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -70,13 +74,37 @@ internal class Program
         var interactive = args.Length == 0
             && (AnsiConsole.Profile.Capabilities.Interactive || Debugger.IsAttached);
 
-        // Build host
-        var hostBuilder = Host.CreateDefaultBuilder();
-        using var host = hostBuilder.Build();
-        var registrar = new TypeRegistrar(hostBuilder, host);
+        // If default configuration file does not exist, create it.
+        const string jotRcFileName = ".jotrc";
+        var jotRcPath = FileUtility.ExpandRelativePaths(Path.Combine("~/", jotRcFileName));
+        if (!File.Exists(jotRcPath))
+        {
+            var defaultCreated = await CreateDefaultJotConfigurationFile(jotRcPath, cts.Token);
+            if (await CreateDefaultJotConfigurationFile(jotRcPath, cts.Token))
+            {
+                AmbientErrorContext.Provider.LogDone($"Created default JSON configuration file at: {jotRcPath}");
+            }
+            else
+            {
+                if (interactive)
+                {
+                    AmbientErrorContext.Provider.LogError($"Unable to create default JSON configuration file at {jotRcPath}");
+                }
+            }
+        }
 
-        // Pre-run configuration
-        var config = registrar.Host?.Services.GetRequiredService<IConfiguration>();
+        // Build host
+        IConfiguration? config;
+        TypeRegistrar registrar;
+        {
+            var hostBuilder = Host.CreateDefaultBuilder();
+            var provider = new PhysicalFileProvider(Path.GetDirectoryName(jotRcPath)!, Microsoft.Extensions.FileProviders.Physical.ExclusionFilters.None);
+            hostBuilder.ConfigureAppConfiguration((_, config) => config.AddJsonFile(provider, jotRcFileName, true, false));
+            var host = hostBuilder.Build();
+            registrar = new TypeRegistrar(hostBuilder, host);
+            config = registrar.Host?.Services.GetRequiredService<IConfiguration>();
+        }
+
         Queue<Action> postBannerActionQueue = new();
 
         // // Error Provider
@@ -84,6 +112,24 @@ internal class Program
         {
             var ep = new SpectreConsoleErrorProvider();
             AmbientErrorContext.Provider = ep;
+        }
+
+        // Pre-run configuration messages
+        if (interactive && config is ConfigurationRoot root)
+        {
+            var jsonConfig = root.Providers.OfType<JsonConfigurationProvider>().FirstOrDefault(p => p.GetChildKeys([], null).Any());
+            if (jsonConfig == null)
+            {
+                AmbientErrorContext.Provider.LogWarning("No JSON configuration file found.");
+            }
+            else if (jsonConfig.Source.FileProvider is PhysicalFileProvider pfp)
+            {
+                // AmbientErrorContext.Provider.LogDebug($"JSON configuration file found: {Path.Combine(pfp.Root, jsonConfig.Source.Path ?? string.Empty)}");
+            }
+            else
+            {
+                // AmbientErrorContext.Provider.LogDebug($"JSON configuration file found: {jsonConfig.Source.Path}");
+            }
         }
 
         // // Storage provider
@@ -607,6 +653,42 @@ internal class Program
         while (!cts.Token.IsCancellationRequested);
 
         return (int)Globals.GLOBAL_ERROR_CODES.SUCCESS;
+    }
+
+    private static async Task<bool> CreateDefaultJotConfigurationFile(string absolutePath, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
+
+        if (File.Exists(absolutePath))
+        {
+            return true; // Nothing to do.
+        }
+
+        var embeddedProvider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly());
+        var defaultConfigFileInfo = embeddedProvider.GetDirectoryContents("/")
+            .Where(x => x.Name.EndsWith("appsettings.json", StringComparison.InvariantCulture))
+            .SingleOrDefault();
+
+        if (defaultConfigFileInfo == null)
+        {
+            AmbientErrorContext.Provider.LogError("Default configuration file not found in embedded resources.");
+            return false;
+        }
+
+        using var stream = defaultConfigFileInfo.CreateReadStream();
+        using var sr = new StreamReader(stream);
+        var configContent = await sr.ReadToEndAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(configContent))
+        {
+            AmbientErrorContext.Provider.LogError("Default configuration file does not contain content.");
+            return false;
+        }
+
+        using var sw = new StreamWriter(absolutePath, false, Encoding.UTF8);
+        await sw.WriteLineAsync(configContent.AsMemory(), cancellationToken);
+        await sw.FlushAsync(cancellationToken);
+
+        return true;
     }
 
     private static async Task RenderView(
