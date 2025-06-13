@@ -17,7 +17,7 @@
 
     <!-- Reproducible build settings -->
     <Deterministic>true</Deterministic>
-    <!--PathMap>$(MSBuildProjectDirectory)=.</PathMap-->
+    <PathMap Condition="'$(CompileConfig)' == 'RELEASE'">$(MSBuildProjectDirectory)=.</PathMap>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <WarningsNotAsErrors />

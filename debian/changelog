@@ -5,8 +5,10 @@ jot (0.0.7) unstable; urgency=low
   * Manual (man) page
   * CsvHelper removed in favor of Sep for CSV parsing to support AOT /
     trimmable binary
+  * When running jot with no default config file, app now creates one with
+    sane defaults
 
- -- Sean McElroy <me@seanmcelroy.com>  Tue, 10 Jun 2025 00:00:00 +0000
+ -- Sean McElroy <me@seanmcelroy.com>  Wed, 11 Jun 2025 00:00:00 +0000
 
 jot (0.0.6) unstable; urgency=low
 
