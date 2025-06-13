@@ -716,7 +716,7 @@ internal class Program
                         return;
                     }
 
-                    var viewProps = new List<ThingProperty>();
+                    var viewProps = new HashSet<ThingProperty>();
                     await foreach (var prop in viewInstance.GetProperties(cancellationToken))
                     {
                         viewProps.Add(prop);

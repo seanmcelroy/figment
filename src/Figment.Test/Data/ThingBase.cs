@@ -140,12 +140,12 @@ public abstract class ThingBase
         Assert.AreEqual(thing.Guid, thing2.Guid);
         Assert.AreEqual(Reference.ReferenceType.Thing, thing2.Type);
 
-        List<PossibleNameMatch> partialThings = [];
+        HashSet<PossibleNameMatch> partialThings = [];
         await foreach (var pt in tsp.FindByPartialNameAsync(newSchema.Guid, nameof(ThingCrud), CancellationToken.None))
         {
             partialThings.Add(pt);
         }
-        Assert.AreEqual(1, partialThings.Count());
+        Assert.AreEqual(1, partialThings.Count);
         Assert.AreEqual(thing.Name, partialThings.First().Name);
         Assert.AreEqual(thing.Guid, partialThings.First().Reference.Guid);
         Assert.AreEqual(Reference.ReferenceType.Thing, partialThings.First().Reference.Type);
@@ -168,7 +168,7 @@ public abstract class ThingBase
         {
             partialThings.Add(pt);
         }
-        Assert.AreEqual(0, partialThings.Count());
+        Assert.AreEqual(0, partialThings.Count);
     }
 
     [TestMethod]

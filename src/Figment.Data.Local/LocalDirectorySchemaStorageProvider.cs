@@ -53,7 +53,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             return new CreateSchemaResult { Success = false };
         }
 
-        using var fs = new FileStream(schemaFilePath, FileMode.CreateNew);
+        await using var fs = new FileStream(schemaFilePath, FileMode.CreateNew);
         try
         {
             await JsonSerializer.SerializeAsync(fs, schemaDefinition!, JsonSchemaDefinitionSourceGenerationContext.Default.JsonSchemaDefinition, cancellationToken);
@@ -70,6 +70,8 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         var indexAdded = await IndexManager.AddAsync(indexFilePath, schemaName, schemaFileName, cancellationToken);
         if (!indexAdded)
             AmbientErrorContext.Provider.LogWarning($"Unable to update index at: {indexFilePath}");
+
+        await fs.FlushAsync(cancellationToken);
 
         return new CreateSchemaResult { Success = true, NewGuid = schemaGuid };
     }
@@ -171,6 +173,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             {
                 yield return indexMatch;
             }
+
             yield break;
         }
 
@@ -247,7 +250,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             return null;
         }
 
-        using var fs = new FileStream(filePath, FileMode.Open);
+        await using var fs = new FileStream(filePath, FileMode.Open);
         try
         {
             var schemaDefinition = await JsonSerializer.DeserializeAsync(
@@ -302,7 +305,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         if (File.Exists(filePath))
             File.Move(filePath, backupFilePath, true);
 
-        using var fs = File.Create(filePath);
+        await using var fs = File.Create(filePath);
         try
         {
             await JsonSerializer.SerializeAsync(
@@ -381,6 +384,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
 
             using var fs = File.Create(index.Key);
             await IndexManager.AddAsync(fs, index.Value, cancellationToken);
+            await fs.FlushAsync(cancellationToken);
         }
 
         return true;

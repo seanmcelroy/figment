@@ -193,7 +193,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
 
                 // This implements partial imports.
                 // This will skip settings.RecordsToSkip records, and only take settings.RecordsToImport records, if specified.
-                var thingsToDelete = new List<Reference>();
+                var thingsToDelete = new HashSet<Reference>();
                 var thingsToImport = new List<(Thing thing, int rowNumber)>();
                 {
                     var count = 0;
@@ -413,7 +413,7 @@ public class ImportSchemaThingsCommand : CancellableAsyncCommand<ImportSchemaThi
             yield break;
         }
 
-        using var fs = File.OpenRead(filePath);
+        await using var fs = File.OpenRead(filePath);
         var fileRowCount = FileUtility.CountLines(fs);
         fs.Seek(0, SeekOrigin.Begin); // Rewind to beginning of file.
 

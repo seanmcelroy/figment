@@ -50,9 +50,32 @@ public class SchemaIntegerField(string Name) : SchemaFieldBase(Name)
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
-        return value == null
-            ? Task.FromResult(!Required)
-            : Task.FromResult(long.TryParse(value.ToString(), out long _));
+        if (value == null)
+        {
+            return Task.FromResult(!Required);
+        }
+
+        if (value is byte
+            || value is int
+            || value is long
+            || value is ulong)
+        {
+            return Task.FromResult(true);
+        }
+
+        var vs = value.ToString();
+
+        if (long.TryParse(vs, out long _))
+        {
+            return Task.FromResult(true);
+        }
+
+        if (ulong.TryParse(vs, out ulong _))
+        {
+            return Task.FromResult(true);
+        }
+
+        return Task.FromResult(false);
     }
 
     /// <inheritdoc/>
@@ -60,18 +83,46 @@ public class SchemaIntegerField(string Name) : SchemaFieldBase(Name)
     {
         if (input != null)
         {
+            if (input is byte b)
+            {
+                output = b;
+                return true;
+            }
+
+            if (input is int i)
+            {
+                output = i;
+                return true;
+            }
+
             if (input is long l)
             {
                 output = l;
                 return true;
             }
-            else if (long.TryParse(input.ToString(), out long l2))
+
+            if (input is ulong u)
+            {
+                output = u;
+                return true;
+            }
+
+            var inputString = input.ToString();
+
+            if (ulong.TryParse(inputString, out ulong u2))
+            {
+                output = u2;
+                return true;
+            }
+
+            if (long.TryParse(inputString, out long l2))
             {
                 output = l2;
                 return true;
             }
         }
 
-        return base.TryMassageInput(input, out output);
+        output = null;
+        return false;
     }
 }

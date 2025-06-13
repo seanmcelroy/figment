@@ -628,7 +628,7 @@ public class Thing
         MarkAccessed();
 
         // Reusable values across each property set.
-        var associatedSchemas = new List<Schema>();
+        var associatedSchemas = new HashSet<Schema>();
         await foreach (var schema in GetAssociatedSchemas(cancellationToken))
         {
             associatedSchemas.Add(schema);
@@ -652,7 +652,7 @@ public class Thing
         var messages = new List<string>();
         foreach (var (propName, propValue) in properties)
         {
-            var existingProperties = new List<ThingProperty>();
+            var existingProperties = new HashSet<ThingProperty>();
             await foreach (var prop in GetPropertyByName(propName, cancellationToken))
             {
                 existingProperties.Add(prop);
@@ -828,7 +828,7 @@ public class Thing
                             && candidateProperties[0].SchemaGuid != null
                             && (candidateProperties[0].SchemaFieldType?.StartsWith(SchemaSchemaField.SCHEMA_FIELD_TYPE) ?? false))
                         {
-                            var disambig = new List<PossibleNameMatch>();
+                            var disambig = new HashSet<PossibleNameMatch>();
                             if (massagedPropValue?.ToString() != null)
                             {
                                 await foreach (var match in ssp.FindByPartialNameAsync(massagedPropValue.ToString()!, cancellationToken))
@@ -839,8 +839,9 @@ public class Thing
 
                             if (disambig.Count == 1)
                             {
-                                Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                                AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Reference.Guid}.");
+                                var first = disambig.Single();
+                                Properties[candidateProperties[0].TruePropertyName] = first.Reference.Guid;
+                                AmbientErrorContext.Provider.LogInfo($"Set {propName} to {first.Reference.Guid}.");
                                 continue;
 
                                 // return new ThingSetResult(true, $"Property {propName} set to '{disambig[0].Reference.Guid}'");
@@ -881,7 +882,7 @@ public class Thing
                             // This is for name resolution of "ref" fields.
                             var remoteSchemaGuid = candidateProperties[0].SchemaFieldType![(SchemaRefField.SCHEMA_FIELD_TYPE.Length + 1)..];
 
-                            var disambig = new List<PossibleNameMatch>();
+                            var disambig = new HashSet<PossibleNameMatch>();
                             if (massagedPropValue?.ToString() != null)
                             {
                                 await foreach (var match in tsp.FindByPartialNameAsync(remoteSchemaGuid, massagedPropValue.ToString()!, cancellationToken))
@@ -892,8 +893,9 @@ public class Thing
 
                             if (disambig.Count == 1)
                             {
-                                Properties[candidateProperties[0].TruePropertyName] = disambig[0].Reference.Guid;
-                                AmbientErrorContext.Provider.LogInfo($"Set {propName} to {disambig[0].Name}.");
+                                var first = disambig.Single();
+                                Properties[candidateProperties[0].TruePropertyName] = first.Reference.Guid;
+                                AmbientErrorContext.Provider.LogInfo($"Set {propName} to {first.Name}.");
                                 continue;
 
                                 // return new ThingSetResult(true, $"Property {candidateProperties[0].TruePropertyName} set to '{disambig[0].Reference.Guid}'");

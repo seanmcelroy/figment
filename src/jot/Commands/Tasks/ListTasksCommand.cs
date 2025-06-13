@@ -754,7 +754,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         filters.Add(archiveFilter);
 
         // Collect all task references first
-        var taskReferences = new List<Reference>();
+        var taskReferences = new HashSet<Reference>();
         await foreach (var reference in thingProvider.GetBySchemaAsync(WellKnownSchemas.TaskGuid, cancellationToken))
         {
             taskReferences.Add(reference);

@@ -255,7 +255,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             return null;
         }
 
-        using var fs = new FileStream(filePath, FileMode.Open);
+        await using var fs = new FileStream(filePath, FileMode.Open);
         try
         {
             using var doc = await JsonDocument.ParseAsync(fs, cancellationToken: cancellationToken);
@@ -468,7 +468,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         if (File.Exists(filePath))
             File.Move(filePath, backupFilePath, true);
 
-        using var fs = File.Create(filePath);
+        await using var fs = File.Create(filePath);
         try
         {
             await JsonSerializer.SerializeAsync(
@@ -516,7 +516,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             return new CreateThingResult { Success = false, Message = $"File for thing {thingName} already exists at {thingFilePath}" };
         }
 
-        using var fs = new FileStream(thingFilePath, FileMode.CreateNew);
+        await using var fs = new FileStream(thingFilePath, FileMode.CreateNew);
         try
         {
             await JsonSerializer.SerializeAsync(fs, thing!, ThingSourceGenerationContext.Default.Thing, cancellationToken: cancellationToken);
@@ -749,8 +749,9 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 continue;
             }
 
-            using var fs = File.Create(index.Key);
+            await using var fs = File.Create(index.Key);
             await IndexManager.AddAsync(fs, index.Value, cancellationToken);
+            await fs.FlushAsync(cancellationToken);
         }
 
         // Renumber increment fields on any associated schemas.
@@ -844,8 +845,9 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 continue;
             }
 
-            using var fs = File.Create(index.Key);
+            await using var fs = File.Create(index.Key);
             await IndexManager.AddAsync(fs, index.Value, cancellationToken);
+            await fs.FlushAsync(cancellationToken);
         }
 
         // Save new maximum to the increment field definition on the schema.

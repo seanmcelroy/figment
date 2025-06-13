@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -47,6 +48,26 @@ public static class IndexManager
         public string Value { get; init; } = Value;
     }
 
+    private readonly static ConcurrentDictionary<string, SemaphoreSlim> indexSemaphores = new(StringComparer.InvariantCultureIgnoreCase);
+
+    private static SemaphoreSlim GetSemaphore(string indexFilePath)
+    {
+        SemaphoreSlim? slim = null;
+        while (slim == null)
+        {
+            if (!indexSemaphores.TryGetValue(indexFilePath, out slim))
+            {
+                var newSlim = new SemaphoreSlim(2);
+                if (indexSemaphores.TryAdd(indexFilePath, newSlim))
+                {
+                    slim = newSlim;
+                }
+            }
+        }
+
+        return slim;
+    }
+
     /// <summary>
     /// Finds entries in an index using a <paramref name="selector"/> match.
     /// </summary>
@@ -62,23 +83,34 @@ public static class IndexManager
         if (!File.Exists(indexFilePath))
             yield break;
 
-        using var fs = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        using var sr = new StreamReader(fs, Encoding.UTF8);
-        using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
-
-        await foreach (var row in csvReader)
+        var slim = GetSemaphore(indexFilePath);
+        await slim.WaitAsync(cancellationToken); // Once here for the read
+        try
         {
-            if (cancellationToken.IsCancellationRequested)
-                yield break;
-
-            var entry = new Entry
+            await using var fs = File.OpenRead(indexFilePath);
+            using var sr = new StreamReader(fs, Encoding.UTF8);
+            using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
+            await foreach (var row in csvReader)
             {
-                Key = row[0].ToString(),
-                Value = row[1].ToString()
-            };
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
 
-            if (selector.Invoke(entry))
-                yield return entry;
+                if (row.ColCount == 2)
+                {
+                    var entry = new Entry
+                    {
+                        Key = row[0].ToString(),
+                        Value = row[1].ToString()
+                    };
+
+                    if (selector.Invoke(entry))
+                        yield return entry;
+                }
+            }
+        }
+        finally
+        {
+            slim.Release(1);
         }
     }
 
@@ -96,9 +128,13 @@ public static class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
+        var slim = GetSemaphore(indexFilePath);
+        await slim.WaitAsync(cancellationToken);
+        await slim.WaitAsync(cancellationToken); // Twice since we're going to write.
         try
         {
-            using var sw = new StreamWriter(indexFilePath, true, Encoding.UTF8);
+            await using var fs = new FileStream(indexFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+            using var sw = new StreamWriter(fs, Encoding.UTF8);
             await using var csvWriter = Sep
                 .Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture })
                 .To(sw);
@@ -111,12 +147,18 @@ public static class IndexManager
                 await csvWriter.FlushAsync(cancellationToken);
             }
 
+            await fs.FlushAsync(cancellationToken);
+
             return true;
         }
         catch (Exception ex)
         {
             AmbientErrorContext.Provider.LogException(ex, $"Unable to add entry to index at '{indexFilePath}'");
             return false;
+        }
+        finally
+        {
+            slim.Release(2);
         }
     }
 
@@ -132,10 +174,13 @@ public static class IndexManager
         ArgumentNullException.ThrowIfNull(fs);
         ArgumentNullException.ThrowIfNull(entries);
 
+        var slim = GetSemaphore(fs.Name);
+        await slim.WaitAsync(cancellationToken);
+        await slim.WaitAsync(cancellationToken); // Twice since we're going to write.
         try
         {
-            using var sw = new StreamWriter(fs, Encoding.UTF8);
-            await using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
+            var sw = new StreamWriter(fs, Encoding.UTF8);
+            var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
             foreach (var entry in entries)
             {
                 await using var row = csvWriter.NewRow(cancellationToken);
@@ -149,6 +194,10 @@ public static class IndexManager
         {
             AmbientErrorContext.Provider.LogException(ex, $"Unable to add entry to index at '{fs.Name}'");
             return false;
+        }
+        finally
+        {
+            slim.Release(2);
         }
     }
 
@@ -192,13 +241,16 @@ public static class IndexManager
 
         var backupPath = $"{indexFilePath}.new";
 
+        var slim = GetSemaphore(indexFilePath);
+        await slim.WaitAsync(cancellationToken); // Once here for the read.
+        try
         {
             // Exclusively read this index.
-            using var fsRead = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using var fsRead = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var sr = new StreamReader(fsRead, Encoding.UTF8);
             using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
-            using var sw = new StreamWriter(backupPath, false, Encoding.UTF8);
-            await using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
+            await using var sw = new StreamWriter(backupPath, false, Encoding.UTF8);
+            using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
 
             await foreach (var row in csvReader)
             {
@@ -212,7 +264,13 @@ public static class IndexManager
 
             await csvWriter.FlushAsync(cancellationToken);
         }
+        finally
+        {
+            slim.Release();
+        }
 
+        await slim.WaitAsync(cancellationToken);
+        await slim.WaitAsync(cancellationToken); // Twice here for the write (move).
         try
         {
             File.Move(backupPath, indexFilePath, true);
@@ -221,6 +279,10 @@ public static class IndexManager
         {
             AmbientErrorContext.Provider.LogException(ex, $"Unable to remove entry from index at '{indexFilePath}'");
             return false;
+        }
+        finally
+        {
+            slim.Release(2);
         }
 
         return true;
