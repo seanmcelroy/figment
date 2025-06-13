@@ -8,10 +8,10 @@ dotnet_diagnostic.IDE0055.severity = warning
 dotnet_diagnostic.SA1101.severity = none
 
 # SA1633: File should have header
-dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.SA1633.severity = warning
 
 # SA1201: Elements should appear in the correct order
-dotnet_diagnostic.SA1201.severity = none
+dotnet_diagnostic.SA1201.severity = warning
 
 # SA1202: Public members should come before private members
 dotnet_diagnostic.SA1202.severity = none
@@ -26,7 +26,7 @@ dotnet_diagnostic.SA1404.severity = none
 dotnet_diagnostic.SA1516.severity = none
 
 # CA1303: Do not pass literals as localized parameters
-dotnet_diagnostic.CA1303.severity = none
+dotnet_diagnostic.CA1303.severity = warning
 
 # CSA1204: Static members should appear before non-static members
 dotnet_diagnostic.SA1204.severity = none
@@ -56,7 +56,7 @@ dotnet_diagnostic.SA1404.severity = none
 dotnet_diagnostic.SA1101.severity = none
 
 # SA1633: File should have header
-dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.SA1633.severity = warning
 
 # SA1649: File name should match first type name
 dotnet_diagnostic.SA1649.severity = none
@@ -68,13 +68,13 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.CA1814.severity = none
 
 # RCS1194: Implement exception constructors.
-dotnet_diagnostic.RCS1194.severity = none
+dotnet_diagnostic.RCS1194.severity = warning
 
 # CA1032: Implement standard exception constructors
-dotnet_diagnostic.CA1032.severity = none
+dotnet_diagnostic.CA1032.severity = warning
 
 # CA1826: Do not use Enumerable methods on indexable collections. Instead use the collection directly
-dotnet_diagnostic.CA1826.severity = none
+dotnet_diagnostic.CA1826.severity = warning
 
 # RCS1079: Throwing of new NotImplementedException.
 dotnet_diagnostic.RCS1079.severity = warning
@@ -83,7 +83,7 @@ dotnet_diagnostic.RCS1079.severity = warning
 dotnet_diagnostic.RCS1057.severity = none
 
 # RCS1057: Validate arguments correctly
-dotnet_diagnostic.RCS1227.severity = none
+dotnet_diagnostic.RCS1227.severity = warning
 
 # IDE0004: Remove Unnecessary Cast
 dotnet_diagnostic.IDE0004.severity = warning
@@ -95,7 +95,7 @@ dotnet_diagnostic.CA1810.severity = none
 dotnet_diagnostic.IDE0044.severity = warning
 
 # RCS1047: Non-asynchronous method name should not end with 'Async'.
-dotnet_diagnostic.RCS1047.severity = none
+dotnet_diagnostic.RCS1047.severity = warning
 
 # RCS1090: Call 'ConfigureAwait(false)'.
 dotnet_diagnostic.RCS1090.severity = warning

@@ -27,11 +27,6 @@ namespace jot.Commands.Tasks;
 /// </summary>
 internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
 {
-    private enum ERROR_CODES : int
-    {
-        THING_CREATE_ERROR = -2002,
-    }
-
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, AddTaskCommandSettings settings, CancellationToken cancellationToken)
     {
@@ -97,7 +92,7 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
         if (!tcr.Success || tcr.NewThing == null)
         {
             AmbientErrorContext.Provider.LogError($"Unable to create task: {tcr.Message}");
-            return (int)ERROR_CODES.THING_CREATE_ERROR;
+            return (int)Globals.GLOBAL_ERROR_CODES.THING_CREATE_ERROR;
         }
 
         var taskIdPropValue = await tcr.NewThing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);

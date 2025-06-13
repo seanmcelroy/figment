@@ -28,7 +28,7 @@ public abstract class SchemaCancellableAsyncCommand<T> : CancellableAsyncCommand
     /// <param name="guidOrNamePart">The <see cref="Schema.Guid"/> or <see cref="Schema.Name"/> a schema to match and return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A tuple with a result which can be returned by the entry point if it is an error, the schema, if loaded, and the storage provider, if constructed.</returns>
-    public static async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(string guidOrNamePart, CancellationToken cancellationToken)
+    public static async Task<(Globals.GLOBAL_ERROR_CODES result, Schema? schema, ISchemaStorageProvider? ssp)> TryGetSchema(string? guidOrNamePart, CancellationToken cancellationToken)
     {
         var selected = Program.SelectedEntity;
         if (selected.Equals(Reference.EMPTY) || selected.Type != Reference.ReferenceType.Schema)

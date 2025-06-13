@@ -69,7 +69,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             // Array
             var saf = new SchemaArrayField(propName)
             {
-                Items = new SchemaArrayField.SchemaArrayFieldItems
+                Items = new SchemaArrayFieldItems
                 {
                     Type = "string",
                 },

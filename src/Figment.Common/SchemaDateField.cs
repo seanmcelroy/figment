@@ -134,6 +134,20 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
         { "twenty", 20 },
     };
 
+    /// <inheritdoc/>
+    [JsonPropertyName("type")]
+    public override string Type { get; } = "string"; // SCHEMA_FIELD_TYPE does not match JSON schema
+
+    /// <summary>
+    /// Gets the format of this string field.
+    /// </summary>
+    /// <remarks>
+    /// Because dates are serialized in JSON as strings with format 'date', the value of this field
+    /// is always <![CDATA[date]]>.
+    /// </remarks>
+    [JsonPropertyName("format")]
+    public string Format { get; } = "date"; // SCHEMA_FIELD_TYPE does not match JSON schema
+
     [GeneratedRegex(@"^(?:on\s+|next\s+)?(\w+)$")]
     private static partial Regex OnDayRegex();
 
@@ -148,20 +162,6 @@ public partial class SchemaDateField(string Name) : SchemaTextField(Name)
 
     [GeneratedRegex(@"^(?:in\s+|after\s+)?(\d+|\w+)\s+months?$")]
     private static partial Regex InMonthsRegex();
-
-    /// <inheritdoc/>
-    [JsonPropertyName("type")]
-    public override string Type { get; } = "string"; // SCHEMA_FIELD_TYPE does not match JSON schema
-
-    /// <summary>
-    /// Gets the format of this string field.
-    /// </summary>
-    /// <remarks>
-    /// Because dates are serialized in JSON as strings with format 'date', the value of this field
-    /// is always <![CDATA[date]]>.
-    /// </remarks>
-    [JsonPropertyName("format")]
-    public string Format { get; } = "date"; // SCHEMA_FIELD_TYPE does not match JSON schema
 
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult("date");

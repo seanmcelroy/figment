@@ -38,18 +38,6 @@ public class SchemaArrayField(string Name) : SchemaFieldBase(Name)
     /// </remarks>
     public const string SCHEMA_FIELD_TYPE = "array";
 
-    /// <summary>
-    /// The type of the array items.
-    /// </summary>
-    public class SchemaArrayFieldItems
-    {
-        /// <summary>
-        /// Gets or sets the type of array items.
-        /// </summary>
-        [JsonPropertyName("type")]
-        required public string Type { get; set; }
-    }
-
     /// <inheritdoc/>
     [JsonPropertyName("type")]
     public override string Type { get; } = SCHEMA_FIELD_TYPE;

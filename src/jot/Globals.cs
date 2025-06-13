@@ -83,7 +83,10 @@ public static class Globals
         /// </summary>
         THING_SAVE_ERROR = -2001,
 
-        // THING_CREATE_ERROR = -2002
+        /// <summary>
+        /// Unable to create a new <see cref="Figment.Common.Thing"/> in the underlying data store.
+        /// </summary>
+        THING_CREATE_ERROR = -2002,
 
         /// <summary>
         /// Unable to delete a <see cref="Figment.Common.Thing"/> from the underlying data store.

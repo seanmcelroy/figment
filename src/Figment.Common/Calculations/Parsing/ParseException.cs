@@ -26,10 +26,38 @@ namespace Figment.Common.Calculations.Parsing;
 /// </remarks>
 /// <param name="message">The error message that explains the reason for the exception.</param>
 /// <param name="position">The index of the expression where the exception occurred during parsing.</param>
-public class ParseException(string message, int position) : Exception(message)
+/// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
+public class ParseException(string message, int? position, Exception? innerException = null) : Exception(message, innerException)
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ParseException"/> class.
+    /// </summary>
+    public ParseException()
+        : this(string.Empty, default(int?))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ParseException"/> class.
+    /// </summary>
+    /// <param name="message">The error message that explains the reason for the exception.</param>
+    public ParseException(string message)
+        : this(message, default(int?))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ParseException"/> class.
+    /// </summary>
+    /// <param name="message">The error message that explains the reason for the exception.</param>
+    /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
+    public ParseException(string message, Exception innerException)
+        : this(message, default(int?), innerException)
+    {
+    }
+
     /// <summary>
     /// Gets the index of the expression where the exception occurred during parsing.
     /// </summary>
-    public int Position { get; init; } = position;
+    public int? Position { get; init; } = position;
 }

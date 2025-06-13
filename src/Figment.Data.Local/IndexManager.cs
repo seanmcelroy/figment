@@ -62,7 +62,8 @@ public static class IndexManager
         if (!File.Exists(indexFilePath))
             yield break;
 
-        using var sr = new StreamReader(indexFilePath, Encoding.UTF8);
+        using var fs = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var sr = new StreamReader(fs, Encoding.UTF8);
         using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
 
         await foreach (var row in csvReader)

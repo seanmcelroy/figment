@@ -49,6 +49,8 @@ public readonly record struct EvaluationContext
     /// <remarks>The purpose of this method is to support <see cref="EvaluationContext(Schema)"/>.</remarks>
     public EvaluationContext(Schema schema)
     {
+        ArgumentNullException.ThrowIfNull(schema);
+
         foreach (var prop in schema.Properties)
         {
             switch (prop.Value.Type)
@@ -131,6 +133,8 @@ public readonly record struct EvaluationContext
     /// <param name="thing">A <see cref="Thing"/> object that should be injected into the context, making its properties available.</param>
     public EvaluationContext(Thing thing)
     {
+        ArgumentNullException.ThrowIfNull(thing);
+
         // Add set properties.
         foreach (var prop in thing.GetProperties(CancellationToken.None).ToBlockingEnumerable())
         {
@@ -157,7 +161,7 @@ public readonly record struct EvaluationContext
     public EvaluationContext(IEnumerable<KeyValuePair<string, ExpressionResult>> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        RowData = arguments.ToDictionary(k => k.Key.ToLowerInvariant(), v => v.Value);
+        RowData = arguments.ToDictionary(k => k.Key, v => v.Value, StringComparer.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
@@ -167,7 +171,15 @@ public readonly record struct EvaluationContext
     public EvaluationContext(IEnumerable<KeyValuePair<string, object?>> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        RowData = arguments.ToDictionary(k => k.Key.ToLowerInvariant(), v => ExpressionResult.Success(v.Value));
+
+        var keys = arguments.Select(k => k.Key.ToLowerInvariant()).ToArray();
+        var uniqueKeys = keys.Distinct().ToArray();
+        if (keys.Length != uniqueKeys.Length)
+        {
+            throw new ArgumentException("Keys in arguments list must be unique.", nameof(arguments));
+        }
+
+        RowData = arguments.ToDictionary(k => k.Key, v => ExpressionResult.Success(v.Value), StringComparer.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
@@ -177,7 +189,7 @@ public readonly record struct EvaluationContext
     public EvaluationContext(IEnumerable<KeyValuePair<string, string?>> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        RowData = arguments.ToDictionary(k => k.Key.ToLowerInvariant(), v => ExpressionResult.Success(v.Value));
+        RowData = arguments.ToDictionary(k => k.Key, v => ExpressionResult.Success(v.Value), StringComparer.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
