@@ -37,7 +37,7 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
             return (int)Globals.GLOBAL_ERROR_CODES.GENERAL_IO_ERROR;
         }
 
-        var taskSchema = await schemaProvider.LoadAsync(WellKnownSchemas.Task.Guid, cancellationToken);
+        var taskSchema = await schemaProvider.LoadAsync(Figment.Common.Tasks.Task.WellKnownSchemaGuid, cancellationToken);
         if (taskSchema == null)
         {
             AmbientErrorContext.Provider.LogError(AmbientStorageContext.RESOURCE_ERR_UNABLE_TO_LOAD_BUILT_IN_SCHEMA);
@@ -95,7 +95,7 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
             return (int)Globals.GLOBAL_ERROR_CODES.THING_CREATE_ERROR;
         }
 
-        var taskIdPropValue = await tcr.NewThing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+        var taskIdPropValue = await tcr.NewThing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);
         var taskId = taskIdPropValue?.AsUInt64();
 
         AmbientErrorContext.Provider.LogDone($"Task #{taskId} created.");

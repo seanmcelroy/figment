@@ -52,13 +52,13 @@ public class UnprioritizeTaskCommand : CancellableAsyncCommand<UnprioritizeTaskC
             // settings.TaskNumber is actually a number.
             isNumber = true;
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                WellKnownSchemas.Task.Guid,
-                ListTasksCommand.TrueNameId,
+                Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+                Figment.Common.Tasks.Task.TrueNameId,
                 settings.TaskNumber,
-                new UnsignedNumberComparer(),
+                UnsignedNumberComparer.Default,
                 cancellationToken))
             {
-                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNamePriority, cancellationToken))?.AsBoolean() ?? false)
+                if (!(await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNamePriority, cancellationToken))?.AsBoolean() ?? false)
                 {
                     foundCount++;
                     AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} is already unprioritized.");
@@ -87,10 +87,10 @@ public class UnprioritizeTaskCommand : CancellableAsyncCommand<UnprioritizeTaskC
         {
             // Mark ALL tasks as unprioritized.
             await foreach (var thing in tsp.LoadAllForSchema(
-                    WellKnownSchemas.Task.Guid,
+                    Figment.Common.Tasks.Task.WellKnownSchemaGuid,
                     cancellationToken))
             {
-                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNamePriority, cancellationToken))?.AsBoolean() ?? false)
+                if (!(await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNamePriority, cancellationToken))?.AsBoolean() ?? false)
                 {
                     continue;
                 }
@@ -98,7 +98,7 @@ public class UnprioritizeTaskCommand : CancellableAsyncCommand<UnprioritizeTaskC
                 var tsr = await thing.Set("priority", false, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+                    var id = await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {

@@ -26,6 +26,11 @@ using System.Collections;
 /// </summary>
 public class UnsignedNumberComparer : IComparer
 {
+    /// <summary>
+    /// Gets the default implementation of this stateless comparer.
+    /// </summary>
+    public static readonly UnsignedNumberComparer Default = new();
+
     /// <inheritdoc/>
     public int Compare(object? x, object? y)
     {

@@ -36,11 +36,11 @@ internal abstract class NoteCommandBase<TSettings> : CancellableAsyncCommand<TSe
     /// <param name="task">The task thing from which to retrieve the notes.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The notes in a string array, unless notes exist and could not be loaded as a string array.</returns>
-    protected async Task<List<string>?> GetNotesAsync(Thing task, CancellationToken cancellationToken)
+    protected static async Task<List<string>?> GetNotesAsync(Thing task, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(task);
 
-        var notes = await task.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameNotes, cancellationToken);
+        var notes = await task.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameNotes, cancellationToken);
         if (notes == null)
         {
             return [];

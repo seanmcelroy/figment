@@ -102,3 +102,9 @@ dotnet_diagnostic.RCS1090.severity = warning
 
 # The file header is missing or not located at the top of the file
 dotnet_diagnostic.SA1633.severity = none
+
+# CA1829: Use the "Count" property instead of Enumerable.Count()
+dotnet_diagnostic.CA1829.severity = warning
+
+# CA2016: Forward the 'cancellationToken' parameter to the 'FlushAsync' method or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token
+dotnet_diagnostic.CA2016.severity = warning

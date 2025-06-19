@@ -51,10 +51,10 @@ internal class EditNoteCommand : NoteCommandBase<EditNoteCommandSettings>
         var anyFound = false;
 
         await foreach (var task in tsp.FindBySchemaAndPropertyValue(
-            WellKnownSchemas.Task.Guid,
-            ListTasksCommand.TrueNameId,
+            Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+            Figment.Common.Tasks.Task.TrueNameId,
             settings.TaskNumber,
-            new UnsignedNumberComparer(),
+            UnsignedNumberComparer.Default,
             cancellationToken))
         {
             anyFound = true;

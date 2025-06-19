@@ -297,8 +297,6 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
             return false;
         }
 
-        Dictionary<string, Dictionary<string, string>> indexesToWrite = [];
-
         Dictionary<Reference, (long existingId, DateTime createdOn)>? metadata = [];
 
         await foreach (var thing in LoadAllForSchema(schemaGuid, cancellationToken))

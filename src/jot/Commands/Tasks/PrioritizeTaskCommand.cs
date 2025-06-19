@@ -49,10 +49,10 @@ public class PrioritizeTaskCommand : CancellableAsyncCommand<PrioritizeTaskComma
         if (ulong.TryParse(settings.TaskNumber, out ulong taskNumber))
         {
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                    WellKnownSchemas.Task.Guid,
-                    ListTasksCommand.TrueNameId,
+                    Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+                    Figment.Common.Tasks.Task.TrueNameId,
                     taskNumber,
-                    new UnsignedNumberComparer(),
+                    UnsignedNumberComparer.Default,
                     cancellationToken))
             {
                 anyFound = true;

@@ -107,7 +107,7 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
         if ("gc".Equals(settings.TaskNumber, StringComparison.CurrentCultureIgnoreCase))
         {
             // Special case for "garbage collecting.
-            var success = await tsp.RenumberIncrementField(WellKnownSchemas.Task.Guid, cancellationToken);
+            var success = await tsp.RenumberIncrementField(Figment.Common.Tasks.Task.WellKnownSchemaGuid, cancellationToken);
             if (!success)
             {
                 AmbientErrorContext.Provider.LogError("Unable to renumber increment fields for tasks.");
@@ -123,13 +123,13 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
             // settings.TaskNumber is actually a number.
             isNumber = true;
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                    WellKnownSchemas.Task.Guid,
-                    ListTasksCommand.TrueNameId,
+                    Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+                    Figment.Common.Tasks.Task.TrueNameId,
                     taskNumber,
-                    new UnsignedNumberComparer(),
+                    UnsignedNumberComparer.Default,
                     cancellationToken))
             {
-                if ((await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if ((await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
                 {
                     foundCount++;
                     AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} is already archived.");
@@ -158,10 +158,10 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
         {
             // Mark ALL tasks as archived.
             await foreach (var thing in tsp.LoadAllForSchema(
-                    WellKnownSchemas.Task.Guid,
+                    Figment.Common.Tasks.Task.WellKnownSchemaGuid,
                     cancellationToken))
             {
-                if ((await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if ((await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
                 {
                     continue;
                 }
@@ -169,7 +169,7 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
                 var tsr = await thing.Set("archived", true, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+                    var id = await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {
@@ -190,13 +190,13 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
             // Archive every completed task.
             // settings.TaskNumber is actually a number.
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                    WellKnownSchemas.Task.Guid,
-                    ListTasksCommand.TrueNameComplete,
+                    Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+                    Figment.Common.Tasks.Task.TrueNameComplete,
                     true,
                     new BooleanComparerTrueIfNotNull(),
                     cancellationToken))
             {
-                if ((await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if ((await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
                 {
                     continue;
                 }
@@ -204,7 +204,7 @@ public class ArchiveTaskCommand : CancellableAsyncCommand<ArchiveTaskCommandSett
                 var tsr = await thing.Set("archived", true, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+                    var id = await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {

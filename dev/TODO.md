@@ -16,6 +16,7 @@
 - [x] Built-in system schemas
 - [x] Pomodoro timer
 - [x] tasks
+- [ ] business process management (BPM)
 - [ ] Versioned things
 - [ ] default schema values
 - [ ] Schema inheritence

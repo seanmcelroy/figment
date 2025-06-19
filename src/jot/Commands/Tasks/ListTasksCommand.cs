@@ -32,33 +32,6 @@ namespace jot.Commands.Tasks;
 /// </summary>
 public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommandSettings>
 {
-    /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "id" field.
-    /// </summary>
-    public const string TrueNameId = $"{WellKnownSchemas.TaskGuid}.id";
-
-    /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "complete" field.
-    /// </summary>
-    public const string TrueNameComplete = $"{WellKnownSchemas.TaskGuid}.complete";
-    private const string TrueNameDue = $"{WellKnownSchemas.TaskGuid}.due";
-
-    /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "priority" field.
-    /// </summary>
-    public const string TrueNamePriority = $"{WellKnownSchemas.TaskGuid}.priority";
-
-    /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "archived" field.
-    /// </summary>
-    public const string TrueNameArchived = $"{WellKnownSchemas.TaskGuid}.archived";
-    private const string TrueNameStatus = $"{WellKnownSchemas.TaskGuid}.status";
-
-    /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "notes" field.
-    /// </summary>
-    public const string TrueNameNotes = $"{WellKnownSchemas.TaskGuid}.notes";
-
     private delegate Task<bool> FilterDelegate(Thing task);
     private delegate Task<Dictionary<string, HashSet<Thing>>> GroupingDelegate(string? fieldName, HashSet<Thing> tasks, CancellationToken cancellationToken);
 
@@ -160,7 +133,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
     {
         return async t =>
         {
-            var archivedProp = await t.GetPropertyByTrueNameAsync(TrueNameArchived, cancellationToken);
+            var archivedProp = await t.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameArchived, cancellationToken);
             var archivedValue = archivedProp?.AsBoolean();
             if (!SchemaBooleanField.TryParseBoolean(flagValue, out bool specValue))
             {
@@ -256,7 +229,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         ArgumentException.ThrowIfNullOrWhiteSpace(fieldName);
         ArgumentNullException.ThrowIfNull(tasks);
 
-        string trueNameGroupField = $"{WellKnownSchemas.TaskGuid}.{fieldName}";
+        string trueNameGroupField = $"{Figment.Common.Tasks.Task.WellKnownSchemaGuid}.{fieldName}";
 
         var groupedBuckets = new Dictionary<string, HashSet<Thing>>();
         foreach (var task in tasks)
@@ -563,7 +536,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         var (rangeStart, rangeEnd) = ParseFlagDateValue(split[1]);
                         dueFilter = async (t) =>
                         {
-                            var dueProp = await t.GetPropertyByTrueNameAsync(TrueNameDue, cancellationToken);
+                            var dueProp = await t.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameDue, cancellationToken);
                             var dueValue = dueProp?.AsDateTimeOffset();
 
                             // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
@@ -587,7 +560,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         var (rangeStart, _) = ParseFlagDateValue(split[1]);
                         dueFilter = async (t) =>
                         {
-                            var dueProp = await t.GetPropertyByTrueNameAsync(TrueNameDue, cancellationToken);
+                            var dueProp = await t.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameDue, cancellationToken);
                             var dueValue = dueProp?.AsDateTimeOffset();
 
                             // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
@@ -611,7 +584,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                         var (_, rangeEnd) = ParseFlagDateValue(split[1]);
                         dueFilter = async (t) =>
                         {
-                            var dueProp = await t.GetPropertyByTrueNameAsync(TrueNameDue, cancellationToken);
+                            var dueProp = await t.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameDue, cancellationToken);
                             var dueValue = dueProp?.AsDateTimeOffset();
 
                             // Only allow if no due date and 'none' specified.  Otherwise no match if no due date.
@@ -637,7 +610,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     async Task<bool> CompletedFilter(Thing t)
                     {
                         // This can be a boolean or a date filter, like completed:true, completed:false, or completed:thisweek
-                        var completeProp = await t.GetPropertyByTrueNameAsync(TrueNameComplete, cancellationToken);
+                        var completeProp = await t.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameComplete, cancellationToken);
                         var completeValue = completeProp?.AsDateTimeOffset();
                         if (!SchemaBooleanField.TryParseBoolean(split[1], out bool specValue))
                         {
@@ -671,7 +644,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 case "prioritized":
                     async Task<bool> PriorityFilter(Thing t)
                     {
-                        var priorityProp = await t.GetPropertyByTrueNameAsync(TrueNamePriority, cancellationToken);
+                        var priorityProp = await t.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNamePriority, cancellationToken);
                         var priorityValue = priorityProp?.AsBoolean();
                         if (!SchemaBooleanField.TryParseBoolean(split[1], out bool specValue))
                         {
@@ -702,7 +675,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                     break;
 
                 case "status":
-                    filters.Add((t) => FilterByProperty(t, TrueNameStatus, split[1], cancellationToken));
+                    filters.Add((t) => FilterByProperty(t, Figment.Common.Tasks.Task.TrueNameStatus, split[1], cancellationToken));
                     break;
 
                 case "group":
@@ -755,7 +728,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
 
         // Collect all task references first
         var taskReferences = new HashSet<Reference>();
-        await foreach (var reference in thingProvider.GetBySchemaAsync(WellKnownSchemas.TaskGuid, cancellationToken))
+        await foreach (var reference in thingProvider.GetBySchemaAsync(Figment.Common.Tasks.Task.WellKnownSchemaGuid, cancellationToken))
         {
             taskReferences.Add(reference);
         }
@@ -778,13 +751,13 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
         {
             var props = await task.GetPropertiesByTrueNameAsync(
             [
-                TrueNameId,
-                TrueNameComplete,
-                TrueNameDue,
-                TrueNameArchived,
-                TrueNamePriority,
-                TrueNameStatus,
-                TrueNameNotes,
+                Figment.Common.Tasks.Task.TrueNameId,
+                Figment.Common.Tasks.Task.TrueNameComplete,
+                Figment.Common.Tasks.Task.TrueNameDue,
+                Figment.Common.Tasks.Task.TrueNameArchived,
+                Figment.Common.Tasks.Task.TrueNamePriority,
+                Figment.Common.Tasks.Task.TrueNameStatus,
+                Figment.Common.Tasks.Task.TrueNameNotes,
             ], cancellationToken);
             string[] projects = [];
             string[] contexts = [];
@@ -827,28 +800,28 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
             // Sort using cached properties instead of calling GetPropertyByTrueName during comparison
             foreach (var item in todos
                 .Join(filteredTaskGuidsAndProps, t => t.Guid, f => f.Key, (f, t) => new { Task = f, Props = t.Value })
-                .OrderBy(x => x.Props.TryGetValue(TrueNamePriority, out var duePrio)
+                .OrderBy(x => x.Props.TryGetValue(Figment.Common.Tasks.Task.TrueNamePriority, out var duePrio)
                     ? ((duePrio?.AsBoolean() ?? false) ? 0 : 1)
                     : 1)
-                .ThenBy(x => x.Props.TryGetValue(TrueNameDue, out var dueProp)
+                .ThenBy(x => x.Props.TryGetValue(Figment.Common.Tasks.Task.TrueNameDue, out var dueProp)
                     ? dueProp?.AsDateTimeOffset()
                     : null)
-                .ThenBy(x => x.Props.TryGetValue(TrueNameId, out var idProp)
+                .ThenBy(x => x.Props.TryGetValue(Figment.Common.Tasks.Task.TrueNameId, out var idProp)
                     ? idProp?.AsUInt64()
                     : null))
             {
                 var task = item.Task;
                 var props = item.Props;
 
-                bool prioritized = props[TrueNamePriority]?.AsBoolean() ?? false;
+                bool prioritized = props[Figment.Common.Tasks.Task.TrueNamePriority]?.AsBoolean() ?? false;
                 var beBold = prioritized ? " bold" : string.Empty;
 
-                var id = props[TrueNameId]?.AsUInt64();
+                var id = props[Figment.Common.Tasks.Task.TrueNameId]?.AsUInt64();
                 var idValue = id != null
                     ? $"[darkgoldenrod{beBold}]{id}[/]"
                     : $"[red{beBold}]<ID MISSING>[/]";
 
-                bool complete = (props[TrueNameComplete]?.AsDateTimeOffset()).HasValue;
+                bool complete = (props[Figment.Common.Tasks.Task.TrueNameComplete]?.AsDateTimeOffset()).HasValue;
                 var completeValue = complete
                     ? (AnsiConsole.Profile.Capabilities.Unicode ? $"[[[green{beBold}]:check_mark:[/]]]" : "[[[green]x[/]]]")
                     : "[[ ]]";
@@ -856,7 +829,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 string? dueValue = null;
                 {
                     DateTime? dueDate = null;
-                    if (!props.TryGetValue(TrueNameDue, out ThingProperty? dueProp))
+                    if (!props.TryGetValue(Figment.Common.Tasks.Task.TrueNameDue, out ThingProperty? dueProp))
                     {
                         dueValue = string.Empty; // No due date
                     }
@@ -951,7 +924,7 @@ public partial class ListTasksCommand : CancellableAsyncCommand<ListTasksCommand
                 // Does this task have notes?
                 if (settings.ShowNotes ?? false)
                 {
-                    var notes = props[TrueNameNotes]?.AsStringArray();
+                    var notes = props[Figment.Common.Tasks.Task.TrueNameNotes]?.AsStringArray();
                     if (notes != null)
                     {
                         for (var noteIndex = 0; noteIndex < notes.Length; noteIndex++)

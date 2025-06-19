@@ -107,13 +107,13 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
             // settings.TaskNumber is actually a number.
             isNumber = true;
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                WellKnownSchemas.Task.Guid,
-                ListTasksCommand.TrueNameId,
+                Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+                Figment.Common.Tasks.Task.TrueNameId,
                 taskNumber,
-                new UnsignedNumberComparer(),
+                UnsignedNumberComparer.Default,
                 cancellationToken))
             {
-                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if (!(await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
                 {
                     foundCount++;
                     AmbientErrorContext.Provider.LogDone($"Task #{taskNumber} is already unarchived.");
@@ -142,10 +142,10 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
         {
             // Mark ALL tasks as archived.
             await foreach (var thing in tsp.LoadAllForSchema(
-                    WellKnownSchemas.Task.Guid,
+                    Figment.Common.Tasks.Task.WellKnownSchemaGuid,
                     cancellationToken))
             {
-                if (!(await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
+                if (!(await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameArchived, cancellationToken))?.AsBoolean() ?? false)
                 {
                     continue;
                 }
@@ -153,7 +153,7 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
                 var tsr = await thing.Set("archived", false, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+                    var id = await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {
@@ -174,8 +174,8 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
             // Archive every completed task.
             // settings.TaskNumber is actually a number.
             await foreach (var thing in tsp.FindBySchemaAndPropertyValue(
-                WellKnownSchemas.Task.Guid,
-                ListTasksCommand.TrueNameComplete,
+                Figment.Common.Tasks.Task.WellKnownSchemaGuid,
+                Figment.Common.Tasks.Task.TrueNameComplete,
                 null,
                 new BooleanComparerTrueIfNull(),
                 cancellationToken))
@@ -183,7 +183,7 @@ public class UnarchiveTaskCommand : CancellableAsyncCommand<UnarchiveTaskCommand
                 var tsr = await thing.Set("archived", false, cancellationToken);
                 if (tsr.Success)
                 {
-                    var id = await thing.GetPropertyByTrueNameAsync(ListTasksCommand.TrueNameId, cancellationToken);
+                    var id = await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
                     if (saveSuccess)
                     {
