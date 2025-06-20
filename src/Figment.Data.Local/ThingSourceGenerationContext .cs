@@ -30,7 +30,14 @@ namespace Figment.Data.Local;
 /// </remarks>
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)] // Rerquired for polymorphism
 [JsonSerializable(typeof(Thing))]
+// Required to allow deserialization of SchemaEnumField.Values object values
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(double))]
+[JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(ulong))]
+[JsonSerializable(typeof(Dictionary<string, object>))]
+[JsonSerializable(typeof(object[]))]
 public partial class ThingSourceGenerationContext : JsonSerializerContext
 {
 }

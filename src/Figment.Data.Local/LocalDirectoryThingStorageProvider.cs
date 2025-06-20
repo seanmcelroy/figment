@@ -468,6 +468,9 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         if (File.Exists(filePath))
             File.Move(filePath, backupFilePath, true);
 
+        // Just in case
+        thing.Properties.Remove("IsDirty");
+
         await using var fs = File.Create(filePath);
         try
         {

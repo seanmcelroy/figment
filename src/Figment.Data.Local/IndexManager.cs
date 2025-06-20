@@ -228,7 +228,13 @@ public static class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFilePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(valueToRemove);
 
-        return await RemoveAsync(indexFilePath, row => string.Equals(row[1].ToString(), valueToRemove, StringComparison.Ordinal), cancellationToken);
+        return await RemoveAsync(indexFilePath, row =>
+        {
+            if (row.ColCount != 2)
+                return false;
+
+            return valueToRemove.Equals(row[1].ToString(), StringComparison.Ordinal);
+        }, cancellationToken);
     }
 
     private static async Task<bool> RemoveAsync(string indexFilePath, Func<SepReader.Row, bool> deleteSelector, CancellationToken cancellationToken)

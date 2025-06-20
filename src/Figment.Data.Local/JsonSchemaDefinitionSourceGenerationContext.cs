@@ -28,7 +28,7 @@ namespace Figment.Data.Local;
 /// <remarks>
 /// See: https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation.
 /// </remarks>
-[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)] // Rerquired for polymorphism
+[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)] // Required for polymorphism
 [JsonSerializable(typeof(JsonSchemaDefinition))]
 [JsonSerializable(typeof(SchemaFieldBase))]
 [JsonSerializable(typeof(Schema))]
@@ -38,6 +38,8 @@ namespace Figment.Data.Local;
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(double))]
 [JsonSerializable(typeof(bool))]
+[JsonSerializable(typeof(ulong))]
+[JsonSerializable(typeof(Dictionary<string, object>))]
 public partial class JsonSchemaDefinitionSourceGenerationContext : JsonSerializerContext
 {
 }
