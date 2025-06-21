@@ -89,7 +89,7 @@ public static class IndexManager
         {
             await using var fs = File.OpenRead(indexFilePath);
             using var sr = new StreamReader(fs, Encoding.UTF8);
-            using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
+            using var csvReader = await Sep.Reader(o => o with { HasHeader = false, Unescape = true, Sep = Sep.New(',') }).FromAsync(sr, cancellationToken);
             await foreach (var row in csvReader)
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -180,7 +180,7 @@ public static class IndexManager
         try
         {
             var sw = new StreamWriter(fs, Encoding.UTF8);
-            var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
+            var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture, Escape = true, Sep = Sep.New(',') }).To(sw);
             foreach (var entry in entries)
             {
                 await using var row = csvWriter.NewRow(cancellationToken);
@@ -254,9 +254,9 @@ public static class IndexManager
             // Exclusively read this index.
             await using var fsRead = new FileStream(indexFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var sr = new StreamReader(fsRead, Encoding.UTF8);
-            using var csvReader = await Sep.Reader(o => o with { HasHeader = false }).FromAsync(sr, cancellationToken);
+            using var csvReader = await Sep.Reader(o => o with { HasHeader = false, Unescape = true, Sep = Sep.New(',') }).FromAsync(sr, cancellationToken);
             await using var sw = new StreamWriter(backupPath, false, Encoding.UTF8);
-            using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture }).To(sw);
+            using var csvWriter = Sep.Writer(o => o with { WriteHeader = false, Escape = true, Sep = Sep.New(','), CultureInfo = CultureInfo.InvariantCulture }).To(sw);
 
             await foreach (var row in csvReader)
             {
