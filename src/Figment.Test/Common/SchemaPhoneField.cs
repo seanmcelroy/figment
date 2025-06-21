@@ -19,18 +19,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace Figment.Test.Common;
 
 [TestClass]
-public sealed class SchemaNumberField
+public sealed class SchemaPhoneField
 {
     [TestMethod]
     public async Task IsValidAsync()
     {
-        var f = new Figment.Common.SchemaNumberField(nameof(IsValidAsync));
+        var f = new Figment.Common.SchemaPhoneField(nameof(IsValidAsync));
 
         var s = await f.GetReadableFieldTypeAsync(false, CancellationToken.None);
 
         Assert.IsNotNull(s);
-        Assert.AreEqual("number", s, StringComparer.Ordinal);
-        Assert.AreEqual("number", f.Type, StringComparer.Ordinal);
+        Assert.AreEqual("phone", s, StringComparer.Ordinal);
+        Assert.AreEqual("string", f.Type, StringComparer.Ordinal);
 
         f.Required = false;
         Assert.IsTrue(await f.IsValidAsync(null, CancellationToken.None));
@@ -123,104 +123,96 @@ public sealed class SchemaNumberField
         Assert.IsTrue(await f.IsValidAsync(ulong.MaxValue, CancellationToken.None));
 
         f.Required = false;
-        Assert.IsTrue(await f.IsValidAsync(int.MaxValue.ToString(), CancellationToken.None));
-        Assert.IsTrue(await f.IsValidAsync(long.MaxValue.ToString(), CancellationToken.None));
-        Assert.IsTrue(await f.IsValidAsync(ulong.MaxValue.ToString(), CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync("12345", CancellationToken.None), "Number values must be native number types");
 
         Assert.IsTrue(await f.IsValidAsync(Math.PI, CancellationToken.None), "PI is a number");
-        Assert.IsFalse(await f.IsValidAsync(string.Empty, CancellationToken.None));
-        Assert.IsFalse(await f.IsValidAsync("whatever", CancellationToken.None));
-        Assert.IsFalse(await f.IsValidAsync("true", CancellationToken.None));
-        Assert.IsFalse(await f.IsValidAsync("false", CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync(string.Empty, CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync("whatever", CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync("true", CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync("false", CancellationToken.None));
     }
 
     [TestMethod]
     public void TryMassageInput()
     {
-        var f = new Figment.Common.SchemaNumberField(nameof(TryMassageInput));
+        var f = new Figment.Common.SchemaPhoneField(nameof(TryMassageInput));
 
-        Assert.IsFalse(f.TryMassageInput(null, out object? output));
-        Assert.IsNull(output);
-
-        Assert.IsFalse(f.TryMassageInput("string", out output));
-        Assert.IsNull(output);
+        Assert.IsTrue(f.TryMassageInput("string", out object? output));
+        Assert.IsNotNull(output);
 
         Assert.IsTrue(f.TryMassageInput(byte.MinValue, out output), "Native byte can be parsed");
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<byte>(output);
-        Assert.AreEqual(byte.MinValue, (byte)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(byte.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput($"{byte.MinValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<ulong>(output);
-        Assert.AreEqual(byte.MinValue, (ulong)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual($"{byte.MinValue}", (string)output);
 
         Assert.IsTrue(f.TryMassageInput($"{byte.MaxValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<ulong>(output);
-        Assert.AreEqual(byte.MaxValue, (ulong)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual($"{byte.MaxValue}", (string)output);
 
         Assert.IsTrue(f.TryMassageInput(int.MinValue, out output), "Native int can be parsed");
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<int>(output, "Negative integers are ultimately treated as signed longs");
-        Assert.AreEqual(int.MinValue, (int)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(int.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput($"{int.MinValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<long>(output, "Negative integers are ultimately treated as signed longs");
-        Assert.AreEqual(int.MinValue, (long)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(int.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput($"{int.MaxValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<ulong>(output, "Positive integers are ultimately treated as unsigned longs");
-        Assert.AreEqual((ulong)int.MaxValue, (ulong)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(int.MaxValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput(long.MinValue, out output), "Native long can be parsed");
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<long>(output);
-        Assert.AreEqual(long.MinValue, (long)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(long.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput($"{long.MinValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<long>(output);
-        Assert.AreEqual(long.MinValue, (long)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(long.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput(ulong.MinValue, out output), "Native ulong can be parsed");
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<ulong>(output);
-        Assert.AreEqual(ulong.MinValue, (ulong)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(ulong.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput($"{ulong.MinValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<ulong>(output);
-        Assert.AreEqual(ulong.MinValue, (ulong)output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual(ulong.MinValue.ToString(), (string)output);
 
         Assert.IsTrue(f.TryMassageInput(float.MinValue, out output), "Native float can be parsed");
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<float>(output);
-        Assert.IsTrue((float)output - float.MinValue <= float.Epsilon);
+        Assert.IsInstanceOfType<string>(output);
 
         Assert.IsTrue(f.TryMassageInput($"{float.MinValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<double>(output);
-        Assert.IsTrue((double)output - float.MinValue <= double.Epsilon);
+        Assert.IsInstanceOfType<string>(output);
 
         Assert.IsTrue(f.TryMassageInput(double.MinValue, out output), "Native double can be parsed");
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<double>(output);
-        Assert.IsTrue((double)output - double.MinValue <= double.Epsilon);
+        Assert.IsInstanceOfType<string>(output);
 
         Assert.IsTrue(f.TryMassageInput($"{double.MinValue}", out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<double>(output);
-        Assert.IsTrue((double)output - double.MinValue <= double.Epsilon);
+        Assert.IsInstanceOfType<string>(output);
 
         Assert.IsTrue(f.TryMassageInput(Math.PI, out output));
         Assert.IsNotNull(output);
-        Assert.IsInstanceOfType<double>(output);
-        Assert.IsTrue((double)output - Math.PI <= double.Epsilon);
+        Assert.IsInstanceOfType<string>(output);
 
-        Assert.IsFalse(f.TryMassageInput('c', out output));
-        Assert.IsNull(output);
+        Assert.IsTrue(f.TryMassageInput('c', out output));
+        Assert.IsNotNull(output);
+        Assert.IsInstanceOfType<string>(output);
+        Assert.AreEqual("c", (string)output);
     }
 }

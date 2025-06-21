@@ -111,6 +111,9 @@ public class LocalDirectoryStorageProvider() : IStorageProvider
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
+        if (!Path.IsPathRooted(path))
+            return false;
+
         if (Directory.Exists(path))
             return true;
 

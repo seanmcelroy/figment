@@ -63,7 +63,7 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
         var propertiesToAdd = new Dictionary<string, object?>();
         if (priority.Specified)
         {
-            propertiesToAdd.Add("priority", priority.Value);
+            propertiesToAdd.Add(Figment.Common.Tasks.Task.SimpleDisplayNamePriority, priority.Value);
         }
 
         if (status.Specified)
@@ -75,11 +75,11 @@ internal partial class AddTaskCommand : TaskCommandBase<AddTaskCommandSettings>
         {
             if (due.Value == DateTimeOffset.MinValue)
             {
-                propertiesToAdd.Add("due", null);
+                propertiesToAdd.Add(Figment.Common.Tasks.Task.SimpleDisplayNameDue, null);
             }
             else
             {
-                propertiesToAdd.Add("due", due.Value);
+                propertiesToAdd.Add(Figment.Common.Tasks.Task.SimpleDisplayNameDue, due.Value);
             }
         }
 

@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -68,31 +69,55 @@ public class SchemaTextField(string Name) : SchemaFieldBase(Name)
     public override Task<bool> IsValidAsync(object? value, CancellationToken _)
 #pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
+        return Task.FromResult(IsValidInternal(value));
+    }
+
+    /// <summary>
+    /// Validates a parsed field meets all applicable optionally-defined constraints.
+    /// </summary>
+    /// <param name="value">The value to evaluate for validity.</param>
+    /// <returns>A value indicating that the field value is valid as defined by any constraints inherent or configured for it.</returns>
+    /// <remarks>This is a version which is only relevant if validation is only synchronous.</remarks>
+    protected virtual bool IsValidInternal(object? value)
+    {
         if (value == null)
         {
-            return Task.FromResult(!Required);
+            return !Required;
         }
 
         var str = value.ToString();
 
         if (MinLength.HasValue && (str == null || str.Length < MinLength.Value))
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         if (MaxLength.HasValue && str?.Length > MaxLength.Value)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         if (!string.IsNullOrWhiteSpace(Pattern) && (str == null || !Regex.IsMatch(str, Pattern)))
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        return Task.FromResult(true);
+        return true;
     }
 
     /// <inheritdoc/>
     public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult("text");
+
+    /// <inheritdoc/>
+    public override bool TryMassageInput(object? input, [MaybeNullWhen(true)] out object? output)
+    {
+        if (!IsValidInternal(input))
+        {
+            output = null;
+            return false;
+        }
+
+        output = input?.ToString();
+        return true;
+    }
 }

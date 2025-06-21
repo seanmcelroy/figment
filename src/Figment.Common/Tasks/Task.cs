@@ -34,19 +34,34 @@ public class Task(string guid, string newName) : Thing(guid, newName)
     public const string TrueNameId = $"{WellKnownSchemaGuid}.id";
 
     /// <summary>
-    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "complete" field.
+    /// The <see cref="ThingProperty.SimpleDisplayName"/> of the built-in Task entity type's "complete" field.
     /// </summary>
-    public const string TrueNameComplete = $"{WellKnownSchemaGuid}.complete";
+    public const string SimpleDisplayNameComplete = "complete";
 
     /// <summary>
-    /// The due date of this planned work.
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "complete" field.
     /// </summary>
-    public const string TrueNameDue = $"{WellKnownSchemaGuid}.due";
+    public const string TrueNameComplete = $"{WellKnownSchemaGuid}.{SimpleDisplayNameComplete}";
+
+    /// <summary>
+    /// The <see cref="ThingProperty.SimpleDisplayName"/> of the built-in Task entity type's "due" date field.
+    /// </summary>
+    public const string SimpleDisplayNameDue = "due";
+
+    /// <summary>
+    /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "due" date field.
+    /// </summary>
+    public const string TrueNameDue = $"{WellKnownSchemaGuid}.{SimpleDisplayNameDue}";
+
+    /// <summary>
+    /// The <see cref="ThingProperty.SimpleDisplayName"/> of the built-in Task entity type's "priority" field.
+    /// </summary>
+    public const string SimpleDisplayNamePriority = "priority";
 
     /// <summary>
     /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "priority" field.
     /// </summary>
-    public const string TrueNamePriority = $"{WellKnownSchemaGuid}.priority";
+    public const string TrueNamePriority = $"{WellKnownSchemaGuid}.{SimpleDisplayNamePriority}";
 
     /// <summary>
     /// The <see cref="ThingProperty.TruePropertyName"/> of the built-in Task entity type's "archived" field.

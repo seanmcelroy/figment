@@ -123,7 +123,9 @@ public sealed class SchemaIntegerField
         Assert.IsTrue(await f.IsValidAsync(ulong.MaxValue, CancellationToken.None));
 
         f.Required = false;
-        Assert.IsTrue(await f.IsValidAsync("12345", CancellationToken.None), "Integer values must be native number types");
+        Assert.IsTrue(await f.IsValidAsync(int.MaxValue.ToString(), CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync(long.MaxValue.ToString(), CancellationToken.None));
+        Assert.IsTrue(await f.IsValidAsync(ulong.MaxValue.ToString(), CancellationToken.None));
 
         f.Required = false;
         Assert.IsFalse(await f.IsValidAsync("12.345", CancellationToken.None), "Integer values must not have decimal points");

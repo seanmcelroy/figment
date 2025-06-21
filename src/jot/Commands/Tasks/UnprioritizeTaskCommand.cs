@@ -65,7 +65,7 @@ public class UnprioritizeTaskCommand : CancellableAsyncCommand<UnprioritizeTaskC
                     break; // Only one can match.
                 }
 
-                var tsr = await thing.Set("priority", false, cancellationToken);
+                var tsr = await thing.Set(Figment.Common.Tasks.Task.SimpleDisplayNamePriority, false, cancellationToken);
                 if (tsr.Success)
                 {
                     var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);
@@ -95,7 +95,7 @@ public class UnprioritizeTaskCommand : CancellableAsyncCommand<UnprioritizeTaskC
                     continue;
                 }
 
-                var tsr = await thing.Set("priority", false, cancellationToken);
+                var tsr = await thing.Set(Figment.Common.Tasks.Task.SimpleDisplayNamePriority, false, cancellationToken);
                 if (tsr.Success)
                 {
                     var id = await thing.GetPropertyByTrueNameAsync(Figment.Common.Tasks.Task.TrueNameId, cancellationToken);

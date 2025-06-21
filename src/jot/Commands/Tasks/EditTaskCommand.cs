@@ -54,7 +54,7 @@ internal class EditTaskCommand : TaskCommandBase<EditTaskCommandSettings>
 
         if (priority.Specified)
         {
-            propertiesToUpdate.Add("priority", priority.Value);
+            propertiesToUpdate.Add(Figment.Common.Tasks.Task.SimpleDisplayNamePriority, priority.Value);
         }
 
         if (status.Specified)
@@ -66,11 +66,11 @@ internal class EditTaskCommand : TaskCommandBase<EditTaskCommandSettings>
         {
             if (due.Value == DateTimeOffset.MinValue)
             {
-                propertiesToUpdate.Add("due", null);
+                propertiesToUpdate.Add(Figment.Common.Tasks.Task.SimpleDisplayNameDue, null);
             }
             else
             {
-                propertiesToUpdate.Add("due", due.Value);
+                propertiesToUpdate.Add(Figment.Common.Tasks.Task.SimpleDisplayNameDue, due.Value);
             }
         }
 

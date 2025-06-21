@@ -53,7 +53,7 @@ public class UncompleteTaskCommand : CancellableAsyncCommand<UncompleteTaskComma
                 await thing.Set("archived", false, cancellationToken);
             }
 
-            var tsr = await thing.Set("complete", null, cancellationToken);
+            var tsr = await thing.Set(Figment.Common.Tasks.Task.SimpleDisplayNameComplete, null, cancellationToken);
             if (tsr.Success)
             {
                 var (saveSuccess, saveMessage) = await thing.SaveAsync(cancellationToken);

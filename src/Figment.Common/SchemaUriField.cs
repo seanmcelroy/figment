@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Figment.Common;
@@ -59,14 +60,50 @@ public class SchemaUriField(string Name) : SchemaTextField(Name)
     public override Task<string> GetReadableFieldTypeAsync(bool verbose, CancellationToken cancellationToken) => Task.FromResult(SCHEMA_FIELD_TYPE);
 
     /// <inheritdoc/>
-    public override async Task<bool> IsValidAsync(object? value, CancellationToken cancellationToken)
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
+    public override Task<bool> IsValidAsync(object? value, CancellationToken _)
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
     {
-        if (!await base.IsValidAsync(value, cancellationToken))
+        return Task.FromResult(IsValidInternal(value));
+    }
+
+    /// <inheritdoc/>
+    protected sealed override bool IsValidInternal(object? value)
+    {
+        if (!base.IsValidInternal(value))
         {
             return false;
         }
 
+        if (!Required && value == null)
+        {
+            return true;
+        }
+
         var str = value as string;
-        return Uri.TryCreate(str, UriKind.RelativeOrAbsolute, out Uri? _);
+        if (!Uri.TryCreate(str, UriKind.Absolute, out Uri? uri))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(uri.Scheme) || uri.IsFile || uri.IsLoopback || uri.IsUnc)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public override bool TryMassageInput(object? input, [MaybeNullWhen(true)] out object? output)
+    {
+        if (!IsValidInternal(input))
+        {
+            output = null;
+            return false;
+        }
+
+        output = input?.ToString();
+        return true;
     }
 }
