@@ -62,14 +62,12 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 yield break;
 
             var thingFileName = entry.Value;
-            var thingGuid = thingFileName.Split('.')[0];
-            var thing = await LoadAsync(thingGuid, cancellationToken);
-            if (thing != null)
-                yield return (new Reference
-                {
-                    Guid = thingGuid,
-                    Type = Reference.ReferenceType.Thing
-                }, thing.Name);
+            var thingGuid = thingFileName.Split('.', 2)[0];
+            yield return (new Reference
+            {
+                Guid = thingGuid,
+                Type = Reference.ReferenceType.Thing
+            }, entry.Key);
         }
 
         yield break;
@@ -86,22 +84,23 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         if (!File.Exists(indexFilePath))
             yield break; // Happens on new install if no items, nothing in index, and so no file
 
-        await foreach (var guid in IndexManager.ResolveGuidFromPartialNameAsync(indexFilePath, thingNamePart, cancellationToken))
+        await foreach (var entry in IndexManager.LookupAsync(
+            indexFilePath,
+            e => e.Key.StartsWith(thingNamePart, StringComparison.CurrentCultureIgnoreCase),
+            cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
                 yield break;
 
-            var thing = await LoadAsync(guid, cancellationToken);
-            if (thing == null || string.IsNullOrWhiteSpace(thing.Name))
-                continue;
+            var thingGuid = entry.Value.Split('.', 2)[0];
             yield return new PossibleNameMatch
             {
                 Reference = new()
                 {
                     Type = Reference.ReferenceType.Thing,
-                    Guid = guid
+                    Guid = thingGuid
                 },
-                Name = thing.Name
+                Name = entry.Key
             };
         }
     }
@@ -113,9 +112,17 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
         var indexFilePath = Path.Combine(ThingDirectoryPath, NameIndexFileName);
         if (File.Exists(indexFilePath))
         {
-            await foreach (var indexMatch in FindByNameAsync(x => true, cancellationToken))
+            await foreach (var entry in IndexManager.LookupAsync(indexFilePath, e => true, cancellationToken))
             {
-                yield return indexMatch;
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+
+                var thingGuid = entry.Value.Split('.', 2)[0];
+                yield return (new Reference
+                {
+                    Guid = thingGuid,
+                    Type = Reference.ReferenceType.Thing
+                }, entry.Key);
             }
             yield break;
         }
@@ -176,7 +183,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 if (cancellationToken.IsCancellationRequested)
                     yield break;
 
-                var guid = Path.GetFileName(entry.Value).Split('.')[0];
+                var guid = Path.GetFileName(entry.Value).Split('.', 2)[0];
                 yield return new Reference
                 {
                     Guid = guid,
@@ -255,7 +262,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
             return null;
         }
 
-        await using var fs = new FileStream(filePath, FileMode.Open);
+        await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
             using var doc = await JsonDocument.ParseAsync(fs, cancellationToken: cancellationToken);

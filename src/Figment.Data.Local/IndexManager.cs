@@ -133,10 +133,10 @@ public static class IndexManager
         await slim.WaitAsync(cancellationToken); // Twice since we're going to write.
         try
         {
-            await using var fs = new FileStream(indexFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+            await using var fs = new FileStream(indexFilePath, FileMode.Append, FileAccess.Write, FileShare.None);
             using var sw = new StreamWriter(fs, Encoding.UTF8);
             await using var csvWriter = Sep
-                .Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture })
+                .Writer(o => o with { WriteHeader = false, CultureInfo = CultureInfo.InvariantCulture, Sep = Sep.New(',') })
                 .To(sw);
 
             {
@@ -314,9 +314,9 @@ public static class IndexManager
 
             var fileName = entry.Value;
             if (Path.IsPathFullyQualified(fileName))
-                yield return Path.GetFileName(fileName).Split('.')[0];
+                yield return Path.GetFileName(fileName).Split('.', 2)[0];
             else
-                yield return fileName.Split('.')[0];
+                yield return fileName.Split('.', 2)[0];
         }
     }
 }

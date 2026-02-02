@@ -148,13 +148,13 @@ public class LocalDirectoryStorageProvider() : IStorageProvider
             if (Path.IsPathFullyQualified(fileName))
             {
                 // Full file path
-                var guid = Path.GetFileName(fileName).Split('.')[0];
+                var guid = Path.GetFileName(fileName).Split('.', 2)[0];
                 yield return guid;
             }
             else
             {
                 // Filename only
-                var guid = fileName.Split('.')[0];
+                var guid = fileName.Split('.', 2)[0];
                 yield return guid;
             }
         }

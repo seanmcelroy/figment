@@ -250,7 +250,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             return null;
         }
 
-        await using var fs = new FileStream(filePath, FileMode.Open);
+        await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
             var schemaDefinition = await JsonSerializer.DeserializeAsync(
@@ -377,8 +377,10 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         {
             if (index.Value.Count == 0)
             {
-                if (File.Exists(index.Key)) { }
-                File.Delete(index.Key);
+                if (File.Exists(index.Key))
+                {
+                    File.Delete(index.Key);
+                }
                 continue;
             }
 
@@ -405,7 +407,7 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             , e => string.Equals(e.Key, schemaName, StringComparison.CurrentCultureIgnoreCase), cancellationToken))
         {
             var schemaFileName = entry.Value;
-            var schemaGuid = schemaFileName.Split('.')[0];
+            var schemaGuid = schemaFileName.Split('.', 2)[0];
             return new Reference
             {
                 Guid = schemaGuid,
@@ -431,18 +433,16 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
             , cancellationToken))
         {
             var schemaFileName = entry.Value;
-            var schemaGuid = schemaFileName.Split('.')[0];
-            var schema = await LoadAsync(schemaGuid, cancellationToken);
-            if (schema != null)
-                yield return new PossibleNameMatch
+            var schemaGuid = schemaFileName.Split('.', 2)[0];
+            yield return new PossibleNameMatch
+            {
+                Reference = new()
                 {
-                    Reference = new()
-                    {
-                        Guid = schemaGuid,
-                        Type = Reference.ReferenceType.Schema
-                    },
-                    Name = schema.Name
-                };
+                    Guid = schemaGuid,
+                    Type = Reference.ReferenceType.Schema
+                },
+                Name = entry.Key
+            };
         }
 
         yield break;
@@ -458,22 +458,20 @@ public class LocalDirectorySchemaStorageProvider(string SchemaDirectoryPath, str
         if (!File.Exists(indexFilePath))
             yield break; // Happens on new install if no items, nothing in index, and so no file
 
-        await foreach (var guid in IndexManager.ResolveGuidFromPartialNameAsync(indexFilePath, thingNamePart, cancellationToken))
+        await foreach (var entry in IndexManager.LookupAsync(
+            indexFilePath,
+            e => e.Key.StartsWith(thingNamePart, StringComparison.CurrentCultureIgnoreCase),
+            cancellationToken))
         {
-            var schema = await LoadAsync(guid, cancellationToken);
-
-            if (schema != null)
+            yield return new PossibleNameMatch
             {
-                yield return new PossibleNameMatch
+                Name = entry.Key,
+                Reference = new Reference
                 {
-                    Name = schema.Name,
-                    Reference = new Reference
-                    {
-                        Type = Reference.ReferenceType.Schema,
-                        Guid = guid
-                    },
-                };
-            }
+                    Type = Reference.ReferenceType.Schema,
+                    Guid = entry.Value.Split('.', 2)[0]
+                },
+            };
         }
     }
 

@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Figment.Common;
 using Figment.Common.Data;
@@ -28,7 +29,7 @@ namespace Figment.Data.Memory;
 /// </summary>
 public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorageProvider
 {
-    private static readonly Dictionary<string, Thing> ThingCache = [];
+    private static readonly ConcurrentDictionary<string, Thing> ThingCache = new();
 
     /// <inheritdoc/>
     public override async Task<Reference> FindByNameAsync(string exactName, CancellationToken cancellationToken, StringComparison comparisonType = StringComparison.InvariantCultureIgnoreCase)
@@ -173,7 +174,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
             LastModified = DateTime.UtcNow,
             LastAccessed = DateTime.UtcNow,
         };
-        ThingCache.Add(thingGuid, thing);
+        ThingCache.TryAdd(thingGuid, thing);
 
         if (schema != null)
             await AssociateWithSchemaInternal(thing, schema, cancellationToken);
@@ -268,7 +269,7 @@ public class MemoryThingStorageProvider : ThingStorageProviderBase, IThingStorag
     public override Task<bool> DeleteAsync(string thingGuid, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(thingGuid);
-        return Task.FromResult(ThingCache.Remove(thingGuid));
+        return Task.FromResult(ThingCache.TryRemove(thingGuid, out _));
     }
 
     /// <inheritdoc/>
