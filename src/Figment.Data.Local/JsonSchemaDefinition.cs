@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections.Frozen;
 using System.Text.Json.Serialization;
 using Figment.Common;
 
@@ -165,12 +166,14 @@ public record JsonSchemaDefinition(string Guid, string Name, string? Description
             LastAccessed = lastAccessed ?? DateTime.UnixEpoch,
         };
 
+        var mutableProps = new Dictionary<string, SchemaFieldBase>(StringComparer.Ordinal);
         foreach (var prop in Properties)
         {
             prop.Value.Required = RequiredProperties?.Any(sdr => string.Equals(sdr, prop.Key, StringComparison.Ordinal)) == true;
-            schema.Properties.Add(prop.Key, prop.Value);
+            mutableProps.Add(prop.Key, prop.Value);
         }
 
+        schema.Properties = mutableProps.ToFrozenDictionary(StringComparer.Ordinal);
         schema.ImportMaps.AddRange(ImportMaps);
 
         return schema;

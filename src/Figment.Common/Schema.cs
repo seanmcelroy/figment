@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using Figment.Common.Data;
 
@@ -74,12 +75,13 @@ public class Schema
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets the list of fields, keyed by name, defined for this schema.
+    /// Gets or sets the list of fields, keyed by name, defined for this schema.
     /// </summary>
     /// <remarks>
-    /// Do not use this outside of this class.  Left public for serialization only.
+    /// After loading, this is a <see cref="FrozenDictionary{TKey, TValue}"/> for optimized lookups.
+    /// Use <see cref="SetProperty"/> and <see cref="RemoveProperty"/> for mutations.
     /// </remarks>
-    public Dictionary<string, SchemaFieldBase> Properties { get; init; } = [];
+    public IReadOnlyDictionary<string, SchemaFieldBase> Properties { get; set; } = new Dictionary<string, SchemaFieldBase>();
 
     /// <summary>
     /// Gets or sets the versioning plan for this schema, if the schema is versioned.
@@ -201,7 +203,7 @@ public class Schema
             MaxLength = maxLength,
             Pattern = pattern,
         };
-        Properties.Add(name, stf);
+        SetProperty(name, stf);
         return stf;
     }
 
@@ -223,7 +225,7 @@ public class Schema
         }
 
         var sdf = new SchemaDateField(name);
-        Properties.Add(name, sdf);
+        SetProperty(name, sdf);
         return sdf;
     }
 
@@ -244,9 +246,9 @@ public class Schema
             throw new ArgumentException($"A field named '{name}' already exists on this schema", nameof(name));
         }
 
-        var sdf = new SchemaIncrementField(name);
-        Properties.Add(name, sdf);
-        return sdf;
+        var sif = new SchemaIncrementField(name);
+        SetProperty(name, sif);
+        return sif;
     }
 
     /// <summary>
@@ -267,8 +269,46 @@ public class Schema
         }
 
         var smdf = new SchemaMonthDayField(name);
-        Properties.Add(name, smdf);
+        SetProperty(name, smdf);
         return smdf;
+    }
+
+    /// <summary>
+    /// Adds or replaces a property field on this schema.
+    /// </summary>
+    /// <param name="name">The name of the property.</param>
+    /// <param name="field">The schema field definition.</param>
+    public void SetProperty(string name, SchemaFieldBase field)
+    {
+        var mutable = Properties as Dictionary<string, SchemaFieldBase>
+            ?? new Dictionary<string, SchemaFieldBase>(Properties, StringComparer.Ordinal);
+        mutable[name] = field;
+        Properties = mutable;
+    }
+
+    /// <summary>
+    /// Removes a property field from this schema.
+    /// </summary>
+    /// <param name="name">The name of the property to remove.</param>
+    /// <returns>True if the property was found and removed; otherwise, false.</returns>
+    public bool RemoveProperty(string name)
+    {
+        var mutable = Properties as Dictionary<string, SchemaFieldBase>
+            ?? new Dictionary<string, SchemaFieldBase>(Properties, StringComparer.Ordinal);
+        var removed = mutable.Remove(name);
+        Properties = mutable;
+        return removed;
+    }
+
+    /// <summary>
+    /// Freezes the <see cref="Properties"/> dictionary for optimized read performance.
+    /// </summary>
+    public void FreezeProperties()
+    {
+        if (Properties is not FrozenDictionary<string, SchemaFieldBase>)
+        {
+            Properties = Properties.ToFrozenDictionary(StringComparer.Ordinal);
+        }
     }
 
     /// <summary>

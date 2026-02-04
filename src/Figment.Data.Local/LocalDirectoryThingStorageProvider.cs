@@ -16,6 +16,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Figment.Common;
@@ -30,6 +31,13 @@ namespace Figment.Data.Local;
 /// <param name="ThingDirectoryPath">The path to the <see cref="Thing"/> subdirectory under the root of the file system database.</param>
 public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : ThingStorageProviderBase, IThingStorageProvider
 {
+    private static readonly FrozenSet<string> BuiltInPropertyNames = FrozenSet.ToFrozenSet(
+    [
+        nameof(Thing.Name),
+        nameof(Thing.Guid),
+        nameof(Thing.SchemaGuids),
+    ], StringComparer.Ordinal);
+
     private const string NameIndexFileName = $"_thing.names.csv";
 
     /// <inheritdoc/>
@@ -214,10 +222,10 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
 
         var fileName = $"{thingGuid}.thing.json";
         var filePath = Path.Combine(ThingDirectoryPath, fileName);
-        if (!File.Exists(filePath))
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
             return Task.FromResult(false);
 
-        var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length == 0)
         {
             try
@@ -336,10 +344,7 @@ public class LocalDirectoryThingStorageProvider(string ThingDirectoryPath) : Thi
                 if (cancellationToken.IsCancellationRequested)
                     return null;
 
-                if (
-                    string.Equals(prop.Name, nameof(Thing.Name), StringComparison.Ordinal)
-                    || string.Equals(prop.Name, nameof(Thing.Guid), StringComparison.Ordinal)
-                    || string.Equals(prop.Name, nameof(Thing.SchemaGuids), StringComparison.Ordinal))
+                if (BuiltInPropertyNames.Contains(prop.Name))
                 {
                     // Ignore built-ins, as they're defined on root, not Properties
                     continue;

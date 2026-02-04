@@ -74,7 +74,7 @@ public class SetSchemaPropertyFormulaCommand : SchemaCancellableAsyncCommand<Set
         }
 
         scf.Formula = settings.Formula;
-        schema.Properties[propName] = scf;
+        schema.SetProperty(propName, scf);
 
         var (saved, saveMessage) = await schema.SaveAsync(cancellationToken);
         if (!saved)

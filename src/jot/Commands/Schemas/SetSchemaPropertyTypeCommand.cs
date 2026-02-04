@@ -61,7 +61,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
                 return (int)Globals.GLOBAL_ERROR_CODES.NOT_FOUND;
             }
 
-            schema.Properties.Remove(propToDelete.Key);
+            schema.RemoveProperty(propToDelete.Key);
             AmbientErrorContext.Provider.LogWarning($"Deleted property name '{propName}'.");
         }
         else if (string.Equals(settings.FieldType, SchemaArrayField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
@@ -74,19 +74,19 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
                     Type = "string",
                 },
             };
-            schema!.Properties[propName] = saf;
+            schema!.SetProperty(propName, saf);
         }
         else if (string.Equals(settings.FieldType, SchemaBooleanField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Boolean
             var sbf = new SchemaBooleanField(propName);
-            schema!.Properties[propName] = sbf;
+            schema!.SetProperty(propName, sbf);
         }
         else if (string.Equals(settings.FieldType, SchemaCalculatedField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Calculated
             var scf = new SchemaCalculatedField(propName);
-            schema!.Properties[propName] = scf;
+            schema!.SetProperty(propName, scf);
 
             // Formula is null at this point.
         }
@@ -94,61 +94,61 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
         {
             // Date
             var sdf = new SchemaDateField(propName);
-            schema!.Properties[propName] = sdf;
+            schema!.SetProperty(propName, sdf);
         }
         else if (string.Equals(settings.FieldType, SchemaEmailField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Email
             var sef = new SchemaEmailField(propName);
-            schema!.Properties[propName] = sef;
+            schema!.SetProperty(propName, sef);
         }
         else if (string.Equals(settings.FieldType, SchemaIncrementField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Auto-incrementing id (increment)
             var sif = new SchemaIncrementField(propName);
-            schema!.Properties[propName] = sif;
+            schema!.SetProperty(propName, sif);
         }
         else if (string.Equals(settings.FieldType, SchemaIntegerField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Number (integer)
             var sif = new SchemaIntegerField(propName);
-            schema!.Properties[propName] = sif;
+            schema!.SetProperty(propName, sif);
         }
         else if (string.Equals(settings.FieldType, SchemaMonthDayField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Month+day
             var ssf = new SchemaMonthDayField(propName);
-            schema!.Properties[propName] = ssf;
+            schema!.SetProperty(propName, ssf);
         }
         else if (string.Equals(settings.FieldType, SchemaNumberField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Number (double)
             var snf = new SchemaNumberField(propName);
-            schema!.Properties[propName] = snf;
+            schema!.SetProperty(propName, snf);
         }
         else if (string.Equals(settings.FieldType, SchemaPhoneField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Phone
             var spf = new SchemaPhoneField(propName);
-            schema!.Properties[propName] = spf;
+            schema!.SetProperty(propName, spf);
         }
         else if (string.Equals(settings.FieldType, SchemaSchemaField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Schema
             var ssf = new SchemaSchemaField(propName);
-            schema!.Properties[propName] = ssf;
+            schema!.SetProperty(propName, ssf);
         }
         else if (string.Equals(settings.FieldType, "text", StringComparison.Ordinal))
         {
             // Text
             var stf = new SchemaTextField(propName);
-            schema!.Properties[propName] = stf;
+            schema!.SetProperty(propName, stf);
         }
         else if (string.Equals(settings.FieldType, SchemaUriField.SCHEMA_FIELD_TYPE, StringComparison.Ordinal))
         {
             // Uri
             var suf = new SchemaUriField(propName);
-            schema!.Properties[propName] = suf;
+            schema!.SetProperty(propName, suf);
         }
         else if (settings.FieldType != null
             && settings.FieldType.StartsWith('[')
@@ -159,7 +159,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             // Enum
             var enumValues = settings.FieldType[1..^1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var sef = new SchemaEnumField(propName, enumValues);
-            schema!.Properties[propName] = sef;
+            schema!.SetProperty(propName, sef);
         }
         else
         {
@@ -172,7 +172,7 @@ public class SetSchemaPropertyTypeCommand : SchemaCancellableAsyncCommand<SetSch
             }
 
             var srf = new SchemaRefField(propName, refSchema.Guid);
-            schema!.Properties[propName] = srf;
+            schema!.SetProperty(propName, srf);
         }
 
         var (saved, saveMessage) = await schema!.SaveAsync(cancellationToken);
